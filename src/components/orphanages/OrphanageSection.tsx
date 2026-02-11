@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Orphanage } from "@/types/orphanage";
 
 export default function OrphanageSection({
@@ -7,6 +8,17 @@ export default function OrphanageSection({
 }) {
   return (
     <div className="rounded-xl bg-white border border-warmgray-200 shadow-sm overflow-hidden">
+      {orphanage.imageUrl && (
+        <div className="aspect-video relative">
+          <Image
+            src={orphanage.imageUrl}
+            alt={`Students at ${orphanage.name}`}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 900px"
+          />
+        </div>
+      )}
       <div className="p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
           <div>

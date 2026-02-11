@@ -7,6 +7,7 @@ const orphanages: Orphanage[] = [
     address:
       "Gg. Satriya Buana Jl. Buana Raya No.1x, Padangsambian, Kec. Denpasar Bar., Kota Denpasar, Bali 80351",
     location: "Denpasar, Bali",
+    imageUrl: "/images/chloe.jpg",
     studentCount: 18,
     classGroups: [
       { name: "Kids", studentCount: 4, ageRange: "8–9" },
@@ -21,6 +22,7 @@ const orphanages: Orphanage[] = [
     name: "Seeds of Hope Orphanage",
     indonesianName: "Benih Harapan",
     location: "Denpasar, Bali",
+    imageUrl: "/images/seeds-of-hope.jpg",
     studentCount: 40,
     classGroups: [
       { name: "Kids I", studentCount: 8, ageRange: "7–9" },
@@ -41,6 +43,7 @@ const orphanages: Orphanage[] = [
     address:
       "Jl. Veteran No.3, Buduk, Kec. Mengwi, Kabupaten Badung, Bali 80351",
     location: "Badung, Bali",
+    imageUrl: "/images/sekar-pengharapan.jpg",
     studentCount: 26,
     classGroups: [
       { name: "Junior", studentCount: 14, ageRange: "13–15" },
@@ -57,6 +60,7 @@ const orphanages: Orphanage[] = [
     address:
       "Jl. Tunjung Sari No.38, Padangsambian Kaja, Kec. Denpasar Bar., Kota Denpasar, Bali 80117",
     location: "Denpasar, Bali",
+    imageUrl: "/images/sunya-giri.jpg",
     studentCount: 18,
     classGroups: [
       { name: "Junior", studentCount: 9, ageRange: "10–17" },

@@ -1,14 +1,22 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Hero() {
   return (
-    <section className="relative bg-teal-800 text-white">
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-900 to-teal-700 opacity-90" />
+    <section className="relative text-white">
+      <Image
+        src="/images/hero.jpg"
+        alt="Girl with arms spread, laughing at Waterbom Bali"
+        fill
+        className="object-cover"
+        priority
+      />
+      <div className="absolute inset-0 bg-black/50" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40 text-center">
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
           Meant for Greatness
         </h1>
-        <p className="mx-auto max-w-2xl text-lg sm:text-xl text-teal-100 mb-10 leading-relaxed">
+        <p className="mx-auto max-w-2xl text-lg sm:text-xl text-white/90 mb-10 leading-relaxed">
           Transforming the lives of orphan children in Bali, Indonesia through
           the power of English education. One class at a time, we&apos;re
           opening doors to brighter futures.

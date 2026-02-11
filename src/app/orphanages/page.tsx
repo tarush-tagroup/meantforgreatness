@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAllOrphanages } from "@/data/orphanages";
 import OrphanageSection from "@/components/orphanages/OrphanageSection";
+import EventSection from "@/components/orphanages/EventSection";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -29,6 +30,13 @@ export default function OrphanagesPage() {
           {orphanages.map((orphanage) => (
             <OrphanageSection key={orphanage.id} orphanage={orphanage} />
           ))}
+        </div>
+
+        <div className="mt-16 mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-warmgray-900 mb-8 text-center">
+            Events
+          </h2>
+          <EventSection />
         </div>
 
         <div className="mt-12 text-center">

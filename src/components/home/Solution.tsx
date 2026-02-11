@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Solution() {
   const features = [
     {
@@ -33,6 +35,17 @@ export default function Solution() {
             We organize English classes for orphan kids across Bali — structured,
             consistent, and designed to produce real results.
           </p>
+        </div>
+
+        <div className="mx-auto max-w-4xl mb-12">
+          <Image
+            src="/images/classroom.jpg"
+            alt="English class in session at an orphanage in Bali"
+            width={1200}
+            height={800}
+            className="rounded-xl w-full h-auto"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 900px"
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
