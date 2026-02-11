@@ -6,9 +6,9 @@ export default function Hero() {
     <section className="relative text-white">
       <Image
         src="/images/hero.jpg"
-        alt="Girl with arms spread, laughing at Waterbom Bali"
+        alt="Kids jumping with joy at the orphanage"
         fill
-        className="object-cover object-top"
+        className="object-cover"
         priority
       />
       <div className="absolute inset-0 bg-black/50" />
