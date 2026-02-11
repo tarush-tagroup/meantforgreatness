@@ -8,7 +8,7 @@ export default function Hero() {
         src="/images/hero.jpg"
         alt="Girl with arms spread, laughing at Waterbom Bali"
         fill
-        className="object-cover"
+        className="object-cover object-top"
         priority
       />
       <div className="absolute inset-0 bg-black/50" />
