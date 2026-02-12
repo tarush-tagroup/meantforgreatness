@@ -2,6 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { listLogs, listSources } from "@/lib/blob-logs";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +31,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Fetch logs and sources in parallel
-  const [logPage, sources] = await Promise.all([
+  // Fetch logs, sources, and last ingest time in parallel
+  const [logPage, sources, lastIngest] = await Promise.all([
     listLogs(
       {
         level: levelFilter || undefined,
@@ -41,6 +42,10 @@ export default async function LogsPage({ searchParams }: PageProps) {
       { limit: PAGE_SIZE, offset }
     ),
     listSources(),
+    // Check last Vercel ingest (most recent vercel:runtime entry)
+    listLogs({ source: "vercel:runtime" }, { limit: 1, offset: 0 })
+      .then((r) => (r.entries.length > 0 ? r.entries[0].timestamp : null))
+      .catch(() => null),
   ]);
 
   const { entries: logs, total } = logPage;
@@ -65,11 +70,65 @@ export default async function LogsPage({ searchParams }: PageProps) {
     info: "bg-blue-100 text-blue-700",
   };
 
+  function formatTimestamp(ts: string | null) {
+    if (!ts) return null;
+    const d = new Date(ts);
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  }
+
+  function timeAgo(ts: string | null) {
+    if (!ts) return null;
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return `${Math.floor(hours / 24)}d ago`;
+  }
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-warmgray-900 mb-6">
-        Application Logs
-      </h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-warmgray-900">
+          Application Logs
+        </h1>
+        <span className="text-sm text-warmgray-500">{total} entries</span>
+      </div>
+
+      {/* Status bar */}
+      <div className="mb-6 flex flex-wrap gap-4 text-xs text-warmgray-500">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
+          <span>Stripe &amp; Resend: live via webhooks</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
+          <span>App errors: live on each request</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`inline-block h-2 w-2 rounded-full ${lastIngest ? "bg-teal-500" : "bg-warmgray-300"}`}
+          />
+          <span>
+            Vercel runtime ingest:{" "}
+            {lastIngest ? (
+              <span title={formatTimestamp(lastIngest) || ""}>
+                {timeAgo(lastIngest)}
+              </span>
+            ) : (
+              "no data yet"
+            )}
+            <span className="text-warmgray-400"> (every 10 min)</span>
+          </span>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-3 items-center">
@@ -143,7 +202,15 @@ export default async function LogsPage({ searchParams }: PageProps) {
           </button>
         </form>
 
-        <span className="text-sm text-warmgray-500">{total} log entries</span>
+        {/* Clear filters */}
+        {(levelFilter || sourceFilter || searchFilter) && (
+          <Link
+            href="/admin/logs"
+            className="text-sm text-teal-600 hover:text-teal-700 font-medium"
+          >
+            Clear filters
+          </Link>
+        )}
       </div>
 
       {/* Logs table */}
@@ -173,9 +240,16 @@ export default async function LogsPage({ searchParams }: PageProps) {
               <tr>
                 <td
                   colSpan={5}
-                  className="px-4 py-8 text-center text-warmgray-400"
+                  className="px-4 py-12 text-center"
                 >
-                  No log entries found.
+                  <p className="text-warmgray-400 text-base font-medium">
+                    No log entries found
+                  </p>
+                  <p className="text-warmgray-400 text-sm mt-1">
+                    {levelFilter || sourceFilter || searchFilter
+                      ? "Try adjusting your filters."
+                      : "Logs will appear here as events flow through the system \u2014 Stripe payments, Resend emails, form submissions, and Vercel runtime errors."}
+                  </p>
                 </td>
               </tr>
             ) : (
