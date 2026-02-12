@@ -574,13 +574,13 @@ function StatCard({
 }) {
   const content = (
     <div
-      className={`rounded-lg border border-warmgray-200 bg-white p-5 ${href ? "hover:border-teal-300 hover:shadow-sm transition-all" : ""}`}
+      className={`rounded-lg border border-warmgray-200 bg-white p-5 h-full ${href ? "hover:border-teal-300 hover:shadow-sm transition-all" : ""}`}
     >
       <p className="text-sm font-medium text-warmgray-500">{label}</p>
       <p className="mt-1 text-2xl font-bold text-warmgray-900">{value}</p>
-      {subtitle && (
-        <p className="mt-0.5 text-xs text-warmgray-400">{subtitle}</p>
-      )}
+      <p className="mt-0.5 text-xs text-warmgray-400">
+        {subtitle || "\u00A0"}
+      </p>
     </div>
   );
 
