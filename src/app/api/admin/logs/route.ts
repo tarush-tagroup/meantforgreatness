@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { db } from "@/db";
-import { appLogs } from "@/db/schema";
-import { desc, eq, and, gte, sql } from "drizzle-orm";
+import { listLogs } from "@/lib/blob-logs";
 
 /**
  * GET /api/admin/logs
  *
  * Dual auth: session-based (admin panel) or bearer token (GitHub Actions).
- * Query params: level, source, since (ISO timestamp), limit (default 50, max 200)
+ * Query params: level, source, since (ISO timestamp), limit (default 50, max 200), page
  */
 export async function GET(req: NextRequest) {
   // Check bearer token first (for GitHub Actions)
@@ -42,42 +40,23 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
   const offset = (page - 1) * limit;
 
-  // Build filters
-  const conditions = [];
-  if (level) conditions.push(eq(appLogs.level, level));
-  if (source) conditions.push(eq(appLogs.source, source));
-  if (since) {
-    const sinceDate = new Date(since);
-    if (!isNaN(sinceDate.getTime())) {
-      conditions.push(gte(appLogs.createdAt, sinceDate));
-    }
-  }
+  // Build filter
+  const sinceDate = since ? new Date(since) : undefined;
+  const filter = {
+    level: level || undefined,
+    source: source || undefined,
+    since: sinceDate && !isNaN(sinceDate.getTime()) ? sinceDate : undefined,
+  };
 
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-  const [data, [countResult]] = await Promise.all([
-    db
-      .select()
-      .from(appLogs)
-      .where(whereClause)
-      .orderBy(desc(appLogs.createdAt))
-      .limit(limit)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(appLogs)
-      .where(whereClause),
-  ]);
-
-  const total = Number(countResult?.count || 0);
+  const result = await listLogs(filter, { limit, offset });
 
   return NextResponse.json({
-    data,
+    data: result.entries,
     pagination: {
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+      total: result.total,
+      totalPages: Math.ceil(result.total / limit),
     },
   });
 }

@@ -1,9 +1,7 @@
 import { getSessionUser } from "@/lib/auth-guard";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
-import { db } from "@/db";
-import { appLogs } from "@/db/schema";
-import { desc, eq, and, gte, like, sql } from "drizzle-orm";
+import { listLogs, listSources } from "@/lib/blob-logs";
 
 export const dynamic = "force-dynamic";
 
@@ -30,42 +28,22 @@ export default async function LogsPage({ searchParams }: PageProps) {
   const sourceFilter = params.source || "";
   const searchFilter = params.search || "";
 
-  // Build dynamic filters
-  const conditions = [];
-  if (levelFilter && LEVELS.includes(levelFilter as (typeof LEVELS)[number])) {
-    conditions.push(eq(appLogs.level, levelFilter));
-  }
-  if (sourceFilter) {
-    conditions.push(eq(appLogs.source, sourceFilter));
-  }
-  if (searchFilter) {
-    conditions.push(like(appLogs.message, `%${searchFilter}%`));
-  }
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Fetch logs and total count in parallel
-  const [logs, [countResult], sources] = await Promise.all([
-    db
-      .select()
-      .from(appLogs)
-      .where(whereClause)
-      .orderBy(desc(appLogs.createdAt))
-      .limit(PAGE_SIZE)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(appLogs)
-      .where(whereClause),
-    // Get distinct sources for the filter dropdown
-    db
-      .selectDistinct({ source: appLogs.source })
-      .from(appLogs)
-      .orderBy(appLogs.source),
+  // Fetch logs and sources in parallel
+  const [logPage, sources] = await Promise.all([
+    listLogs(
+      {
+        level: levelFilter || undefined,
+        source: sourceFilter || undefined,
+        search: searchFilter || undefined,
+      },
+      { limit: PAGE_SIZE, offset }
+    ),
+    listSources(),
   ]);
 
-  const total = Number(countResult?.count || 0);
+  const { entries: logs, total } = logPage;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   function buildUrl(overrides: Record<string, string>) {
@@ -133,8 +111,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
           >
             <option value="">All sources</option>
             {sources.map((s) => (
-              <option key={s.source} value={s.source}>
-                {s.source}
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
@@ -201,11 +179,11 @@ export default async function LogsPage({ searchParams }: PageProps) {
                 </td>
               </tr>
             ) : (
-              logs.map((log) => (
-                <tr key={log.id} className="hover:bg-warmgray-50">
+              logs.map((log, idx) => (
+                <tr key={`${log.timestamp}-${idx}`} className="hover:bg-warmgray-50">
                   <td className="px-4 py-3 text-warmgray-500 font-mono text-xs whitespace-nowrap">
-                    {log.createdAt
-                      ? new Date(log.createdAt).toLocaleString("en-US", {
+                    {log.timestamp
+                      ? new Date(log.timestamp).toLocaleString("en-US", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
@@ -213,7 +191,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
                           second: "2-digit",
                           hour12: false,
                         })
-                      : "—"}
+                      : "\u2014"}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -231,7 +209,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
                     {log.message}
                   </td>
                   <td className="px-4 py-3 text-warmgray-500 font-mono text-xs max-w-xs truncate">
-                    {log.meta ? JSON.stringify(log.meta) : "—"}
+                    {log.meta ? JSON.stringify(log.meta) : "\u2014"}
                   </td>
                 </tr>
               ))

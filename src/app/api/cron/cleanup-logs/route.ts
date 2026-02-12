@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { appLogs } from "@/db/schema";
-import { lt, sql } from "drizzle-orm";
+import { deleteOldLogs } from "@/lib/blob-logs";
 
 /**
  * GET /api/cron/cleanup-logs
  *
- * Vercel cron job that deletes app_logs older than 30 days.
+ * Vercel cron job that deletes log blobs older than 30 days.
  * Protected by CRON_SECRET to prevent unauthorized access.
  */
 export async function GET(req: NextRequest) {
@@ -21,12 +19,10 @@ export async function GET(req: NextRequest) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - 30);
 
-  const result = await db
-    .delete(appLogs)
-    .where(lt(appLogs.createdAt, cutoffDate));
+  const { deletedCount } = await deleteOldLogs(cutoffDate);
 
   return NextResponse.json({
     success: true,
-    message: `Cleaned up logs older than ${cutoffDate.toISOString()}`,
+    message: `Cleaned up ${deletedCount} log blobs older than ${cutoffDate.toISOString()}`,
   });
 }
