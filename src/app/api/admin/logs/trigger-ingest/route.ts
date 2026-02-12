@@ -11,14 +11,14 @@ export async function POST() {
   const [, authError] = await withAuth("logs:view");
   if (authError) return authError;
 
-  const cronSecret = process.env.CRON_SECRET;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
+  const cronSecret = process.env.CRON_SECRET || process.env.LOG_API_SECRET;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+    || "http://localhost:3000";
 
   if (!cronSecret) {
     return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
+      { error: "CRON_SECRET or LOG_API_SECRET not configured" },
       { status: 500 }
     );
   }
