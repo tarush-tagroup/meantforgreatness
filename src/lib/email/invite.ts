@@ -1,7 +1,5 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface SendInviteEmailParams {
   to: string;
   invitedByName: string;
@@ -13,6 +11,7 @@ export async function sendInviteEmail({
   invitedByName,
   roles,
 }: SendInviteEmailParams) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const roleLabels = roles.map((r) => r.replace("_", " ")).join(", ");
   const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://meantforgreatness.org"}/admin/login`;
 
