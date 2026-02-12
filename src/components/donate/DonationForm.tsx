@@ -21,8 +21,8 @@ export default function DonationForm() {
     e.preventDefault();
     setError("");
 
-    if (!amount || amount < 1) {
-      setError("Please enter a valid donation amount (minimum $1).");
+    if (!amount || amount < 10) {
+      setError("Please enter a valid donation amount (minimum $10).");
       return;
     }
 
@@ -124,7 +124,7 @@ export default function DonationForm() {
           ))}
         </div>
 
-        {/* Custom amount */}
+        {/* Other amount */}
         <div className="mt-3">
           <div
             className={`flex items-center rounded-lg border-2 px-4 py-3 transition-colors ${
@@ -136,10 +136,10 @@ export default function DonationForm() {
             <span className="text-warmgray-500 font-medium mr-2">$</span>
             <input
               type="number"
-              min="1"
+              min="10"
               max="10000"
               step="1"
-              placeholder="Custom amount"
+              placeholder="Other amount (min $10)"
               value={customAmount}
               onChange={(e) => {
                 setCustomAmount(e.target.value);
@@ -197,7 +197,7 @@ export default function DonationForm() {
 
       <button
         type="submit"
-        disabled={loading || !amount || amount < 1}
+        disabled={loading || !amount || amount < 10}
         className="w-full rounded-lg bg-amber-500 px-6 py-3.5 text-lg font-semibold text-white hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading

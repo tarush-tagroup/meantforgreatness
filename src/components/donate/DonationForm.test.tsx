@@ -62,9 +62,9 @@ describe("DonationForm", () => {
       expect(getPresetButton(500)).toBeInTheDocument();
     });
 
-    it("renders custom amount input", () => {
+    it("renders other amount input", () => {
       render(<DonationForm />);
-      expect(screen.getByPlaceholderText("Custom amount")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Other amount (min $10)")).toBeInTheDocument();
     });
 
     it("renders submit button", () => {
@@ -87,14 +87,14 @@ describe("DonationForm", () => {
 
     it("switches to custom amount when typing", async () => {
       render(<DonationForm />);
-      const input = screen.getByPlaceholderText("Custom amount");
+      const input = screen.getByPlaceholderText("Other amount (min $10)");
       await user.type(input, "75");
       expect(getSubmitButton().textContent).toMatch(/Donate \$75/);
     });
 
     it("switches back to preset after selecting custom", async () => {
       render(<DonationForm />);
-      const input = screen.getByPlaceholderText("Custom amount");
+      const input = screen.getByPlaceholderText("Other amount (min $10)");
       await user.type(input, "75");
       await user.click(getPresetButton(100));
       expect(getSubmitButton().textContent).toMatch(/Donate \$100/);
@@ -139,10 +139,10 @@ describe("DonationForm", () => {
   });
 
   describe("validation", () => {
-    it("disables submit button for amount less than $1", async () => {
+    it("disables submit button for amount less than $10", async () => {
       render(<DonationForm />);
-      const input = screen.getByPlaceholderText("Custom amount");
-      await user.type(input, "0.5");
+      const input = screen.getByPlaceholderText("Other amount (min $10)");
+      await user.type(input, "5");
 
       expect(getSubmitButton()).toBeDisabled();
       expect(mockFetch).not.toHaveBeenCalled();
@@ -150,7 +150,7 @@ describe("DonationForm", () => {
 
     it("shows error for amount over $10,000", async () => {
       render(<DonationForm />);
-      const input = screen.getByPlaceholderText("Custom amount");
+      const input = screen.getByPlaceholderText("Other amount (min $10)");
       await user.type(input, "20000");
 
       // The HTML5 max="10000" constraint blocks normal form submission,
@@ -165,7 +165,7 @@ describe("DonationForm", () => {
 
     it("clears error on new submit attempt", async () => {
       render(<DonationForm />);
-      const input = screen.getByPlaceholderText("Custom amount");
+      const input = screen.getByPlaceholderText("Other amount (min $10)");
       await user.type(input, "20000");
 
       fireEvent.submit(input.closest("form")!);
