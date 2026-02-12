@@ -2,8 +2,8 @@ name: Vercel Error Monitor
 
 on:
   schedule:
-    # Run every 6 hours (reduced from 30 min to conserve GitHub Actions minutes)
-    - cron: "0 */6 * * *"
+    # Run every hour
+    - cron: "0 * * * *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
@@ -47,9 +47,9 @@ jobs:
           DEPLOYMENT_URL=$(echo "$DEPLOYMENTS" | jq -r '.deployments[0].url // empty')
           echo "Latest deployment: $DEPLOYMENT_ID ($DEPLOYMENT_URL)"
 
-          # Step 2: Fetch runtime logs for this deployment (last 6 hours)
+          # Step 2: Fetch runtime logs for this deployment (last 1 hour)
           # Use the log drain events API or runtime logs
-          SINCE=$(date -d '6 hours ago' +%s000 2>/dev/null || date -v-6H +%s000 2>/dev/null || echo "")
+          SINCE=$(date -d '1 hour ago' +%s000 2>/dev/null || date -v-1H +%s000 2>/dev/null || echo "")
 
           RAW_LOGS=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
             "https://api.vercel.com/v2/deployments/$DEPLOYMENT_ID/events?teamId=$VERCEL_TEAM_ID&limit=500&direction=backward" 2>/dev/null || true)
@@ -102,7 +102,7 @@ jobs:
           LOG_API_SECRET: ${{ secrets.LOG_API_SECRET }}
           BASE_URL: https://www.meantforgreatness.org
         run: |
-          SINCE=$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-6H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
+          SINCE=$(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-1H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
 
           if [ -z "$LOG_API_SECRET" ]; then
             echo "LOG_API_SECRET not configured — skipping centralized log check."
