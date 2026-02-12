@@ -10,6 +10,13 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow bearer-token auth for specific API routes (GitHub Actions, cron)
+  // These routes handle their own auth in the route handler
+  const authHeader = req.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ") && pathname === "/api/admin/logs") {
+    return NextResponse.next();
+  }
+
   // For protected routes, check session
   const session = await auth();
 
