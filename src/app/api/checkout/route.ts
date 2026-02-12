@@ -85,8 +85,18 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("Checkout error:", err);
+
+    // Return Stripe-specific error details for debugging
+    if (err instanceof Error && "type" in err) {
+      const stripeErr = err as { type: string; code?: string; message: string };
+      return NextResponse.json(
+        { error: stripeErr.message, code: stripeErr.code, type: stripeErr.type },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "An error occurred creating the checkout session." },
+      { error: err instanceof Error ? err.message : "An error occurred creating the checkout session." },
       { status: 500 }
     );
   }

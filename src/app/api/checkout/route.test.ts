@@ -168,12 +168,12 @@ describe("POST /api/checkout", () => {
   });
 
   describe("error handling", () => {
-    it("returns 500 when Stripe throws", async () => {
+    it("returns actual error message when Stripe throws", async () => {
       mockSessionCreate.mockRejectedValue(new Error("Stripe API down"));
       const res = await POST(makeRequest({ amount: 50, frequency: "one_time" }));
       const data = await res.json();
       expect(res.status).toBe(500);
-      expect(data.error).toBe("An error occurred creating the checkout session.");
+      expect(data.error).toBe("Stripe API down");
     });
 
     it("returns 500 for malformed request body", async () => {
