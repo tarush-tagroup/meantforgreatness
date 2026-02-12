@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+import { analyzeClassLogPhotos, validatePhotoDate } from "@/lib/ai-photo-analysis";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { haversineDistance } from "@/lib/geocode";
 import { db } from "@/db";
@@ -19,6 +19,8 @@ const analyzeSchema = z.object({
     })
     .nullable()
     .optional(),
+  // EXIF date extracted from photo metadata (optional)
+  exifDateTaken: z.string().nullable().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -59,9 +61,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { classLogId, photoUrls, photoGps } = parsed.data;
+  const { classLogId, photoUrls, photoGps, exifDateTaken } = parsed.data;
 
-  // Fetch the class log, orphanage name, and orphanage GPS coordinates
+  // Fetch the class log, orphanage name, orphanage GPS, and user-entered date/time
   const [row] = await db
     .select({
       id: classLogs.id,
@@ -69,6 +71,8 @@ export async function POST(req: NextRequest) {
       orphanageName: orphanages.name,
       orphanageLat: orphanages.latitude,
       orphanageLon: orphanages.longitude,
+      classDate: classLogs.classDate,
+      classTime: classLogs.classTime,
     })
     .from(classLogs)
     .leftJoin(orphanages, eq(classLogs.orphanageId, orphanages.id))
@@ -94,9 +98,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Calculate GPS-based orphanage match if both coordinates are available
+    // ── Location verification: GPS + AI vision (do both, prefer GPS) ──
     let gpsDistance: number | null = null;
     let gpsBasedMatch: "high" | "likely" | "uncertain" | "unlikely" | null = null;
+    const verificationMethods: string[] = [];
 
     if (
       photoGps &&
@@ -112,25 +117,30 @@ export async function POST(req: NextRequest) {
         )
       );
 
-      // GPS-based match: within 200m = high match
-      if (gpsDistance <= 200) {
-        gpsBasedMatch = "high";
-      } else if (gpsDistance <= 500) {
-        gpsBasedMatch = "likely";
-      } else if (gpsDistance <= 2000) {
-        gpsBasedMatch = "uncertain";
-      } else {
-        gpsBasedMatch = "unlikely";
-      }
+      if (gpsDistance <= 200) gpsBasedMatch = "high";
+      else if (gpsDistance <= 500) gpsBasedMatch = "likely";
+      else if (gpsDistance <= 2000) gpsBasedMatch = "uncertain";
+      else gpsBasedMatch = "unlikely";
+
+      verificationMethods.push(`GPS (${gpsDistance}m from orphanage)`);
     }
 
-    // Use GPS-based match if available (more reliable), otherwise fall back to AI vision match
-    const finalOrphanageMatch = gpsBasedMatch || analysis.orphanageMatch;
-    const finalConfidenceNotes = gpsBasedMatch
-      ? `GPS: Photo taken ${gpsDistance}m from orphanage (threshold: 200m). ${analysis.confidenceNotes}`
-      : analysis.confidenceNotes;
+    // AI vision is always run
+    verificationMethods.push(`AI vision (${analysis.orphanageMatch})`);
 
-    // Save the AI metadata to the class log
+    // Final match: prioritize GPS if available, otherwise use AI vision
+    const finalOrphanageMatch = gpsBasedMatch || analysis.orphanageMatch;
+    const methodSummary = `Verified by: ${verificationMethods.join(" + ")}`;
+    const finalConfidenceNotes = `${methodSummary}. ${analysis.confidenceNotes}`;
+
+    // ── Date verification: EXIF metadata vs user-entered date ──
+    const dateValidation = validatePhotoDate(
+      exifDateTaken || null,
+      row.classDate,
+      row.classTime
+    );
+
+    // Save all metadata to the class log
     await db
       .update(classLogs)
       .set({
@@ -144,6 +154,9 @@ export async function POST(req: NextRequest) {
         photoLatitude: photoGps?.latitude ?? null,
         photoLongitude: photoGps?.longitude ?? null,
         aiGpsDistance: gpsDistance,
+        exifDateTaken: exifDateTaken || null,
+        aiDateMatch: dateValidation.dateMatch,
+        aiDateNotes: dateValidation.dateNotes,
       })
       .where(eq(classLogs.id, classLogId));
 
@@ -153,6 +166,9 @@ export async function POST(req: NextRequest) {
         orphanageMatch: finalOrphanageMatch,
         confidenceNotes: finalConfidenceNotes,
         gpsDistance,
+        dateMatch: dateValidation.dateMatch,
+        dateNotes: dateValidation.dateNotes,
+        verificationMethods,
       },
     });
   } catch (error) {

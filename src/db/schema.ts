@@ -104,6 +104,10 @@ export const classLogs = pgTable(
     photoLatitude: doublePrecision("photo_latitude"),
     photoLongitude: doublePrecision("photo_longitude"),
     aiGpsDistance: doublePrecision("ai_gps_distance"), // distance in meters from orphanage
+    // EXIF date/time extracted from photo metadata
+    exifDateTaken: varchar("exif_date_taken", { length: 30 }), // ISO 8601 from EXIF, e.g. "2025-03-12T10:30:00"
+    aiDateMatch: varchar("ai_date_match", { length: 20 }), // "match" | "mismatch" | "no_exif"
+    aiDateNotes: text("ai_date_notes"), // human-readable explanation of date validation
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

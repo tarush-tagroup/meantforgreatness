@@ -13,6 +13,7 @@ interface PhotoItem {
   url: string;
   caption?: string | null;
   gps?: GpsData | null;
+  exifDateTaken?: string | null;
 }
 
 interface AiMetadata {
@@ -117,7 +118,7 @@ export default function ClassLogForm({
         }
 
         const data = await res.json();
-        newPhotos.push({ url: data.url, caption: null, gps: data.gps || null });
+        newPhotos.push({ url: data.url, caption: null, gps: data.gps || null, exifDateTaken: data.exifDateTaken || null });
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
@@ -145,8 +146,9 @@ export default function ClassLogForm({
     setSaving(true);
 
     try {
-      // Find first photo with GPS data to pass along for location verification
+      // Find first photo with GPS/EXIF data to pass along for verification
       const firstGps = photos.find((p) => p.gps)?.gps || null;
+      const firstExifDate = photos.find((p) => p.exifDateTaken)?.exifDateTaken || null;
 
       const payload: Record<string, unknown> = {
         orphanageId,
@@ -157,6 +159,7 @@ export default function ClassLogForm({
           sortOrder: i,
         })),
         photoGps: firstGps,
+        exifDateTaken: firstExifDate,
       };
       if (classTime) payload.classTime = classTime;
       if (studentCount) payload.studentCount = parseInt(studentCount);

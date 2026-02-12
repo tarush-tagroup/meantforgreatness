@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
 import { eq, desc, and, gte, lte, sql, asc } from "drizzle-orm";
 import { z } from "zod";
-import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+import { analyzeClassLogPhotos, validatePhotoDate } from "@/lib/ai-photo-analysis";
 import { haversineDistance } from "@/lib/geocode";
 
 const photoSchema = z.object({
@@ -27,6 +27,7 @@ const createSchema = z.object({
     })
     .nullable()
     .optional(),
+  exifDateTaken: z.string().nullable().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -187,13 +188,14 @@ export async function POST(req: NextRequest) {
   // Trigger AI photo analysis (non-blocking — runs in background)
   const photoUrls = parsed.data.photos.map((p) => p.url);
   const photoGps = parsed.data.photoGps;
+  const exifDateTaken = parsed.data.exifDateTaken;
   analyzeClassLogPhotos(photoUrls, orphanage.name)
     .then(async (analysis) => {
       if (analysis) {
-        // Calculate GPS-based orphanage match if coordinates available
+        // ── Location: GPS + AI vision (do both, prefer GPS) ──
         let gpsDistance: number | null = null;
-        let finalMatch = analysis.orphanageMatch;
-        let finalNotes = analysis.confidenceNotes;
+        let gpsBasedMatch: string | null = null;
+        const verificationMethods: string[] = [];
 
         if (
           photoGps &&
@@ -208,12 +210,24 @@ export async function POST(req: NextRequest) {
               orphanage.longitude
             )
           );
-          if (gpsDistance <= 200) finalMatch = "high";
-          else if (gpsDistance <= 500) finalMatch = "likely";
-          else if (gpsDistance <= 2000) finalMatch = "uncertain";
-          else finalMatch = "unlikely";
-          finalNotes = `GPS: Photo taken ${gpsDistance}m from orphanage (threshold: 200m). ${analysis.confidenceNotes}`;
+          if (gpsDistance <= 200) gpsBasedMatch = "high";
+          else if (gpsDistance <= 500) gpsBasedMatch = "likely";
+          else if (gpsDistance <= 2000) gpsBasedMatch = "uncertain";
+          else gpsBasedMatch = "unlikely";
+          verificationMethods.push(`GPS (${gpsDistance}m from orphanage)`);
         }
+        verificationMethods.push(`AI vision (${analysis.orphanageMatch})`);
+
+        const finalMatch = gpsBasedMatch || analysis.orphanageMatch;
+        const methodSummary = `Verified by: ${verificationMethods.join(" + ")}`;
+        const finalNotes = `${methodSummary}. ${analysis.confidenceNotes}`;
+
+        // ── Date: EXIF metadata vs user-entered date ──
+        const dateValidation = validatePhotoDate(
+          exifDateTaken || null,
+          parsed.data.classDate,
+          parsed.data.classTime || null
+        );
 
         await db
           .update(classLogs)
@@ -228,6 +242,9 @@ export async function POST(req: NextRequest) {
             photoLatitude: photoGps?.latitude ?? null,
             photoLongitude: photoGps?.longitude ?? null,
             aiGpsDistance: gpsDistance,
+            exifDateTaken: exifDateTaken || null,
+            aiDateMatch: dateValidation.dateMatch,
+            aiDateNotes: dateValidation.dateNotes,
           })
           .where(eq(classLogs.id, created.id));
       }

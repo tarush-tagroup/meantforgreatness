@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { put } from "@vercel/blob";
-import { optimizeImage, validateImageFile, extractExifGps } from "@/lib/image";
+import { optimizeImage, validateImageFile, extractExifMetadata } from "@/lib/image";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { db } from "@/db";
 import { media } from "@/db/schema";
@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  // Extract GPS coordinates from EXIF BEFORE optimization strips them
-  const gps = await extractExifGps(buffer);
+  // Extract EXIF metadata (GPS + date taken) BEFORE optimization strips them
+  const exifData = await extractExifMetadata(buffer);
 
   // Optimize the image (this strips EXIF)
   const optimized = await optimizeImage(buffer);
@@ -90,8 +90,9 @@ export async function POST(req: NextRequest) {
     {
       url: blob.url,
       media: record,
-      // Include GPS data if extracted from EXIF
-      gps: gps || null,
+      // Include EXIF data extracted before optimization stripped it
+      gps: exifData.gps || null,
+      exifDateTaken: exifData.dateTaken || null,
     },
     { status: 201 }
   );
