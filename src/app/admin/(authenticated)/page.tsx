@@ -279,7 +279,7 @@ export default async function AdminDashboard({
       </div>
 
       {/* ── All-time totals ── */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {canViewOrphanages && (
           <StatCard
             label="Total Orphanages"
@@ -316,7 +316,7 @@ export default async function AdminDashboard({
       </div>
 
       {/* ── Period metrics ── */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {canViewClasses && (
           <StatCard
             label={`Classes ${getPeriodLabel(period)}`}
@@ -359,7 +359,7 @@ export default async function AdminDashboard({
       {/* ── Recent Classes ── */}
       {canViewClasses && recentClassesResult.length > 0 && (
         <div className="mt-8">
-          <SectionHeader title="Recent Classes" href="/admin/classes" />
+          <SectionHeader title="Recent Classes" href="/admin/classes" showViewAll={classTotal > PAGE_SIZE} />
           <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
             <table className="min-w-full divide-y divide-warmgray-200">
               <thead className="bg-warmgray-50">
@@ -423,7 +423,7 @@ export default async function AdminDashboard({
       {/* ── Recent Events ── */}
       {canViewClasses && recentEventsResult.length > 0 && (
         <div className="mt-8">
-          <SectionHeader title="Recent Events" href="/admin/events" />
+          <SectionHeader title="Recent Events" href="/admin/events" showViewAll={eventTotal > PAGE_SIZE} />
           <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
             <table className="min-w-full divide-y divide-warmgray-200">
               <thead className="bg-warmgray-50">
@@ -489,7 +489,7 @@ export default async function AdminDashboard({
       {/* ── Recent Donations ── */}
       {canViewDonations && recentDonationsResult.length > 0 && (
         <div className="mt-8">
-          <SectionHeader title="Recent Donations" href="/admin/donations" />
+          <SectionHeader title="Recent Donations" href="/admin/donations" showViewAll={donationTotal > PAGE_SIZE} />
           <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
             <table className="min-w-full divide-y divide-warmgray-200">
               <thead className="bg-warmgray-50">
@@ -590,16 +590,26 @@ function StatCard({
   return content;
 }
 
-function SectionHeader({ title, href }: { title: string; href: string }) {
+function SectionHeader({
+  title,
+  href,
+  showViewAll = false,
+}: {
+  title: string;
+  href: string;
+  showViewAll?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-lg font-semibold text-warmgray-900">{title}</h2>
-      <Link
-        href={href}
-        className="text-sm font-medium text-teal-600 hover:text-teal-700"
-      >
-        View all &rarr;
-      </Link>
+      {showViewAll && (
+        <Link
+          href={href}
+          className="text-sm font-medium text-teal-600 hover:text-teal-700"
+        >
+          View all &rarr;
+        </Link>
+      )}
     </div>
   );
 }
