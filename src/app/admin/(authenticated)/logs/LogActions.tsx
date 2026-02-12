@@ -13,15 +13,23 @@ interface LogActionsProps {
   } | null;
 }
 
+interface ErrorEntry {
+  timestamp: string;
+  source: string;
+  message: string;
+}
+
 export default function LogActions({ lastRun }: LogActionsProps) {
   const router = useRouter();
   const [ingestLoading, setIngestLoading] = useState(false);
-  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [checkLoading, setCheckLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [recentErrors, setRecentErrors] = useState<ErrorEntry[] | null>(null);
 
   async function triggerIngest() {
     setIngestLoading(true);
     setFeedback(null);
+    setRecentErrors(null);
     try {
       const res = await fetch("/api/admin/logs/trigger-ingest", {
         method: "POST",
@@ -40,25 +48,37 @@ export default function LogActions({ lastRun }: LogActionsProps) {
     }
   }
 
-  async function triggerMonitor() {
-    setMonitorLoading(true);
+  async function checkForErrors() {
+    setCheckLoading(true);
     setFeedback(null);
+    setRecentErrors(null);
     try {
-      const res = await fetch("/api/admin/logs/trigger-monitor", {
-        method: "POST",
-      });
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const res = await fetch(
+        `/api/admin/logs?level=error&since=${encodeURIComponent(since)}&limit=20`
+      );
       const data = await res.json();
-      if (res.ok) {
-        setFeedback("Monitor workflow triggered — check GitHub Actions for progress.");
+      if (!res.ok) {
+        setFeedback(`Check failed: ${data.error || "unknown error"}`);
+        return;
+      }
+      const errors: ErrorEntry[] = data.data || [];
+      if (errors.length === 0) {
+        setFeedback("No errors in the last hour");
+        setRecentErrors([]);
       } else {
-        setFeedback(`Monitor failed: ${data.error || data.message || "unknown error"}`);
+        setFeedback(`Found ${data.pagination?.total || errors.length} error${errors.length !== 1 ? "s" : ""} in the last hour`);
+        setRecentErrors(errors);
       }
     } catch (err) {
-      setFeedback(`Monitor failed: ${err instanceof Error ? err.message : "network error"}`);
+      setFeedback(`Check failed: ${err instanceof Error ? err.message : "network error"}`);
     } finally {
-      setMonitorLoading(false);
+      setCheckLoading(false);
     }
   }
+
+  const hasErrors = recentErrors !== null && recentErrors.length > 0;
+  const noErrors = recentErrors !== null && recentErrors.length === 0;
 
   return (
     <div className="mb-6 rounded-lg border border-warmgray-200 bg-white p-4">
@@ -138,14 +158,14 @@ export default function LogActions({ lastRun }: LogActionsProps) {
             )}
           </button>
           <button
-            onClick={triggerMonitor}
-            disabled={monitorLoading}
+            onClick={checkForErrors}
+            disabled={checkLoading}
             className="inline-flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {monitorLoading ? (
+            {checkLoading ? (
               <>
                 <Spinner />
-                Triggering…
+                Checking…
               </>
             ) : (
               <>
@@ -161,12 +181,51 @@ export default function LogActions({ lastRun }: LogActionsProps) {
       {feedback && (
         <div
           className={`mt-3 rounded-md px-3 py-2 text-sm ${
-            feedback.includes("failed") || feedback.includes("error")
+            hasErrors
               ? "bg-red-50 text-red-700"
-              : "bg-teal-50 text-teal-700"
+              : noErrors
+                ? "bg-teal-50 text-teal-700"
+                : feedback.includes("failed") || feedback.includes("Failed")
+                  ? "bg-red-50 text-red-700"
+                  : "bg-teal-50 text-teal-700"
           }`}
         >
           {feedback}
+        </div>
+      )}
+
+      {/* Error list */}
+      {hasErrors && (
+        <div className="mt-3 rounded-md border border-red-200 overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-red-50">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-red-700 w-36">Time</th>
+                <th className="text-left px-3 py-2 font-medium text-red-700 w-32">Source</th>
+                <th className="text-left px-3 py-2 font-medium text-red-700">Message</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-red-100 bg-white">
+              {recentErrors!.map((err, i) => (
+                <tr key={`${err.timestamp}-${i}`} className="hover:bg-red-50/50">
+                  <td className="px-3 py-2 text-warmgray-500 font-mono whitespace-nowrap">
+                    {new Date(err.timestamp).toLocaleString("en-US", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: false,
+                    })}
+                  </td>
+                  <td className="px-3 py-2 text-warmgray-700 font-mono">
+                    {err.source}
+                  </td>
+                  <td className="px-3 py-2 text-warmgray-900 max-w-md truncate">
+                    {err.message}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
