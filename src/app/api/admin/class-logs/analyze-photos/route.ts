@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { db } from "@/db";
 import { classLogs, orphanages } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -12,8 +13,27 @@ const analyzeSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const [, authError] = await withAuth("class_logs:create");
+  const [user, authError] = await withAuth("class_logs:create");
   if (authError) return authError;
+
+  // Rate limit: 30 AI analysis requests per hour per user
+  const rateLimitResult = checkRateLimit(
+    `ai-analysis:${user!.id}`,
+    RATE_LIMITS.aiAnalysis
+  );
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { error: "AI analysis rate limit exceeded. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
+          ),
+        },
+      }
+    );
+  }
 
   let body;
   try {

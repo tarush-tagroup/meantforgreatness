@@ -2,6 +2,7 @@
  * Seed script to initialize the database with:
  * 1. The initial admin user
  * 2. Orphanage data migrated from hardcoded src/data/orphanages.ts
+ * 3. Waterbom Bali event (previously hardcoded in EventSection)
  *
  * Usage: npx tsx src/db/seed.ts
  *
@@ -10,7 +11,8 @@
 
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { users, orphanages, classGroups } from "./schema";
+import { eq } from "drizzle-orm";
+import { users, orphanages, classGroups, events, eventPhotos } from "./schema";
 
 async function seed() {
   if (!process.env.DATABASE_URL) {
@@ -150,6 +152,52 @@ async function seed() {
           orphanageId: orphanage.id,
           ...group,
         })
+        .onConflictDoNothing();
+    }
+  }
+
+  // 3. Seed the Waterbom Bali event (previously hardcoded)
+  console.log("Seeding Waterbom Bali event...");
+
+  // Get the admin user ID for createdBy
+  const [adminUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, "tarush.aggarwal@gmail.com"))
+    .limit(1);
+
+  if (adminUser) {
+    const [waterbomEvent] = await db
+      .insert(events)
+      .values({
+        title: "Waterbom Bali Outing",
+        description:
+          "A fun day out at Waterbom water park with kids from Seeds of Hope and Chloe Orphanage. These outings give the children a chance to have fun, build friendships, and create lasting memories outside the classroom.",
+        eventDate: "2025-01-15",
+        createdBy: adminUser.id,
+        coverImageUrl: "/images/waterbom-group.jpg",
+        active: true,
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    if (waterbomEvent) {
+      await db
+        .insert(eventPhotos)
+        .values([
+          {
+            eventId: waterbomEvent.id,
+            url: "/images/waterbom-girls.jpg",
+            caption: "Three girls with peace signs at Waterbom Bali",
+            sortOrder: 0,
+          },
+          {
+            eventId: waterbomEvent.id,
+            url: "/images/waterbom-kids.jpg",
+            caption: "Group of kids smiling together at Waterbom Bali",
+            sortOrder: 1,
+          },
+        ])
         .onConflictDoNothing();
     }
   }

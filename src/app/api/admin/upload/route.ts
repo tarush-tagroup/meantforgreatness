@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { put } from "@vercel/blob";
 import { optimizeImage, validateImageFile } from "@/lib/image";
+import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { db } from "@/db";
 import { media } from "@/db/schema";
 
@@ -10,6 +11,30 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const [user, authError] = await withAuth("media:upload");
   if (authError) return authError;
+
+  // Rate limit: 20 uploads per hour per user
+  const rateLimitResult = checkRateLimit(
+    `upload:${user!.id}`,
+    RATE_LIMITS.upload
+  );
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { error: "Upload rate limit exceeded. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)
+          ),
+          "X-RateLimit-Limit": String(RATE_LIMITS.upload.maxRequests),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(
+            Math.ceil(rateLimitResult.resetAt / 1000)
+          ),
+        },
+      }
+    );
+  }
 
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
