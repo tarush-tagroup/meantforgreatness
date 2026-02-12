@@ -59,10 +59,11 @@ export async function POST(req: NextRequest) {
         cancel_url: `${baseUrl}/donate`,
       });
 
+      console.log("Stripe session created:", { id: session.id, url: session.url, status: session.status });
+
       if (!session.url) {
-        console.error("Stripe session created but no URL returned:", JSON.stringify(session, null, 2));
         return NextResponse.json(
-          { error: "Checkout session created but no redirect URL was returned. Please try again." },
+          { error: `Checkout session ${session.id} created (status: ${session.status}) but no URL returned.` },
           { status: 500 }
         );
       }
@@ -91,10 +92,11 @@ export async function POST(req: NextRequest) {
         cancel_url: `${baseUrl}/donate`,
       });
 
+      console.log("Stripe session created:", { id: session.id, url: session.url, status: session.status });
+
       if (!session.url) {
-        console.error("Stripe session created but no URL returned:", JSON.stringify(session, null, 2));
         return NextResponse.json(
-          { error: "Checkout session created but no redirect URL was returned. Please try again." },
+          { error: `Checkout session ${session.id} created (status: ${session.status}) but no URL returned.` },
           { status: 500 }
         );
       }

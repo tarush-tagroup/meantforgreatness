@@ -46,6 +46,10 @@ export default function DonationForm() {
         throw new Error(data.error || "Something went wrong");
       }
 
+      if (!data.url || typeof data.url !== "string") {
+        throw new Error(`Invalid checkout URL received: ${JSON.stringify(data.url)}`);
+      }
+
       window.location.href = data.url;
     } catch (err) {
       setError(
