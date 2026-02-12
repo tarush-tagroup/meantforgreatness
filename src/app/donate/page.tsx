@@ -48,7 +48,7 @@ export default function DonatePage() {
 
         <div className="mt-8 text-center text-sm text-warmgray-500">
           <p>
-            5X is a registered 501(c)(3) nonprofit organization. All donations
+            White Light Ventures, Inc is a registered 501(c)(3) nonprofit organization. All donations
             are tax-deductible to the extent allowed by law.
           </p>
         </div>
