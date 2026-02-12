@@ -28,22 +28,29 @@ export default function DonatePage() {
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-sm">
           <div>
             <div className="font-semibold text-warmgray-800 mb-1">
-              $25/month
+              $50/month
             </div>
-            <div className="text-warmgray-500">Sponsors 1 child</div>
+            <div className="text-warmgray-500">Sponsors a child</div>
           </div>
           <div>
             <div className="font-semibold text-warmgray-800 mb-1">
               $100/month
             </div>
-            <div className="text-warmgray-500">Sponsors 4-5 children</div>
+            <div className="text-warmgray-500">Sponsors multiple children</div>
           </div>
           <div>
             <div className="font-semibold text-warmgray-800 mb-1">
-              $250/month
+              $500/month
             </div>
             <div className="text-warmgray-500">Sponsors a teacher</div>
           </div>
+        </div>
+
+        <div className="mt-8 text-center text-sm text-warmgray-500">
+          <p>
+            5X is a registered 501(c)(3) nonprofit organization. All donations
+            are tax-deductible to the extent allowed by law.
+          </p>
         </div>
       </div>
     </div>
