@@ -5,6 +5,7 @@ import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
 import { eq, desc, and, gte, lte, sql, asc } from "drizzle-orm";
 import { z } from "zod";
 import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+import { haversineDistance } from "@/lib/geocode";
 
 const photoSchema = z.object({
   url: z.string().url(),
@@ -19,6 +20,13 @@ const createSchema = z.object({
   studentCount: z.number().int().min(0).optional(),
   photos: z.array(photoSchema).min(1, "At least one photo is required"),
   notes: z.string().max(2000).optional(),
+  photoGps: z
+    .object({
+      latitude: z.number(),
+      longitude: z.number(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -178,19 +186,48 @@ export async function POST(req: NextRequest) {
 
   // Trigger AI photo analysis (non-blocking — runs in background)
   const photoUrls = parsed.data.photos.map((p) => p.url);
+  const photoGps = parsed.data.photoGps;
   analyzeClassLogPhotos(photoUrls, orphanage.name)
     .then(async (analysis) => {
       if (analysis) {
+        // Calculate GPS-based orphanage match if coordinates available
+        let gpsDistance: number | null = null;
+        let finalMatch = analysis.orphanageMatch;
+        let finalNotes = analysis.confidenceNotes;
+
+        if (
+          photoGps &&
+          orphanage.latitude != null &&
+          orphanage.longitude != null
+        ) {
+          gpsDistance = Math.round(
+            haversineDistance(
+              photoGps.latitude,
+              photoGps.longitude,
+              orphanage.latitude,
+              orphanage.longitude
+            )
+          );
+          if (gpsDistance <= 200) finalMatch = "high";
+          else if (gpsDistance <= 500) finalMatch = "likely";
+          else if (gpsDistance <= 2000) finalMatch = "uncertain";
+          else finalMatch = "unlikely";
+          finalNotes = `GPS: Photo taken ${gpsDistance}m from orphanage (threshold: 200m). ${analysis.confidenceNotes}`;
+        }
+
         await db
           .update(classLogs)
           .set({
             aiKidsCount: analysis.kidsCount,
             aiLocation: analysis.location,
             aiPhotoTimestamp: analysis.photoTimestamp,
-            aiOrphanageMatch: analysis.orphanageMatch,
-            aiConfidenceNotes: analysis.confidenceNotes,
+            aiOrphanageMatch: finalMatch,
+            aiConfidenceNotes: finalNotes,
             aiPrimaryPhotoUrl: analysis.primaryPhotoUrl,
             aiAnalyzedAt: new Date(),
+            photoLatitude: photoGps?.latitude ?? null,
+            photoLongitude: photoGps?.longitude ?? null,
+            aiGpsDistance: gpsDistance,
           })
           .where(eq(classLogs.id, created.id));
       }

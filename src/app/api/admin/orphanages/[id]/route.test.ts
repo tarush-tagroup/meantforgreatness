@@ -30,6 +30,10 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn((_col: unknown, _val: unknown) => "eq"),
 }));
 
+vi.mock("@/lib/geocode", () => ({
+  geocodeAddress: vi.fn().mockResolvedValue(null),
+}));
+
 import { GET, PUT } from "./route";
 import { NextRequest } from "next/server";
 
@@ -119,7 +123,7 @@ describe("PUT /api/admin/orphanages/[id]", () => {
     name: "Chloe Orphanage",
     location: "Denpasar",
     description: "A great orphanage",
-    imageUrl: "/images/chloe.jpg",
+    imageUrl: "https://example.blob.vercel-storage.com/images/chloe.webp",
     studentCount: 18,
     classesPerWeek: 2,
   };

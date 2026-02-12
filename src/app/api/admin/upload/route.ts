@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { put } from "@vercel/blob";
-import { optimizeImage, validateImageFile } from "@/lib/image";
+import { optimizeImage, validateImageFile, extractExifGps } from "@/lib/image";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { db } from "@/db";
 import { media } from "@/db/schema";
@@ -49,9 +49,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
-  // Read file into buffer and optimize
+  // Read file into buffer
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+
+  // Extract GPS coordinates from EXIF BEFORE optimization strips them
+  const gps = await extractExifGps(buffer);
+
+  // Optimize the image (this strips EXIF)
   const optimized = await optimizeImage(buffer);
 
   // Generate filename: timestamp-original.webp
@@ -85,6 +90,8 @@ export async function POST(req: NextRequest) {
     {
       url: blob.url,
       media: record,
+      // Include GPS data if extracted from EXIF
+      gps: gps || null,
     },
     { status: 201 }
   );

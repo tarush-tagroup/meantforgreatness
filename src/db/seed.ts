@@ -1,8 +1,12 @@
 /**
  * Seed script to initialize the database with:
  * 1. The initial admin user
- * 2. Orphanage data migrated from hardcoded src/data/orphanages.ts
- * 3. Waterbom Bali event (previously hardcoded in EventSection)
+ * 2. Orphanage data (text data only — images are managed via admin panel)
+ * 3. Waterbom Bali event (text data only — images are managed via admin panel)
+ *
+ * Note: Orphanage and event images are NOT seeded here. They should be uploaded
+ * through the admin panel (which stores them on Vercel Blob) or by running:
+ *   npx tsx src/db/migrate-images-to-blob.ts
  *
  * Usage: npx tsx src/db/seed.ts
  *
@@ -40,6 +44,8 @@ async function seed() {
   // 2. Seed orphanages (migrated from src/data/orphanages.ts)
   console.log("Seeding orphanages...");
 
+  // Note: imageUrl is intentionally omitted — images are managed via admin panel
+  // and stored on Vercel Blob. Run migrate-images-to-blob.ts to upload initial images.
   const orphanageData = [
     {
       id: "chloe",
@@ -47,7 +53,8 @@ async function seed() {
       address:
         "Gg. Satriya Buana Jl. Buana Raya No.1x, Padangsambian, Kec. Denpasar Bar., Kota Denpasar, Bali 80351",
       location: "Denpasar, Bali",
-      imageUrl: "/images/chloe.jpg",
+      latitude: -8.6604026,
+      longitude: 115.1875247,
       studentCount: 20,
       classesPerWeek: 4,
       description:
@@ -62,7 +69,8 @@ async function seed() {
       name: "Seeds of Hope Orphanage",
       indonesianName: "Benih Harapan",
       location: "Denpasar, Bali",
-      imageUrl: "/images/seeds-of-hope.jpg",
+      latitude: -8.6109385,
+      longitude: 115.1777757,
       studentCount: 46,
       classesPerWeek: 15,
       hoursPerWeek: 15,
@@ -98,7 +106,8 @@ async function seed() {
       address:
         "Jl. Veteran No.3, Buduk, Kec. Mengwi, Kabupaten Badung, Bali 80351",
       location: "Badung, Bali",
-      imageUrl: "/images/sekar-pengharapan.jpg",
+      latitude: -8.6105845,
+      longitude: 115.1598903,
       studentCount: 26,
       classesPerWeek: 4,
       curriculum: "English for Everyone – Level 2",
@@ -120,7 +129,8 @@ async function seed() {
       address:
         "Jl. Tunjung Sari No.38, Padangsambian Kaja, Kec. Denpasar Bar., Kota Denpasar, Bali 80117",
       location: "Denpasar, Bali",
-      imageUrl: "/images/sunya-giri.jpg",
+      latitude: -8.6528080,
+      longitude: 115.1899000,
       studentCount: 17,
       classesPerWeek: 6,
       description:
@@ -167,7 +177,9 @@ async function seed() {
     .limit(1);
 
   if (adminUser) {
-    const [waterbomEvent] = await db
+    // Note: Event images are managed via admin panel and stored on Vercel Blob.
+    // Seed only creates the text data — upload images through the admin panel.
+    await db
       .insert(events)
       .values({
         title: "Waterbom Bali Outing",
@@ -175,31 +187,9 @@ async function seed() {
           "A fun day out at Waterbom water park with kids from Seeds of Hope and Chloe Orphanage. These outings give the children a chance to have fun, build friendships, and create lasting memories outside the classroom.",
         eventDate: "2025-01-15",
         createdBy: adminUser.id,
-        coverImageUrl: "/images/waterbom-group.jpg",
         active: true,
       })
-      .onConflictDoNothing()
-      .returning();
-
-    if (waterbomEvent) {
-      await db
-        .insert(eventPhotos)
-        .values([
-          {
-            eventId: waterbomEvent.id,
-            url: "/images/waterbom-girls.jpg",
-            caption: "Three girls with peace signs at Waterbom Bali",
-            sortOrder: 0,
-          },
-          {
-            eventId: waterbomEvent.id,
-            url: "/images/waterbom-kids.jpg",
-            caption: "Group of kids smiling together at Waterbom Bali",
-            sortOrder: 1,
-          },
-        ])
-        .onConflictDoNothing();
-    }
+      .onConflictDoNothing();
   }
 
   console.log("Seed complete!");

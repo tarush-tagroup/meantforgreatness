@@ -4,9 +4,15 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
+interface GpsData {
+  latitude: number;
+  longitude: number;
+}
+
 interface PhotoItem {
   url: string;
   caption?: string | null;
+  gps?: GpsData | null;
 }
 
 interface AiMetadata {
@@ -111,7 +117,7 @@ export default function ClassLogForm({
         }
 
         const data = await res.json();
-        newPhotos.push({ url: data.url, caption: null });
+        newPhotos.push({ url: data.url, caption: null, gps: data.gps || null });
       }
 
       setPhotos((prev) => [...prev, ...newPhotos]);
@@ -139,6 +145,9 @@ export default function ClassLogForm({
     setSaving(true);
 
     try {
+      // Find first photo with GPS data to pass along for location verification
+      const firstGps = photos.find((p) => p.gps)?.gps || null;
+
       const payload: Record<string, unknown> = {
         orphanageId,
         classDate,
@@ -147,6 +156,7 @@ export default function ClassLogForm({
           caption: p.caption || null,
           sortOrder: i,
         })),
+        photoGps: firstGps,
       };
       if (classTime) payload.classTime = classTime;
       if (studentCount) payload.studentCount = parseInt(studentCount);

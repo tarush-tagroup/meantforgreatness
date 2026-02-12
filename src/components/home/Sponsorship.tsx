@@ -1,6 +1,20 @@
 import Link from "next/link";
+import { db } from "@/db";
+import { orphanages } from "@/db/schema";
+import { sql } from "drizzle-orm";
 
-export default function Sponsorship() {
+export default async function Sponsorship() {
+  // Fetch live stats from the database
+  const [stats] = await db
+    .select({
+      orphanageCount: sql<number>`count(*)`,
+      totalStudents: sql<number>`coalesce(sum(${orphanages.studentCount}), 0)`,
+    })
+    .from(orphanages);
+
+  const orphanageCount = Number(stats?.orphanageCount || 0);
+  const totalStudents = Number(stats?.totalStudents || 0);
+
   const options = [
     {
       title: "Sponsor a Kid",
@@ -63,11 +77,11 @@ export default function Sponsorship() {
           </Link>
         </div>
 
-        {/* Impact stats */}
+        {/* Impact stats — pulled from database */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
-            { stat: "4", label: "Orphanages" },
-            { stat: "100+", label: "Kids" },
+            { stat: String(orphanageCount), label: "Orphanages" },
+            { stat: `${totalStudents}+`, label: "Kids" },
             { stat: "Bali", label: "Indonesia" },
             { stat: "Sept 2024", label: "Classes Since" },
           ].map((item) => (

@@ -9,6 +9,7 @@ import {
   date,
   jsonb,
   index,
+  doublePrecision,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
@@ -54,6 +55,9 @@ export const orphanages = pgTable("orphanages", {
   studentCount: integer("student_count").notNull().default(0),
   classesPerWeek: integer("classes_per_week").notNull().default(0),
   hoursPerWeek: integer("hours_per_week"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  websiteUrl: text("website_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -96,6 +100,10 @@ export const classLogs = pgTable(
     aiConfidenceNotes: text("ai_confidence_notes"),
     aiPrimaryPhotoUrl: text("ai_primary_photo_url"),
     aiAnalyzedAt: timestamp("ai_analyzed_at"),
+    // GPS coordinates extracted from photo EXIF data
+    photoLatitude: doublePrecision("photo_latitude"),
+    photoLongitude: doublePrecision("photo_longitude"),
+    aiGpsDistance: doublePrecision("ai_gps_distance"), // distance in meters from orphanage
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

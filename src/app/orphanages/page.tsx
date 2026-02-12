@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Our Orphanages",
   description:
-    "Meet the 4 orphanages across Bali where we run English classes for over 100 children.",
+    "Meet the orphanages across Bali where we run English classes for children in need.",
 };
 
 export default async function OrphanagesPage() {
   const orphanages = await getAllOrphanages();
+  const totalStudents = orphanages.reduce((sum, o) => sum + o.studentCount, 0);
 
   return (
     <div className="py-12 sm:py-16">
@@ -23,8 +24,8 @@ export default async function OrphanagesPage() {
             Our Orphanages
           </h1>
           <p className="mx-auto max-w-2xl text-lg text-warmgray-600 leading-relaxed">
-            We currently run English classes across 4 orphanages in Bali,
-            reaching over 100 children with consistent, quality education.
+            We currently run English classes across {orphanages.length} orphanages in Bali,
+            reaching over {totalStudents} children with consistent, quality education.
           </p>
         </div>
 

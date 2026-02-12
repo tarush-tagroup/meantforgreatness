@@ -16,6 +16,9 @@ interface OrphanageData {
   studentCount: number;
   classesPerWeek: number;
   hoursPerWeek: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  websiteUrl: string | null;
 }
 
 export default function OrphanageEditForm({
@@ -34,12 +37,19 @@ export default function OrphanageEditForm({
     studentCount: orphanage.studentCount,
     classesPerWeek: orphanage.classesPerWeek,
     hoursPerWeek: orphanage.hoursPerWeek || 0,
+    websiteUrl: orphanage.websiteUrl || "",
   });
   const [imageUrl, setImageUrl] = useState(orphanage.imageUrl || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [gpsStatus, setGpsStatus] = useState<string>(
+    orphanage.latitude && orphanage.longitude
+      ? `GPS: ${orphanage.latitude.toFixed(6)}, ${orphanage.longitude.toFixed(6)}`
+      : "No GPS coordinates set"
+  );
   const router = useRouter();
 
   function handleChange(
@@ -102,6 +112,7 @@ export default function OrphanageEditForm({
           runningSince: form.runningSince || null,
           hoursPerWeek: form.hoursPerWeek || null,
           imageUrl: imageUrl || null,
+          websiteUrl: form.websiteUrl || null,
         }),
       });
 
@@ -111,6 +122,12 @@ export default function OrphanageEditForm({
         return;
       }
 
+      const data = await res.json();
+      // Update GPS status if coordinates were computed
+      if (data.latitude && data.longitude) {
+        setGpsStatus(`GPS: ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`);
+      }
+
       setSuccess(true);
       router.refresh();
       setTimeout(() => setSuccess(false), 3000);
@@ -118,6 +135,44 @@ export default function OrphanageEditForm({
       setError("An unexpected error occurred.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleGeocode() {
+    if (!form.address) {
+      setError("Enter an address first to compute GPS coordinates");
+      return;
+    }
+
+    setGeocoding(true);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/admin/orphanages/${orphanage.id}/geocode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: form.address }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Geocoding failed");
+        return;
+      }
+
+      const data = await res.json();
+      if (data.latitude && data.longitude) {
+        setGpsStatus(`GPS: ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}`);
+        setSuccess(true);
+        router.refresh();
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        setError("Could not find GPS coordinates for this address. Try a more specific address.");
+      }
+    } catch {
+      setError("Geocoding failed. Please try again.");
+    } finally {
+      setGeocoding(false);
     }
   }
 
@@ -177,12 +232,43 @@ export default function OrphanageEditForm({
         <label className="block text-sm font-medium text-warmgray-700">
           Address
         </label>
+        <div className="flex gap-2 mt-1">
+          <input
+            name="address"
+            value={form.address}
+            onChange={handleChange}
+            placeholder="Full street address for GPS geocoding"
+            className="flex-1 rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          />
+          <button
+            type="button"
+            onClick={handleGeocode}
+            disabled={geocoding || !form.address}
+            className="rounded-lg bg-warmgray-100 px-3 py-2 text-xs font-medium text-warmgray-700 hover:bg-warmgray-200 transition-colors disabled:opacity-50 whitespace-nowrap"
+            title="Compute GPS coordinates from address"
+          >
+            {geocoding ? "Finding..." : "Get GPS"}
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-warmgray-400">
+          {gpsStatus}
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-warmgray-700">
+          Website URL
+        </label>
         <input
-          name="address"
-          value={form.address}
+          name="websiteUrl"
+          value={form.websiteUrl}
           onChange={handleChange}
+          placeholder="https://example.com/orphanage-page"
           className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
         />
+        <p className="mt-1 text-xs text-warmgray-400">
+          Link to orphanage website or listing for additional verification
+        </p>
       </div>
 
       <div>
