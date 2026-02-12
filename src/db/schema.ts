@@ -9,7 +9,7 @@ import {
   date,
   jsonb,
   index,
-
+  serial,
   doublePrecision,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -223,5 +223,23 @@ export const donations = pgTable(
     index("donations_email_idx").on(table.donorEmail),
     index("donations_status_idx").on(table.status),
     index("donations_created_idx").on(table.createdAt),
+  ]
+);
+
+// ─── Cron Runs ──────────────────────────────────────────────────────────────
+export const cronRuns = pgTable(
+  "cron_runs",
+  {
+    id: serial("id").primaryKey(),
+    jobName: varchar("job_name", { length: 100 }).notNull(), // e.g. "ingest-vercel-logs", "monitor"
+    status: varchar("status", { length: 20 }).notNull().default("running"), // "running" | "success" | "error"
+    message: text("message"), // summary or error message
+    itemsProcessed: integer("items_processed").default(0),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (table) => [
+    index("cron_runs_job_name_idx").on(table.jobName),
+    index("cron_runs_started_at_idx").on(table.startedAt),
   ]
 );

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { db } from "@/db";
+import { cronRuns } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * GET /api/cron/ingest-vercel-logs
@@ -7,6 +10,9 @@ import { logger } from "@/lib/logger";
  * Cron job (triggered via GitHub Actions every 10 min) that fetches
  * ALL runtime logs from the Vercel API and writes them into
  * centralized Vercel Blob logs, classified by level.
+ *
+ * Each run is recorded in the cron_runs table so the admin UI
+ * can show last run time, status, and error details.
  *
  * Log level classification:
  *   - error: type=stderr or type=error, or text matches error patterns
@@ -39,6 +45,12 @@ export async function GET(req: NextRequest) {
     }, { status: 500 });
   }
 
+  // Record the start of this run
+  const [run] = await db
+    .insert(cronRuns)
+    .values({ jobName: "ingest-vercel-logs", status: "running" })
+    .returning({ id: cronRuns.id });
+
   try {
     // Step 1: Get the latest production deployment
     const deploymentsRes = await fetch(
@@ -47,16 +59,16 @@ export async function GET(req: NextRequest) {
     );
 
     if (!deploymentsRes.ok) {
-      return NextResponse.json({
-        success: false,
-        message: `Vercel API error: ${deploymentsRes.status}`,
-      }, { status: 502 });
+      const msg = `Vercel API error: ${deploymentsRes.status}`;
+      await markRun(run.id, "error", msg, 0);
+      return NextResponse.json({ success: false, message: msg }, { status: 502 });
     }
 
     const deployments = await deploymentsRes.json();
     const deployment = deployments.deployments?.[0];
 
     if (!deployment) {
+      await markRun(run.id, "success", "No production deployment found", 0);
       return NextResponse.json({
         success: true,
         message: "No production deployment found",
@@ -71,15 +83,15 @@ export async function GET(req: NextRequest) {
     );
 
     if (!eventsRes.ok) {
-      return NextResponse.json({
-        success: false,
-        message: `Vercel events API error: ${eventsRes.status}`,
-      }, { status: 502 });
+      const msg = `Vercel events API error: ${eventsRes.status}`;
+      await markRun(run.id, "error", msg, 0);
+      return NextResponse.json({ success: false, message: msg }, { status: 502 });
     }
 
     const events = await eventsRes.json();
 
     if (!Array.isArray(events) || events.length === 0) {
+      await markRun(run.id, "success", "No runtime logs", 0);
       return NextResponse.json({
         success: true,
         message: "No runtime logs",
@@ -92,7 +104,6 @@ export async function GET(req: NextRequest) {
     const warnPattern = /(?:warn|WARN|deprecated|deprecation|slow|timeout)/i;
 
     function classifyLevel(event: { type?: string; text?: string; message?: string }): "error" | "warn" | "info" {
-      // stderr / error type → error
       if (event.type === "stderr" || event.type === "error") return "error";
       const text = event.text || event.message || "";
       if (errorPattern.test(text)) return "error";
@@ -106,7 +117,6 @@ export async function GET(req: NextRequest) {
 
     for (const event of events) {
       const text = event.text || event.message || "";
-      // Skip empty/blank log lines
       if (!text.trim()) continue;
 
       const level = classifyLevel(event);
@@ -128,16 +138,39 @@ export async function GET(req: NextRequest) {
       ingested++;
     }
 
+    const message = `Ingested ${ingested} logs (${counts.error} errors, ${counts.warn} warnings, ${counts.info} info)`;
+    await markRun(run.id, counts.error > 0 ? "error" : "success", message, ingested);
+
     return NextResponse.json({
       success: true,
-      message: `Ingested ${ingested} Vercel runtime logs (${counts.error} errors, ${counts.warn} warnings, ${counts.info} info)`,
+      message,
       ingested,
       counts,
     });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    await markRun(run.id, "error", message, 0);
     return NextResponse.json({
       success: false,
-      message: err instanceof Error ? err.message : "Unknown error",
+      message,
     }, { status: 500 });
+  }
+}
+
+/** Update the cron_runs row with final status. */
+async function markRun(id: number, status: string, message: string, items: number) {
+  try {
+    await db
+      .update(cronRuns)
+      .set({
+        status,
+        message,
+        itemsProcessed: items,
+        finishedAt: new Date(),
+      })
+      .where(eq(cronRuns.id, id));
+  } catch {
+    // Don't let tracking failures break the endpoint
+    console.error("[ingest] Failed to update cron_runs row", id);
   }
 }

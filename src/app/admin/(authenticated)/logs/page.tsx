@@ -2,23 +2,16 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { listLogs, listSources } from "@/lib/blob-logs";
+import { db } from "@/db";
+import { cronRuns } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
+import LogActions from "./LogActions";
 
 export const dynamic = "force-dynamic";
 
 const LEVELS = ["error", "warn", "info"] as const;
 const PAGE_SIZE = 25;
-
-function computeTimeAgo(ts: string | null): string | null {
-  if (!ts) return null;
-  const diff = Date.now() - new Date(ts).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
 
 interface PageProps {
   searchParams: Promise<{
@@ -42,8 +35,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Fetch logs, sources, and last ingest time in parallel
-  const [logPage, sources, lastIngest] = await Promise.all([
+  // Fetch logs, sources, and last ingest run in parallel
+  const [logPage, sources, lastIngestRun] = await Promise.all([
     listLogs(
       {
         level: levelFilter || undefined,
@@ -53,9 +46,20 @@ export default async function LogsPage({ searchParams }: PageProps) {
       { limit: PAGE_SIZE, offset }
     ),
     listSources(),
-    // Check last Vercel ingest (most recent vercel:runtime entry)
-    listLogs({ source: "vercel:runtime" }, { limit: 1, offset: 0 })
-      .then((r) => (r.entries.length > 0 ? r.entries[0].timestamp : null))
+    // Get the most recent ingest run from the cron_runs table
+    db
+      .select({
+        status: cronRuns.status,
+        message: cronRuns.message,
+        startedAt: cronRuns.startedAt,
+        finishedAt: cronRuns.finishedAt,
+        itemsProcessed: cronRuns.itemsProcessed,
+      })
+      .from(cronRuns)
+      .where(eq(cronRuns.jobName, "ingest-vercel-logs"))
+      .orderBy(desc(cronRuns.startedAt))
+      .limit(1)
+      .then((rows) => rows[0] || null)
       .catch(() => null),
   ]);
 
@@ -81,55 +85,28 @@ export default async function LogsPage({ searchParams }: PageProps) {
     info: "bg-blue-100 text-blue-700",
   };
 
-  // Pre-compute ingest display strings to avoid impure Date.now() in render
-  const lastIngestFormatted = lastIngest
-    ? new Date(lastIngest).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      })
+  // Serialize the last run for the client component
+  const lastRunData = lastIngestRun
+    ? {
+        status: lastIngestRun.status,
+        message: lastIngestRun.message,
+        startedAt: lastIngestRun.startedAt.toISOString(),
+        finishedAt: lastIngestRun.finishedAt?.toISOString() || null,
+        itemsProcessed: lastIngestRun.itemsProcessed,
+      }
     : null;
-
-  const lastIngestAgo = computeTimeAgo(lastIngest);
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-warmgray-900">
           Application Logs
         </h1>
         <span className="text-sm text-warmgray-500">{total} entries</span>
       </div>
 
-      {/* Status bar */}
-      <div className="mb-6 flex flex-wrap gap-4 text-xs text-warmgray-500">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
-          <span>Stripe &amp; Resend: live via webhooks</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
-          <span>App errors: live on each request</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`inline-block h-2 w-2 rounded-full ${lastIngest ? "bg-teal-500" : "bg-warmgray-300"}`}
-          />
-          <span>
-            Vercel runtime ingest:{" "}
-            {lastIngestAgo ? (
-              <span title={lastIngestFormatted || ""}>
-                {lastIngestAgo}
-              </span>
-            ) : (
-              "no data yet"
-            )}
-            <span className="text-warmgray-400"> (every 10 min)</span>
-          </span>
-        </div>
-      </div>
+      {/* Action bar with last run status + buttons */}
+      <LogActions lastRun={lastRunData} />
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-3 items-center">
@@ -249,7 +226,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
                   <p className="text-warmgray-400 text-sm mt-1">
                     {levelFilter || sourceFilter || searchFilter
                       ? "Try adjusting your filters."
-                      : "Logs will appear here as events flow through the system \u2014 Stripe payments, Resend emails, form submissions, and Vercel runtime logs."}
+                      : "Click \"Run Ingest\" above to pull Vercel runtime logs, or wait for events to flow through the system."}
                   </p>
                 </td>
               </tr>
