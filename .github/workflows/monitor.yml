@@ -1,0 +1,83 @@
+name: Vercel Error Monitor
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Fetch Vercel logs and check for errors
+      - name: Fetch Vercel logs
+        id: logs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          npm i -g vercel
+
+          # Fetch recent logs (timeout after 15s since vercel logs can stream)
+          RAW_LOGS=$(timeout 15 vercel logs https://meantforgreatness.vercel.app --token "$VERCEL_TOKEN" 2>/dev/null || true)
+
+          if [ -z "$RAW_LOGS" ]; then
+            echo "No logs retrieved."
+            echo "has_errors=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Filter for errors
+          ERRORS=$(echo "$RAW_LOGS" | grep -iE "(error|ERR|500|exception|unhandled|fatal|ENOENT|TypeError|ReferenceError)" || true)
+
+          if [ -z "$ERRORS" ]; then
+            echo "No errors found. All clear."
+            echo "has_errors=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Found errors:"
+          echo "$ERRORS"
+
+          # Save errors for Claude to read
+          echo "$ERRORS" > /tmp/vercel-errors.txt
+          echo "has_errors=true" >> "$GITHUB_OUTPUT"
+
+      # If errors found, let Claude analyze and fix
+      - name: Claude analyzes and fixes errors
+        if: steps.logs.outputs.has_errors == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Install Claude Code
+          npm i -g @anthropic-ai/claude-code
+
+          ERRORS=$(cat /tmp/vercel-errors.txt)
+
+          claude -p \
+            --model claude-haiku \
+            --allowedTools "Read,Edit,Bash(npm test),Bash(npm run test),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
+            "You are an automated error-fixing agent. Here are production errors from Vercel logs:
+
+          \`\`\`
+          $ERRORS
+          \`\`\`
+
+          Please:
+          1. Analyze these errors and identify the root cause
+          2. Find the relevant source files in this repo
+          3. Create a fix on a new branch (use format: fix/auto-$(date +%Y-%m-%d)-description)
+          4. Run tests to verify the fix works
+          5. Push the branch and create a PR with a clear description of what broke and how you fixed it
+
+          If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR."
