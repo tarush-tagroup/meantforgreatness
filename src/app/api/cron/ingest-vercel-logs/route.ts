@@ -28,9 +28,15 @@ import { eq } from "drizzle-orm";
  *   - VERCEL_TEAM_ID: Team ID
  */
 export async function GET(req: NextRequest) {
+  // Accept either CRON_SECRET or LOG_API_SECRET as bearer token
   const cronSecret = process.env.CRON_SECRET;
+  const logApiSecret = process.env.LOG_API_SECRET;
   const authHeader = req.headers.get("authorization");
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const isAuthed =
+    (token && cronSecret && token === cronSecret) ||
+    (token && logApiSecret && token === logApiSecret);
+  if (!isAuthed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -12,10 +12,10 @@ jobs:
     steps:
       - name: Trigger Vercel log ingest endpoint
         env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          LOG_API_SECRET: ${{ secrets.LOG_API_SECRET }}
           BASE_URL: https://www.meantforgreatness.org
         run: |
-          RESULT=$(curl -sf -H "Authorization: Bearer $CRON_SECRET" \
+          RESULT=$(curl -sf -H "Authorization: Bearer $LOG_API_SECRET" \
             "$BASE_URL/api/cron/ingest-vercel-logs" 2>/dev/null || echo "")
 
           if [ -z "$RESULT" ]; then
