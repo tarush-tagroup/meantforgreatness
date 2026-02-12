@@ -1,14 +1,24 @@
 import { getSessionUser } from "@/lib/auth-guard";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
-import { db } from "@/db";
-import { appLogs } from "@/db/schema";
-import { desc, eq, and, gte, like, sql } from "drizzle-orm";
+import { listLogs, listSources } from "@/lib/blob-logs";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 const LEVELS = ["error", "warn", "info"] as const;
 const PAGE_SIZE = 25;
+
+function computeTimeAgo(ts: string | null): string | null {
+  if (!ts) return null;
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 interface PageProps {
   searchParams: Promise<{
@@ -30,42 +40,26 @@ export default async function LogsPage({ searchParams }: PageProps) {
   const sourceFilter = params.source || "";
   const searchFilter = params.search || "";
 
-  // Build dynamic filters
-  const conditions = [];
-  if (levelFilter && LEVELS.includes(levelFilter as (typeof LEVELS)[number])) {
-    conditions.push(eq(appLogs.level, levelFilter));
-  }
-  if (sourceFilter) {
-    conditions.push(eq(appLogs.source, sourceFilter));
-  }
-  if (searchFilter) {
-    conditions.push(like(appLogs.message, `%${searchFilter}%`));
-  }
-
-  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Fetch logs and total count in parallel
-  const [logs, [countResult], sources] = await Promise.all([
-    db
-      .select()
-      .from(appLogs)
-      .where(whereClause)
-      .orderBy(desc(appLogs.createdAt))
-      .limit(PAGE_SIZE)
-      .offset(offset),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(appLogs)
-      .where(whereClause),
-    // Get distinct sources for the filter dropdown
-    db
-      .selectDistinct({ source: appLogs.source })
-      .from(appLogs)
-      .orderBy(appLogs.source),
+  // Fetch logs, sources, and last ingest time in parallel
+  const [logPage, sources, lastIngest] = await Promise.all([
+    listLogs(
+      {
+        level: levelFilter || undefined,
+        source: sourceFilter || undefined,
+        search: searchFilter || undefined,
+      },
+      { limit: PAGE_SIZE, offset }
+    ),
+    listSources(),
+    // Check last Vercel ingest (most recent vercel:runtime entry)
+    listLogs({ source: "vercel:runtime" }, { limit: 1, offset: 0 })
+      .then((r) => (r.entries.length > 0 ? r.entries[0].timestamp : null))
+      .catch(() => null),
   ]);
 
-  const total = Number(countResult?.count || 0);
+  const { entries: logs, total } = logPage;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   function buildUrl(overrides: Record<string, string>) {
@@ -87,11 +81,55 @@ export default async function LogsPage({ searchParams }: PageProps) {
     info: "bg-blue-100 text-blue-700",
   };
 
+  // Pre-compute ingest display strings to avoid impure Date.now() in render
+  const lastIngestFormatted = lastIngest
+    ? new Date(lastIngest).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : null;
+
+  const lastIngestAgo = computeTimeAgo(lastIngest);
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-warmgray-900 mb-6">
-        Application Logs
-      </h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-warmgray-900">
+          Application Logs
+        </h1>
+        <span className="text-sm text-warmgray-500">{total} entries</span>
+      </div>
+
+      {/* Status bar */}
+      <div className="mb-6 flex flex-wrap gap-4 text-xs text-warmgray-500">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
+          <span>Stripe &amp; Resend: live via webhooks</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-teal-500" />
+          <span>App errors: live on each request</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`inline-block h-2 w-2 rounded-full ${lastIngest ? "bg-teal-500" : "bg-warmgray-300"}`}
+          />
+          <span>
+            Vercel runtime ingest:{" "}
+            {lastIngestAgo ? (
+              <span title={lastIngestFormatted || ""}>
+                {lastIngestAgo}
+              </span>
+            ) : (
+              "no data yet"
+            )}
+            <span className="text-warmgray-400"> (every 10 min)</span>
+          </span>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-3 items-center">
@@ -133,8 +171,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
           >
             <option value="">All sources</option>
             {sources.map((s) => (
-              <option key={s.source} value={s.source}>
-                {s.source}
+              <option key={s} value={s}>
+                {s}
               </option>
             ))}
           </select>
@@ -165,7 +203,15 @@ export default async function LogsPage({ searchParams }: PageProps) {
           </button>
         </form>
 
-        <span className="text-sm text-warmgray-500">{total} log entries</span>
+        {/* Clear filters */}
+        {(levelFilter || sourceFilter || searchFilter) && (
+          <Link
+            href="/admin/logs"
+            className="text-sm text-teal-600 hover:text-teal-700 font-medium"
+          >
+            Clear filters
+          </Link>
+        )}
       </div>
 
       {/* Logs table */}
@@ -195,17 +241,24 @@ export default async function LogsPage({ searchParams }: PageProps) {
               <tr>
                 <td
                   colSpan={5}
-                  className="px-4 py-8 text-center text-warmgray-400"
+                  className="px-4 py-12 text-center"
                 >
-                  No log entries found.
+                  <p className="text-warmgray-400 text-base font-medium">
+                    No log entries found
+                  </p>
+                  <p className="text-warmgray-400 text-sm mt-1">
+                    {levelFilter || sourceFilter || searchFilter
+                      ? "Try adjusting your filters."
+                      : "Logs will appear here as events flow through the system \u2014 Stripe payments, Resend emails, form submissions, and Vercel runtime errors."}
+                  </p>
                 </td>
               </tr>
             ) : (
-              logs.map((log) => (
-                <tr key={log.id} className="hover:bg-warmgray-50">
+              logs.map((log, idx) => (
+                <tr key={`${log.timestamp}-${idx}`} className="hover:bg-warmgray-50">
                   <td className="px-4 py-3 text-warmgray-500 font-mono text-xs whitespace-nowrap">
-                    {log.createdAt
-                      ? new Date(log.createdAt).toLocaleString("en-US", {
+                    {log.timestamp
+                      ? new Date(log.timestamp).toLocaleString("en-US", {
                           month: "short",
                           day: "numeric",
                           hour: "2-digit",
@@ -213,7 +266,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
                           second: "2-digit",
                           hour12: false,
                         })
-                      : "—"}
+                      : "\u2014"}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -231,7 +284,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
                     {log.message}
                   </td>
                   <td className="px-4 py-3 text-warmgray-500 font-mono text-xs max-w-xs truncate">
-                    {log.meta ? JSON.stringify(log.meta) : "—"}
+                    {log.meta ? JSON.stringify(log.meta) : "\u2014"}
                   </td>
                 </tr>
               ))

@@ -41,23 +41,135 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
+      // ─── Payment Success Events ─────────────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        logger.info("webhook:stripe", "Checkout session completed", {
+          sessionId: session.id,
+          mode: session.mode,
+          amount: session.amount_total,
+          email: session.customer_details?.email,
+        });
         await handleCheckoutCompleted(session);
         break;
       }
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
+        logger.info("webhook:stripe", "Invoice paid", {
+          invoiceId: invoice.id,
+          amount: invoice.amount_paid,
+          email: invoice.customer_email,
+          billingReason: invoice.billing_reason,
+        });
         await handleInvoicePaid(invoice);
         break;
       }
+
+      // ─── Payment Failure Events ─────────────────────────────────────
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        logger.error("webhook:stripe", "Payment failed", {
+          paymentIntentId: pi.id,
+          amount: pi.amount,
+          error: pi.last_payment_error?.message,
+          errorCode: pi.last_payment_error?.code,
+          email: pi.receipt_email,
+        });
+        break;
+      }
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        logger.error("webhook:stripe", "Invoice payment failed", {
+          invoiceId: invoice.id,
+          amount: invoice.amount_due,
+          email: invoice.customer_email,
+          attemptCount: invoice.attempt_count,
+          nextAttempt: invoice.next_payment_attempt
+            ? new Date(invoice.next_payment_attempt * 1000).toISOString()
+            : null,
+        });
+        break;
+      }
+
+      // ─── Refund Events ──────────────────────────────────────────────
       case "charge.refunded": {
         const charge = event.data.object as Stripe.Charge;
+        logger.info("webhook:stripe", "Charge refunded", {
+          chargeId: charge.id,
+          amount: charge.amount_refunded,
+          email: charge.billing_details?.email,
+        });
         await handleChargeRefunded(charge);
         break;
       }
+
+      // ─── Dispute Events ─────────────────────────────────────────────
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute;
+        logger.error("webhook:stripe", "Dispute created", {
+          disputeId: dispute.id,
+          chargeId: typeof dispute.charge === "string" ? dispute.charge : dispute.charge?.id,
+          amount: dispute.amount,
+          reason: dispute.reason,
+          status: dispute.status,
+        });
+        break;
+      }
+      case "charge.dispute.closed": {
+        const dispute = event.data.object as Stripe.Dispute;
+        logger.info("webhook:stripe", "Dispute closed", {
+          disputeId: dispute.id,
+          status: dispute.status,
+          reason: dispute.reason,
+        });
+        break;
+      }
+
+      // ─── Subscription Lifecycle Events ──────────────────────────────
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        logger.warn("webhook:stripe", "Subscription cancelled", {
+          subscriptionId: sub.id,
+          customerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
+          canceledAt: sub.canceled_at
+            ? new Date(sub.canceled_at * 1000).toISOString()
+            : null,
+          cancellationReason: (sub as unknown as Record<string, unknown>).cancellation_details
+            ? ((sub as unknown as Record<string, unknown>).cancellation_details as Record<string, unknown>)?.reason
+            : null,
+        });
+        // Update donation records for this subscription
+        if (sub.id) {
+          await db
+            .update(donations)
+            .set({ status: "cancelled", updatedAt: new Date() })
+            .where(eq(donations.stripeSubscriptionId, sub.id));
+        }
+        break;
+      }
+      case "customer.subscription.updated": {
+        const sub = event.data.object as Stripe.Subscription;
+        logger.info("webhook:stripe", "Subscription updated", {
+          subscriptionId: sub.id,
+          status: sub.status,
+          customerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
+        });
+        break;
+      }
+      case "customer.subscription.paused": {
+        const sub = event.data.object as Stripe.Subscription;
+        logger.warn("webhook:stripe", "Subscription paused", {
+          subscriptionId: sub.id,
+          customerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
+        });
+        break;
+      }
+
       default:
-        // Unhandled event type — acknowledge it
+        // Unhandled event type — log for visibility
+        logger.info("webhook:stripe", `Unhandled event type: ${event.type}`, {
+          eventId: event.id,
+        });
         break;
     }
   } catch (err) {
