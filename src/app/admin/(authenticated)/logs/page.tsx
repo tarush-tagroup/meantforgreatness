@@ -9,6 +9,17 @@ export const dynamic = "force-dynamic";
 const LEVELS = ["error", "warn", "info"] as const;
 const PAGE_SIZE = 25;
 
+function computeTimeAgo(ts: string | null): string | null {
+  if (!ts) return null;
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 interface PageProps {
   searchParams: Promise<{
     page?: string;
@@ -70,28 +81,18 @@ export default async function LogsPage({ searchParams }: PageProps) {
     info: "bg-blue-100 text-blue-700",
   };
 
-  function formatTimestamp(ts: string | null) {
-    if (!ts) return null;
-    const d = new Date(ts);
-    return d.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  }
+  // Pre-compute ingest display strings to avoid impure Date.now() in render
+  const lastIngestFormatted = lastIngest
+    ? new Date(lastIngest).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+    : null;
 
-  function timeAgo(ts: string | null) {
-    if (!ts) return null;
-    const diff = Date.now() - new Date(ts).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  }
+  const lastIngestAgo = computeTimeAgo(lastIngest);
 
   return (
     <div>
@@ -118,9 +119,9 @@ export default async function LogsPage({ searchParams }: PageProps) {
           />
           <span>
             Vercel runtime ingest:{" "}
-            {lastIngest ? (
-              <span title={formatTimestamp(lastIngest) || ""}>
-                {timeAgo(lastIngest)}
+            {lastIngestAgo ? (
+              <span title={lastIngestFormatted || ""}>
+                {lastIngestAgo}
               </span>
             ) : (
               "no data yet"
