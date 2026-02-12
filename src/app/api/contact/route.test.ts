@@ -113,7 +113,7 @@ describe("POST /api/contact", () => {
       expect(res.status).toBe(200);
       expect(data.success).toBe(true);
       expect(mockSend).toHaveBeenCalledWith({
-        from: "Meant for Greatness <onboarding@resend.dev>",
+        from: "Meant for Greatness <tarush@meantforgreatness.org>",
         to: "test@example.com",
         subject: "Contact Form: John Doe",
         replyTo: "john@example.com",
