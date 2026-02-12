@@ -22,79 +22,15 @@ jobs:
           node-version: 20
           cache: npm
 
-      # Step 1: Fetch Vercel runtime logs and push them into centralized blob logs
-      - name: Ingest Vercel runtime logs
-        id: ingest
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: prj_W31dDW0Ekdsn4G3Ufz4VxPEg8a9s
-          VERCEL_TEAM_ID: team_K5YfQm6u9dAQGJT6txaCOmoF
-          LOG_API_SECRET: ${{ secrets.LOG_API_SECRET }}
-          BASE_URL: https://www.meantforgreatness.org
-        run: |
-          # Get the latest production deployment
-          DEPLOYMENTS=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_TEAM_ID&target=production&limit=1&state=READY")
-
-          DEPLOYMENT_ID=$(echo "$DEPLOYMENTS" | jq -r '.deployments[0].uid // empty')
-
-          if [ -z "$DEPLOYMENT_ID" ]; then
-            echo "Could not find a production deployment."
-            echo "ingested=0" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          DEPLOYMENT_URL=$(echo "$DEPLOYMENTS" | jq -r '.deployments[0].url // empty')
-          echo "Latest deployment: $DEPLOYMENT_ID ($DEPLOYMENT_URL)"
-
-          # Fetch runtime logs for this deployment
-          RAW_LOGS=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v2/deployments/$DEPLOYMENT_ID/events?teamId=$VERCEL_TEAM_ID&limit=500&direction=backward" 2>/dev/null || true)
-
-          if [ -z "$RAW_LOGS" ] || [ "$RAW_LOGS" = "[]" ] || [ "$RAW_LOGS" = "null" ]; then
-            echo "No Vercel logs to ingest."
-            echo "ingested=0" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Extract error entries from Vercel logs
-          ERRORS=$(echo "$RAW_LOGS" | jq -c '[.[] | select(.type == "stderr" or .type == "error" or (.text // "" | test("(?i)(error|ERR|500|exception|unhandled|fatal|TypeError|ReferenceError)"))) | {message: (.text // .message // ""), type: .type}]' 2>/dev/null || echo "[]")
-
-          ERROR_COUNT=$(echo "$ERRORS" | jq 'length')
-
-          if [ "$ERROR_COUNT" = "0" ]; then
-            echo "No Vercel errors to ingest."
-            echo "ingested=0" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "Found $ERROR_COUNT Vercel runtime errors. Ingesting into centralized logs..."
-
-          # Build entries array for the ingest API
-          ENTRIES=$(echo "$ERRORS" | jq -c '[.[] | {level: "error", source: "vercel:runtime", message: .message, meta: {type: .type, deployment: "'"$DEPLOYMENT_ID"'"}}]')
-
-          # Push to centralized logs via ingest API
-          RESULT=$(curl -sf -X POST \
-            -H "Authorization: Bearer $LOG_API_SECRET" \
-            -H "Content-Type: application/json" \
-            -d "{\"entries\": $ENTRIES}" \
-            "$BASE_URL/api/admin/logs/ingest" 2>/dev/null || echo "")
-
-          if [ -n "$RESULT" ]; then
-            INGESTED=$(echo "$RESULT" | jq '.ingested // 0')
-            echo "Ingested $INGESTED Vercel runtime errors into centralized logs."
-            echo "ingested=$INGESTED" >> "$GITHUB_OUTPUT"
-          else
-            echo "Failed to ingest Vercel logs (API may be unreachable)."
-            echo "ingested=0" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Step 2: Wait briefly for ingested logs to be available
-      - name: Wait for log propagation
-        if: steps.ingest.outputs.ingested != '0'
-        run: sleep 3
-
-      # Step 3: Check centralized logs — the SINGLE source of truth
+      # Step 1: Check centralized logs — the SINGLE source of truth
+      #
+      # All log sources are already ingested into Vercel Blob storage:
+      #   - Vercel runtime errors → ingested by Vercel Cron (every 10 min)
+      #   - Stripe webhook errors → written directly by webhook handler
+      #   - Resend email errors  → written directly by webhook handler
+      #   - Application errors   → written directly by app code
+      #
+      # This monitor just READS from that single store.
       - name: Check centralized logs for errors
         id: check
         env:
@@ -133,7 +69,7 @@ jobs:
           echo "has_errors=true" >> "$GITHUB_OUTPUT"
           echo "error_count=$ERROR_COUNT" >> "$GITHUB_OUTPUT"
 
-      # Step 4: Create a GitHub issue with all errors
+      # Step 2: Create a GitHub issue with all errors
       - name: Create issue for detected errors
         if: steps.check.outputs.has_errors == 'true'
         id: issue
@@ -173,7 +109,7 @@ jobs:
           echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
           echo "Created issue: $ISSUE_URL"
 
-      # Step 5: Install deps + let Claude analyze and fix
+      # Step 3: Install deps + let Claude analyze and fix
       - name: Install dependencies
         if: steps.check.outputs.has_errors == 'true'
         run: npm ci
@@ -210,7 +146,7 @@ jobs:
           If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR." \
           2>&1 | tee /tmp/claude-output.txt
 
-      # Step 6: Update issue with results
+      # Step 4: Update issue with results
       - name: Update issue with results
         if: steps.check.outputs.has_errors == 'true'
         env:
