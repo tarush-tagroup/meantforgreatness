@@ -2,8 +2,8 @@ name: Vercel Error Monitor
 
 on:
   schedule:
-    # Run every 6 hours
-    - cron: "0 */6 * * *"
+    # Run every 30 minutes (Vercel free tier only retains logs for 1 hour)
+    - cron: "*/30 * * * *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
