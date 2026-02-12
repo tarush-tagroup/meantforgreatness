@@ -249,7 +249,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
                   <p className="text-warmgray-400 text-sm mt-1">
                     {levelFilter || sourceFilter || searchFilter
                       ? "Try adjusting your filters."
-                      : "Logs will appear here as events flow through the system \u2014 Stripe payments, Resend emails, form submissions, and Vercel runtime errors."}
+                      : "Logs will appear here as events flow through the system \u2014 Stripe payments, Resend emails, form submissions, and Vercel runtime logs."}
                   </p>
                 </td>
               </tr>

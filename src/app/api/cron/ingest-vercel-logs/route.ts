@@ -4,10 +4,16 @@ import { logger } from "@/lib/logger";
 /**
  * GET /api/cron/ingest-vercel-logs
  *
- * Vercel Cron job that fetches runtime errors from the Vercel API
- * and writes them into centralized Vercel Blob logs.
+ * Cron job (triggered via GitHub Actions every 10 min) that fetches
+ * ALL runtime logs from the Vercel API and writes them into
+ * centralized Vercel Blob logs, classified by level.
  *
- * Runs every 10 minutes. Protected by CRON_SECRET.
+ * Log level classification:
+ *   - error: type=stderr or type=error, or text matches error patterns
+ *   - warn:  text matches warning patterns
+ *   - info:  everything else (stdout, general output)
+ *
+ * Protected by CRON_SECRET bearer token.
  *
  * Required env vars:
  *   - CRON_SECRET: Vercel cron authentication
@@ -81,38 +87,52 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Step 3: Filter for errors
+    // Step 3: Classify each event by log level
     const errorPattern = /(?:error|ERR|500|exception|unhandled|fatal|TypeError|ReferenceError)/i;
-    const errors = events.filter((e: { type?: string; text?: string; message?: string }) => {
-      if (e.type === "stderr" || e.type === "error") return true;
-      const text = e.text || e.message || "";
-      return errorPattern.test(text);
-    });
+    const warnPattern = /(?:warn|WARN|deprecated|deprecation|slow|timeout)/i;
 
-    if (errors.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "No errors in Vercel runtime logs",
-        ingested: 0,
-      });
+    function classifyLevel(event: { type?: string; text?: string; message?: string }): "error" | "warn" | "info" {
+      // stderr / error type → error
+      if (event.type === "stderr" || event.type === "error") return "error";
+      const text = event.text || event.message || "";
+      if (errorPattern.test(text)) return "error";
+      if (warnPattern.test(text)) return "warn";
+      return "info";
     }
 
-    // Step 4: Write each error to centralized blob logs
+    // Step 4: Write ALL log entries to centralized blob logs
     let ingested = 0;
-    for (const error of errors) {
-      const message = error.text || error.message || "Unknown Vercel runtime error";
-      await logger.error("vercel:runtime", message, {
-        type: error.type,
+    const counts = { error: 0, warn: 0, info: 0 };
+
+    for (const event of events) {
+      const text = event.text || event.message || "";
+      // Skip empty/blank log lines
+      if (!text.trim()) continue;
+
+      const level = classifyLevel(event);
+      counts[level]++;
+
+      const meta = {
+        type: event.type,
         deploymentId: deployment.uid,
         deploymentUrl: deployment.url,
-      });
+      };
+
+      if (level === "error") {
+        await logger.error("vercel:runtime", text, meta);
+      } else if (level === "warn") {
+        await logger.warn("vercel:runtime", text, meta);
+      } else {
+        await logger.info("vercel:runtime", text, meta);
+      }
       ingested++;
     }
 
     return NextResponse.json({
       success: true,
-      message: `Ingested ${ingested} Vercel runtime errors`,
+      message: `Ingested ${ingested} Vercel runtime logs (${counts.error} errors, ${counts.warn} warnings, ${counts.info} info)`,
       ingested,
+      counts,
     });
   } catch (err) {
     return NextResponse.json({
