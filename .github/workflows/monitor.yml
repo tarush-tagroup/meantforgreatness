@@ -2,8 +2,8 @@ name: Vercel Error Monitor
 
 on:
   schedule:
-    # Run every 30 minutes (Vercel free tier only retains logs for 1 hour)
-    - cron: "*/30 * * * *"
+    # Run every 6 hours (reduced from 30 min to conserve GitHub Actions minutes)
+    - cron: "0 */6 * * *"
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
@@ -22,30 +22,68 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
-
-      # Fetch Vercel logs and check for errors
+      # Fetch Vercel logs using REST API (more reliable than CLI in CI)
       - name: Fetch Vercel logs
         id: logs
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: prj_W31dDW0Ekdsn4G3Ufz4VxPEg8a9s
+          VERCEL_TEAM_ID: team_K5YfQm6u9dAQGJT6txaCOmoF
         run: |
-          npm i -g vercel
+          # Step 1: Get the latest production deployment
+          echo "Fetching latest production deployment..."
+          DEPLOYMENTS=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v6/deployments?projectId=$VERCEL_PROJECT_ID&teamId=$VERCEL_TEAM_ID&target=production&limit=1&state=READY")
 
-          # Fetch recent logs (timeout after 15s since vercel logs can stream)
-          RAW_LOGS=$(timeout 15 vercel logs https://meantforgreatness.vercel.app --token "$VERCEL_TOKEN" 2>/dev/null || true)
+          DEPLOYMENT_ID=$(echo "$DEPLOYMENTS" | jq -r '.deployments[0].uid // empty')
 
-          if [ -z "$RAW_LOGS" ]; then
-            echo "No logs retrieved."
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "Could not find a production deployment."
+            echo "API response: $DEPLOYMENTS"
             echo "has_errors=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Filter for errors
-          ERRORS=$(echo "$RAW_LOGS" | grep -iE "(error|ERR|500|exception|unhandled|fatal|ENOENT|TypeError|ReferenceError)" || true)
+          DEPLOYMENT_URL=$(echo "$DEPLOYMENTS" | jq -r '.deployments[0].url // empty')
+          echo "Latest deployment: $DEPLOYMENT_ID ($DEPLOYMENT_URL)"
+
+          # Step 2: Fetch runtime logs for this deployment (last 6 hours)
+          # Use the log drain events API or runtime logs
+          SINCE=$(date -d '6 hours ago' +%s000 2>/dev/null || date -v-6H +%s000 2>/dev/null || echo "")
+
+          RAW_LOGS=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v2/deployments/$DEPLOYMENT_ID/events?teamId=$VERCEL_TEAM_ID&limit=500&direction=backward" 2>/dev/null || true)
+
+          if [ -z "$RAW_LOGS" ] || [ "$RAW_LOGS" = "[]" ] || [ "$RAW_LOGS" = "null" ]; then
+            echo "No logs retrieved from API."
+
+            # Fallback: Try the Vercel CLI with project linking
+            npm i -g vercel 2>/dev/null
+            mkdir -p .vercel
+            echo "{\"projectId\":\"$VERCEL_PROJECT_ID\",\"orgId\":\"$VERCEL_TEAM_ID\"}" > .vercel/project.json
+            RAW_LOGS=$(timeout 20 vercel logs "$DEPLOYMENT_URL" --token "$VERCEL_TOKEN" 2>&1 || true)
+
+            if [ -z "$RAW_LOGS" ]; then
+              echo "No logs from CLI fallback either."
+              echo "has_errors=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "Logs retrieved. Scanning for errors..."
+
+          # Step 3: Filter for errors
+          # Handle both JSON array format (API) and plain text (CLI)
+          if echo "$RAW_LOGS" | jq -e '.[0]' >/dev/null 2>&1; then
+            # JSON format from API - extract error-level log entries
+            ERRORS=$(echo "$RAW_LOGS" | jq -r '.[] | select(.type == "stderr" or .type == "error" or (.text // "" | test("(?i)(error|ERR|500|exception|unhandled|fatal|TypeError|ReferenceError)"))) | .text // .message // ""' 2>/dev/null | head -100 || true)
+          else
+            # Plain text format from CLI
+            ERRORS=$(echo "$RAW_LOGS" | grep -iE "(error|ERR|500|exception|unhandled|fatal|ENOENT|TypeError|ReferenceError)" | head -100 || true)
+          fi
 
           if [ -z "$ERRORS" ]; then
-            echo "No errors found. All clear."
+            echo "No errors found. All clear. ✅"
             echo "has_errors=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -90,6 +128,11 @@ jobs:
 
           echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
           echo "Created issue: $ISSUE_URL"
+
+      # Install dependencies only if errors found (saves CI time on clean runs)
+      - name: Install dependencies
+        if: steps.logs.outputs.has_errors == 'true'
+        run: npm ci
 
       # If errors found, let Claude analyze and fix
       - name: Claude analyzes and fixes errors
