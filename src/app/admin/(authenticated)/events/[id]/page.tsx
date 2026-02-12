@@ -62,10 +62,20 @@ export default async function EditEventPage({
             orphanageId: event.orphanageId,
             coverImageUrl: event.coverImageUrl,
             active: event.active,
-            photos: photos.map((p) => ({
-              url: p.url,
-              caption: p.caption || "",
-            })),
+            photos: (() => {
+              const photoList = photos.map((p) => ({
+                url: p.url,
+                caption: p.caption || "",
+              }));
+              // Include cover image as first photo if it's not already in the event_photos list
+              if (
+                event.coverImageUrl &&
+                !photoList.some((p) => p.url === event.coverImageUrl)
+              ) {
+                photoList.unshift({ url: event.coverImageUrl, caption: "" });
+              }
+              return photoList;
+            })(),
           }}
         />
       </div>
