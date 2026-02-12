@@ -12,10 +12,16 @@ vi.mock("@/lib/permissions", () => ({
   hasPermission: (...args: unknown[]) => mockHasPermission(...args),
 }));
 
+// Mock AI photo analysis (runs in background, always resolves to null in tests)
+vi.mock("@/lib/ai-photo-analysis", () => ({
+  analyzeClassLogPhotos: vi.fn().mockResolvedValue(null),
+}));
+
 // Mock db
 const mockSelect = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
+const mockInsert = vi.fn();
 const mockFrom = vi.fn();
 const mockWhere = vi.fn();
 const mockLimit = vi.fn();
@@ -23,12 +29,15 @@ const mockSet = vi.fn();
 const mockUpdateWhere = vi.fn();
 const mockDeleteWhere = vi.fn();
 const mockLeftJoin = vi.fn();
+const mockValues = vi.fn();
+const mockReturning = vi.fn();
 
 vi.mock("@/db", () => ({
   db: {
     select: (...args: unknown[]) => mockSelect(...args),
     update: (...args: unknown[]) => mockUpdate(...args),
     delete: (...args: unknown[]) => mockDelete(...args),
+    insert: (...args: unknown[]) => mockInsert(...args),
   },
 }));
 
@@ -42,6 +51,21 @@ vi.mock("@/db/schema", () => ({
     studentCount: "student_count",
     photoUrl: "photo_url",
     notes: "notes",
+    aiKidsCount: "ai_kids_count",
+    aiLocation: "ai_location",
+    aiPhotoTimestamp: "ai_photo_timestamp",
+    aiOrphanageMatch: "ai_orphanage_match",
+    aiConfidenceNotes: "ai_confidence_notes",
+    aiPrimaryPhotoUrl: "ai_primary_photo_url",
+    aiAnalyzedAt: "ai_analyzed_at",
+    createdAt: "created_at",
+  },
+  classLogPhotos: {
+    id: "id",
+    classLogId: "class_log_id",
+    url: "url",
+    caption: "caption",
+    sortOrder: "sort_order",
     createdAt: "created_at",
   },
   orphanages: { id: "id", name: "name" },
@@ -50,6 +74,7 @@ vi.mock("@/db/schema", () => ({
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((_col: unknown, _val: unknown) => "eq"),
+  asc: vi.fn((col: unknown) => col),
 }));
 
 import { GET, PUT, DELETE } from "./route";
@@ -94,8 +119,24 @@ describe("GET /api/admin/class-logs/[id]", () => {
     vi.clearAllMocks();
     mockWithAuth.mockResolvedValue([adminUser, null]);
 
-    mockSelect.mockReturnValue({ from: mockFrom });
-    mockFrom.mockReturnValue({ leftJoin: mockLeftJoin });
+    // GET does: select log (with leftJoin) -> select photos
+    let selectCallCount = 0;
+    const mockPhotosOrderBy = vi.fn().mockResolvedValue([
+      { id: "p1", url: "https://example.com/photo.jpg", caption: null, sortOrder: 0 },
+    ]);
+    const mockPhotosWhere = vi.fn().mockReturnValue({ orderBy: mockPhotosOrderBy });
+
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      return { from: mockFrom };
+    });
+
+    mockFrom.mockImplementation(() => {
+      if (selectCallCount <= 1) {
+        return { leftJoin: mockLeftJoin };
+      }
+      return { where: mockPhotosWhere };
+    });
     mockLeftJoin.mockReturnValue({ leftJoin: mockLeftJoin, where: mockWhere });
     mockWhere.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([mockLog]);
@@ -118,12 +159,14 @@ describe("GET /api/admin/class-logs/[id]", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns class log data", async () => {
+  it("returns class log data with photos", async () => {
     const res = await GET(makeRequest("GET"), makeParams("log-1"));
     expect(res.status).toBe(200);
 
     const data = await res.json();
     expect(data.classLog.orphanageName).toBe("Chloe Orphanage");
+    expect(data.classLog.photos).toBeDefined();
+    expect(data.classLog.photos).toHaveLength(1);
   });
 });
 
@@ -170,6 +213,13 @@ describe("PUT /api/admin/class-logs/[id]", () => {
     mockUpdate.mockReturnValue({ set: mockSet });
     mockSet.mockReturnValue({ where: mockUpdateWhere });
     mockUpdateWhere.mockResolvedValue(undefined);
+
+    // For delete (photos) and insert (photos)
+    mockDelete.mockReturnValue({ where: mockDeleteWhere });
+    mockDeleteWhere.mockResolvedValue(undefined);
+    mockInsert.mockReturnValue({ values: mockValues });
+    mockValues.mockReturnValue({ returning: mockReturning });
+    mockReturning.mockResolvedValue([]);
   });
 
   it("returns 403 when not authenticated", async () => {
@@ -207,13 +257,22 @@ describe("PUT /api/admin/class-logs/[id]", () => {
   });
 
   it("allows owner to update their own log", async () => {
-    // Admin user owns this log (teacherId = admin-1)
     const res = await PUT(
       makeRequest("PUT", { notes: "Updated notes" }),
       makeParams("log-1")
     );
     expect(res.status).toBe(200);
     expect(mockUpdate).toHaveBeenCalled();
+  });
+
+  it("allows updating photos", async () => {
+    const res = await PUT(
+      makeRequest("PUT", {
+        photos: [{ url: "https://example.com/new-photo.jpg" }],
+      }),
+      makeParams("log-1")
+    );
+    expect(res.status).toBe(200);
   });
 
   it("returns 400 for malformed JSON", async () => {
@@ -226,11 +285,6 @@ describe("PUT /api/admin/class-logs/[id]", () => {
       }
     );
     const res = await PUT(req, makeParams("log-1"));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 400 when no fields provided", async () => {
-    const res = await PUT(makeRequest("PUT", {}), makeParams("log-1"));
     expect(res.status).toBe(400);
   });
 });

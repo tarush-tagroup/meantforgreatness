@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
-import { classLogs, orphanages, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
+import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
+import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+
+const photoSchema = z.object({
+  url: z.string().url(),
+  caption: z.string().max(500).nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
 
 const updateSchema = z.object({
   orphanageId: z.string().min(1).optional(),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
   classTime: z.string().max(20).nullable().optional(),
   studentCount: z.number().int().min(0).nullable().optional(),
-  photoUrl: z.string().url().nullable().optional(),
+  photos: z.array(photoSchema).min(1, "At least one photo is required").optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
 
@@ -36,6 +43,13 @@ export async function GET(
       studentCount: classLogs.studentCount,
       photoUrl: classLogs.photoUrl,
       notes: classLogs.notes,
+      aiKidsCount: classLogs.aiKidsCount,
+      aiLocation: classLogs.aiLocation,
+      aiPhotoTimestamp: classLogs.aiPhotoTimestamp,
+      aiOrphanageMatch: classLogs.aiOrphanageMatch,
+      aiConfidenceNotes: classLogs.aiConfidenceNotes,
+      aiPrimaryPhotoUrl: classLogs.aiPrimaryPhotoUrl,
+      aiAnalyzedAt: classLogs.aiAnalyzedAt,
       createdAt: classLogs.createdAt,
     })
     .from(classLogs)
@@ -51,7 +65,19 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ classLog: row });
+  // Fetch photos for this class log
+  const photos = await db
+    .select({
+      id: classLogPhotos.id,
+      url: classLogPhotos.url,
+      caption: classLogPhotos.caption,
+      sortOrder: classLogPhotos.sortOrder,
+    })
+    .from(classLogPhotos)
+    .where(eq(classLogPhotos.classLogId, id))
+    .orderBy(asc(classLogPhotos.sortOrder));
+
+  return NextResponse.json({ classLog: { ...row, photos } });
 }
 
 export async function PUT(
@@ -127,17 +153,73 @@ export async function PUT(
   if (parsed.data.classDate !== undefined) updateData.classDate = parsed.data.classDate;
   if (parsed.data.classTime !== undefined) updateData.classTime = parsed.data.classTime;
   if (parsed.data.studentCount !== undefined) updateData.studentCount = parsed.data.studentCount;
-  if (parsed.data.photoUrl !== undefined) updateData.photoUrl = parsed.data.photoUrl;
   if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
 
-  if (Object.keys(updateData).length === 0) {
-    return NextResponse.json(
-      { error: "No fields to update" },
-      { status: 400 }
-    );
+  // Replace photos if provided
+  let photosChanged = false;
+  if (parsed.data.photos) {
+    photosChanged = true;
+    updateData.photoUrl = parsed.data.photos[0]?.url || null; // keep legacy field
+    // Clear AI metadata — will be re-generated
+    updateData.aiKidsCount = null;
+    updateData.aiLocation = null;
+    updateData.aiPhotoTimestamp = null;
+    updateData.aiOrphanageMatch = null;
+    updateData.aiConfidenceNotes = null;
+    updateData.aiPrimaryPhotoUrl = null;
+    updateData.aiAnalyzedAt = null;
+
+    await db.delete(classLogPhotos).where(eq(classLogPhotos.classLogId, id));
+    if (parsed.data.photos.length > 0) {
+      await db.insert(classLogPhotos).values(
+        parsed.data.photos.map((p, i) => ({
+          classLogId: id,
+          url: p.url,
+          caption: p.caption || null,
+          sortOrder: p.sortOrder ?? i,
+        }))
+      );
+    }
   }
 
-  await db.update(classLogs).set(updateData).where(eq(classLogs.id, id));
+  if (Object.keys(updateData).length > 0) {
+    await db.update(classLogs).set(updateData).where(eq(classLogs.id, id));
+  }
+
+  // Re-run AI analysis if photos were changed (non-blocking)
+  if (photosChanged && parsed.data.photos && parsed.data.photos.length > 0) {
+    // Get orphanage name for analysis
+    const effectiveOrphanageId = parsed.data.orphanageId || existing.orphanageId;
+    const [orphanageRow] = await db
+      .select({ name: orphanages.name })
+      .from(orphanages)
+      .where(eq(orphanages.id, effectiveOrphanageId))
+      .limit(1);
+
+    const orphanageName = orphanageRow?.name || effectiveOrphanageId;
+    const photoUrls = parsed.data.photos.map((p) => p.url);
+
+    analyzeClassLogPhotos(photoUrls, orphanageName)
+      .then(async (analysis) => {
+        if (analysis) {
+          await db
+            .update(classLogs)
+            .set({
+              aiKidsCount: analysis.kidsCount,
+              aiLocation: analysis.location,
+              aiPhotoTimestamp: analysis.photoTimestamp,
+              aiOrphanageMatch: analysis.orphanageMatch,
+              aiConfidenceNotes: analysis.confidenceNotes,
+              aiPrimaryPhotoUrl: analysis.primaryPhotoUrl,
+              aiAnalyzedAt: new Date(),
+            })
+            .where(eq(classLogs.id, id));
+        }
+      })
+      .catch((err) => {
+        console.error("Background AI re-analysis failed for class log:", id, err);
+      });
+  }
 
   return NextResponse.json({ success: true });
 }
@@ -175,6 +257,7 @@ export async function DELETE(
     );
   }
 
+  // Photos cascade delete via FK
   await db.delete(classLogs).where(eq(classLogs.id, id));
 
   return NextResponse.json({ success: true });

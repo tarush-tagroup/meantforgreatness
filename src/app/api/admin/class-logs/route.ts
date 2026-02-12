@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { db } from "@/db";
-import { classLogs, orphanages, users } from "@/db/schema";
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
+import { eq, desc, and, gte, lte, sql, asc } from "drizzle-orm";
 import { z } from "zod";
+import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+
+const photoSchema = z.object({
+  url: z.string().url(),
+  caption: z.string().max(500).nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
 
 const createSchema = z.object({
   orphanageId: z.string().min(1),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
   classTime: z.string().max(20).optional(),
   studentCount: z.number().int().min(0).optional(),
-  photoUrl: z.string().url().optional(),
+  photos: z.array(photoSchema).min(1, "At least one photo is required"),
   notes: z.string().max(2000).optional(),
 });
 
@@ -47,6 +54,11 @@ export async function GET(req: NextRequest) {
       studentCount: classLogs.studentCount,
       photoUrl: classLogs.photoUrl,
       notes: classLogs.notes,
+      aiKidsCount: classLogs.aiKidsCount,
+      aiLocation: classLogs.aiLocation,
+      aiOrphanageMatch: classLogs.aiOrphanageMatch,
+      aiPrimaryPhotoUrl: classLogs.aiPrimaryPhotoUrl,
+      aiAnalyzedAt: classLogs.aiAnalyzedAt,
       createdAt: classLogs.createdAt,
     })
     .from(classLogs)
@@ -57,6 +69,34 @@ export async function GET(req: NextRequest) {
     .limit(limit)
     .offset(offset);
 
+  // Fetch photos for these class logs
+  const logIds = rows.map((r) => r.id);
+  let allPhotos: { classLogId: string; url: string; caption: string | null; sortOrder: number }[] = [];
+  if (logIds.length > 0) {
+    allPhotos = await db
+      .select({
+        classLogId: classLogPhotos.classLogId,
+        url: classLogPhotos.url,
+        caption: classLogPhotos.caption,
+        sortOrder: classLogPhotos.sortOrder,
+      })
+      .from(classLogPhotos)
+      .where(sql`${classLogPhotos.classLogId} IN (${sql.join(logIds.map(id => sql`${id}`), sql`, `)})`)
+      .orderBy(asc(classLogPhotos.sortOrder));
+  }
+
+  const photosByLog = new Map<string, typeof allPhotos>();
+  for (const p of allPhotos) {
+    const list = photosByLog.get(p.classLogId) || [];
+    list.push(p);
+    photosByLog.set(p.classLogId, list);
+  }
+
+  const classLogsWithPhotos = rows.map((row) => ({
+    ...row,
+    photos: photosByLog.get(row.id) || [],
+  }));
+
   // Get total count for pagination
   const [countResult] = await db
     .select({ count: sql<number>`count(*)` })
@@ -64,7 +104,7 @@ export async function GET(req: NextRequest) {
     .where(whereClause);
 
   return NextResponse.json({
-    classLogs: rows,
+    classLogs: classLogsWithPhotos,
     pagination: {
       page,
       limit,
@@ -110,8 +150,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Teachers are locked to their own ID. Admins and teacher_managers
-  // can also create logs for themselves (teacherId is always the current user).
+  // Teachers are locked to their own ID
   const [created] = await db
     .insert(classLogs)
     .values({
@@ -120,10 +159,45 @@ export async function POST(req: NextRequest) {
       classDate: parsed.data.classDate,
       classTime: parsed.data.classTime || null,
       studentCount: parsed.data.studentCount ?? null,
-      photoUrl: parsed.data.photoUrl || null,
+      photoUrl: parsed.data.photos[0]?.url || null, // keep legacy field with first photo
       notes: parsed.data.notes || null,
     })
     .returning();
+
+  // Insert photos into class_log_photos table
+  if (parsed.data.photos.length > 0) {
+    await db.insert(classLogPhotos).values(
+      parsed.data.photos.map((p, i) => ({
+        classLogId: created.id,
+        url: p.url,
+        caption: p.caption || null,
+        sortOrder: p.sortOrder ?? i,
+      }))
+    );
+  }
+
+  // Trigger AI photo analysis (non-blocking — runs in background)
+  const photoUrls = parsed.data.photos.map((p) => p.url);
+  analyzeClassLogPhotos(photoUrls, orphanage.name)
+    .then(async (analysis) => {
+      if (analysis) {
+        await db
+          .update(classLogs)
+          .set({
+            aiKidsCount: analysis.kidsCount,
+            aiLocation: analysis.location,
+            aiPhotoTimestamp: analysis.photoTimestamp,
+            aiOrphanageMatch: analysis.orphanageMatch,
+            aiConfidenceNotes: analysis.confidenceNotes,
+            aiPrimaryPhotoUrl: analysis.primaryPhotoUrl,
+            aiAnalyzedAt: new Date(),
+          })
+          .where(eq(classLogs.id, created.id));
+      }
+    })
+    .catch((err) => {
+      console.error("Background AI analysis failed for class log:", created.id, err);
+    });
 
   return NextResponse.json({ classLog: created }, { status: 201 });
 }

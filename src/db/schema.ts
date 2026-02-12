@@ -88,6 +88,14 @@ export const classLogs = pgTable(
     studentCount: integer("student_count"),
     photoUrl: text("photo_url"),
     notes: text("notes"),
+    // AI-extracted metadata (read-only, auto-generated from photos)
+    aiKidsCount: integer("ai_kids_count"),
+    aiLocation: text("ai_location"),
+    aiPhotoTimestamp: varchar("ai_photo_timestamp", { length: 100 }),
+    aiOrphanageMatch: varchar("ai_orphanage_match", { length: 50 }),
+    aiConfidenceNotes: text("ai_confidence_notes"),
+    aiPrimaryPhotoUrl: text("ai_primary_photo_url"),
+    aiAnalyzedAt: timestamp("ai_analyzed_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
@@ -95,6 +103,18 @@ export const classLogs = pgTable(
     index("class_logs_date_idx").on(table.classDate),
   ]
 );
+
+// ─── Class Log Photos ───────────────────────────────────────────────────────
+export const classLogPhotos = pgTable("class_log_photos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  classLogId: uuid("class_log_id")
+    .notNull()
+    .references(() => classLogs.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  caption: varchar("caption", { length: 500 }),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 export const events = pgTable("events", {
