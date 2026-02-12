@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { events, orphanages } from "@/db/schema";
+import { events, eventPhotos, orphanages } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import EventForm from "../EventForm";
 
@@ -30,6 +30,16 @@ export default async function EditEventPage({
     notFound();
   }
 
+  // Fetch existing photos for this event
+  const photos = await db
+    .select({
+      url: eventPhotos.url,
+      caption: eventPhotos.caption,
+    })
+    .from(eventPhotos)
+    .where(eq(eventPhotos.eventId, id))
+    .orderBy(asc(eventPhotos.sortOrder));
+
   const orphanageOptions = await db
     .select({ id: orphanages.id, name: orphanages.name })
     .from(orphanages)
@@ -52,6 +62,10 @@ export default async function EditEventPage({
             orphanageId: event.orphanageId,
             coverImageUrl: event.coverImageUrl,
             active: event.active,
+            photos: photos.map((p) => ({
+              url: p.url,
+              caption: p.caption || "",
+            })),
           }}
         />
       </div>

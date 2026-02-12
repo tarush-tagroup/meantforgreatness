@@ -21,6 +21,26 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com https://lh3.googleusercontent.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "connect-src 'self' https://accounts.google.com https://api.anthropic.com https://*.public.blob.vercel-storage.com https://api.stripe.com",
+              "frame-src 'self' https://accounts.google.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self' https://accounts.google.com",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
         ],
       },
     ];

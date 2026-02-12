@@ -5,6 +5,12 @@ import { events, eventPhotos } from "@/db/schema";
 import { eq, desc, asc } from "drizzle-orm";
 import { z } from "zod";
 
+const photoSchema = z.object({
+  url: z.string().url(),
+  caption: z.string().max(500).nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+
 const createSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().min(1),
@@ -12,6 +18,7 @@ const createSchema = z.object({
   orphanageId: z.string().nullable().optional(),
   coverImageUrl: z.string().url().nullable().optional(),
   active: z.boolean().optional().default(true),
+  photos: z.array(photoSchema).max(3).optional(),
 });
 
 export async function GET() {
@@ -71,6 +78,18 @@ export async function POST(req: NextRequest) {
       createdBy: user!.id,
     })
     .returning();
+
+  // Insert photos if provided
+  if (parsed.data.photos && parsed.data.photos.length > 0) {
+    await db.insert(eventPhotos).values(
+      parsed.data.photos.map((p, i) => ({
+        eventId: created.id,
+        url: p.url,
+        caption: p.caption || null,
+        sortOrder: p.sortOrder ?? i,
+      }))
+    );
+  }
 
   return NextResponse.json({ event: created }, { status: 201 });
 }

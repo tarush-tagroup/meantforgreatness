@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { orphanages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { geocodeAddress } from "@/lib/geocode";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(255),
@@ -17,6 +18,7 @@ const updateSchema = z.object({
   studentCount: z.number().int().min(0),
   classesPerWeek: z.number().int().min(0),
   hoursPerWeek: z.number().int().min(0).nullable().optional(),
+  websiteUrl: z.string().nullable().optional(),
 });
 
 export async function GET(
@@ -81,6 +83,18 @@ export async function PUT(
 
   const data = parsed.data;
 
+  // Auto-geocode if address changed and we don't already have coordinates
+  let latitude = existing.latitude;
+  let longitude = existing.longitude;
+
+  if (data.address && data.address !== existing.address) {
+    const geo = await geocodeAddress(data.address);
+    if (geo) {
+      latitude = geo.latitude;
+      longitude = geo.longitude;
+    }
+  }
+
   await db
     .update(orphanages)
     .set({
@@ -95,9 +109,12 @@ export async function PUT(
       studentCount: data.studentCount,
       classesPerWeek: data.classesPerWeek,
       hoursPerWeek: data.hoursPerWeek ?? null,
+      websiteUrl: data.websiteUrl ?? null,
+      latitude,
+      longitude,
       updatedAt: new Date(),
     })
     .where(eq(orphanages.id, id));
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, latitude, longitude });
 }
