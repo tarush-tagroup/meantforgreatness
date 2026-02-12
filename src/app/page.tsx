@@ -4,6 +4,8 @@ import Solution from "@/components/home/Solution";
 import Partnership from "@/components/home/Partnership";
 import Sponsorship from "@/components/home/Sponsorship";
 
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
   return (
     <>
