@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.meantforgreatness.org";
     const amountInCents = Math.round(amount * 100);
 
     if (frequency === "monthly") {
