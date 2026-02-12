@@ -8,6 +8,11 @@ export interface GpsCoordinates {
   longitude: number;
 }
 
+export interface ExifMetadata {
+  gps: GpsCoordinates | null;
+  dateTaken: string | null; // ISO 8601 string, e.g. "2025-03-12T10:30:00"
+}
+
 /**
  * Extract GPS coordinates from image EXIF data before optimization strips it.
  * Returns null if no GPS data is found.
@@ -26,6 +31,27 @@ export async function extractExifGps(
     return parseGpsFromExifBuffer(exif);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Extract all useful EXIF metadata (GPS + date taken) from an image buffer.
+ * Call this BEFORE optimization since sharp strips EXIF data.
+ */
+export async function extractExifMetadata(
+  buffer: Buffer
+): Promise<ExifMetadata> {
+  try {
+    const metadata = await sharp(buffer).metadata();
+    const exif = metadata.exif;
+    if (!exif) return { gps: null, dateTaken: null };
+
+    return {
+      gps: parseGpsFromExifBuffer(exif),
+      dateTaken: parseDateFromExifBuffer(exif),
+    };
+  } catch {
+    return { gps: null, dateTaken: null };
   }
 }
 
@@ -50,6 +76,44 @@ function parseGpsFromExifBuffer(exifBuffer: Buffer): GpsCoordinates | null {
       if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
         return { latitude: lat, longitude: lon };
       }
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse date/time from raw EXIF buffer.
+ * EXIF stores dates as "YYYY:MM:DD HH:MM:SS" in DateTimeOriginal or CreateDate tags.
+ * Also checks XMP metadata for ISO date strings.
+ */
+function parseDateFromExifBuffer(exifBuffer: Buffer): string | null {
+  try {
+    const text = exifBuffer.toString("latin1");
+
+    // EXIF standard format: "2025:03:12 10:30:00" in DateTimeOriginal tag
+    // The tag appears in binary EXIF as a string after the tag marker
+    const exifDateMatch = text.match(
+      /(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/
+    );
+    if (exifDateMatch) {
+      const [, year, month, day, hour, min, sec] = exifDateMatch;
+      const isoDate = `${year}-${month}-${day}T${hour}:${min}:${sec}`;
+      // Sanity check: year should be reasonable (2000-2099)
+      const y = parseInt(year);
+      if (y >= 2000 && y <= 2099) {
+        return isoDate;
+      }
+    }
+
+    // XMP format: "2025-03-12T10:30:00" in DateCreated or CreateDate
+    const xmpDateMatch = text.match(
+      /(?:DateCreated|CreateDate|DateTimeOriginal)[>"=\s]*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/
+    );
+    if (xmpDateMatch) {
+      return xmpDateMatch[1];
     }
 
     return null;

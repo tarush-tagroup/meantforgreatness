@@ -17,6 +17,109 @@ export interface ClassLogPhotoAnalysis {
   confidenceNotes: string;
 }
 
+export interface DateValidationResult {
+  dateMatch: "match" | "mismatch" | "no_exif";
+  dateNotes: string;
+}
+
+/**
+ * Validate the EXIF date from a photo against the user-entered class date/time.
+ * Returns a match status and human-readable explanation.
+ */
+export function validatePhotoDate(
+  exifDateTaken: string | null,
+  classDate: string, // YYYY-MM-DD
+  classTime: string | null // e.g. "10:00 AM" or "14:00"
+): DateValidationResult {
+  if (!exifDateTaken) {
+    return {
+      dateMatch: "no_exif",
+      dateNotes: "No date metadata found in photo. Cannot verify when the photo was taken.",
+    };
+  }
+
+  // Parse EXIF date: "2025-03-12T10:30:00"
+  const exifDate = new Date(exifDateTaken);
+  if (isNaN(exifDate.getTime())) {
+    return {
+      dateMatch: "no_exif",
+      dateNotes: `Could not parse photo date: ${exifDateTaken}`,
+    };
+  }
+
+  // Extract just the date part from EXIF
+  const exifDateStr = exifDateTaken.substring(0, 10); // "2025-03-12"
+
+  // Compare dates
+  const dateMatches = exifDateStr === classDate;
+
+  if (!dateMatches) {
+    // Check if it's within 1 day (could be timezone difference)
+    const exifD = new Date(exifDateStr);
+    const classD = new Date(classDate);
+    const diffDays = Math.abs(
+      (exifD.getTime() - classD.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    if (diffDays <= 1) {
+      return {
+        dateMatch: "match",
+        dateNotes: `Photo taken ${exifDateStr}, class logged ${classDate} (within 1 day — possible timezone difference).`,
+      };
+    }
+
+    return {
+      dateMatch: "mismatch",
+      dateNotes: `Photo was taken on ${exifDateStr} but class was logged for ${classDate} (${Math.round(diffDays)} days apart).`,
+    };
+  }
+
+  // Date matches — also check time if available
+  if (classTime) {
+    const exifHour = exifDate.getHours();
+    const classHour = parseTimeToHour(classTime);
+
+    if (classHour !== null) {
+      const hourDiff = Math.abs(exifHour - classHour);
+      if (hourDiff <= 2) {
+        return {
+          dateMatch: "match",
+          dateNotes: `Photo taken ${exifDateTaken.replace("T", " ")}, class at ${classTime} on ${classDate}. Date and time match.`,
+        };
+      } else {
+        return {
+          dateMatch: "mismatch",
+          dateNotes: `Photo date matches (${exifDateStr}) but time differs: photo at ${exifDate.getHours()}:${String(exifDate.getMinutes()).padStart(2, "0")}, class at ${classTime} (${hourDiff}h apart).`,
+        };
+      }
+    }
+  }
+
+  return {
+    dateMatch: "match",
+    dateNotes: `Photo date ${exifDateStr} matches class date ${classDate}.`,
+  };
+}
+
+/**
+ * Parse a time string to an hour (0-23).
+ */
+function parseTimeToHour(time: string): number | null {
+  // "10:00 AM", "2:30 PM"
+  const amPm = time.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+  if (amPm) {
+    let hour = parseInt(amPm[1]);
+    const isPm = amPm[3].toLowerCase() === "pm";
+    if (isPm && hour !== 12) hour += 12;
+    if (!isPm && hour === 12) hour = 0;
+    return hour;
+  }
+  // "14:00"
+  const h24 = time.match(/(\d{1,2}):(\d{2})/);
+  if (h24) return parseInt(h24[1]);
+  return null;
+}
+
 /**
  * Analyze a single class log photo using Claude Vision API.
  * Extracts: kid count, location hints, timestamp, and whether it looks like it's at the named orphanage.
