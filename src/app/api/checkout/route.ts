@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
       });
 
       const session = await getStripe().checkout.sessions.create({
-        ui_mode: "hosted",
         mode: "subscription",
         payment_method_types: ["card"],
         line_items: [{ price: price.id, quantity: 1 }],
@@ -72,7 +71,6 @@ export async function POST(req: NextRequest) {
     } else {
       // One-time payment
       const session = await getStripe().checkout.sessions.create({
-        ui_mode: "hosted",
         mode: "payment",
         payment_method_types: ["card"],
         customer_creation: "always",
