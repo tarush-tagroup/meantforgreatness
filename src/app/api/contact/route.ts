@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const resend = new Resend(resendApiKey);
 
     await resend.emails.send({
-      from: "Meant for Greatness <onboarding@resend.dev>",
+      from: "Meant for Greatness <tarush@meantforgreatness.org>",
       to: contactEmail,
       subject: `Contact Form: ${name}`,
       replyTo: email,
