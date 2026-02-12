@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { getAllOrphanages } from "@/data/orphanages";
+import { getAllOrphanages } from "@/db/queries/orphanages";
 import OrphanageSection from "@/components/orphanages/OrphanageSection";
 import EventSection from "@/components/orphanages/EventSection";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Our Orphanages",
@@ -10,8 +12,8 @@ export const metadata: Metadata = {
     "Meet the 4 orphanages across Bali where we run English classes for over 100 children.",
 };
 
-export default function OrphanagesPage() {
-  const orphanages = getAllOrphanages();
+export default async function OrphanagesPage() {
+  const orphanages = await getAllOrphanages();
 
   return (
     <div className="py-12 sm:py-16">
