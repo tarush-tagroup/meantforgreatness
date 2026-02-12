@@ -128,7 +128,7 @@ jobs:
           fi
 
           echo "Found $ERROR_COUNT application-level errors in centralized logs."
-          echo "$APP_LOGS" | jq -r '.data[] | "\(.createdAt) [\(.level)] [\(.source)] \(.message)"' > /tmp/app-errors.txt
+          echo "$APP_LOGS" | jq -r '.data[] | "\(.timestamp // .createdAt) [\(.level)] [\(.source)] \(.message)"' > /tmp/app-errors.txt
           echo "has_app_errors=true" >> "$GITHUB_OUTPUT"
 
       # Create a GitHub issue to notify about the errors
