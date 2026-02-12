@@ -27,7 +27,7 @@ async function analyzePhoto(
   orphanageName: string
 ): Promise<PhotoAnalysisResult> {
   const response = await client.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-haiku-4-20250414",
     max_tokens: 1024,
     messages: [
       {
