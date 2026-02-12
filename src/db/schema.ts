@@ -9,6 +9,7 @@ import {
   date,
   jsonb,
   index,
+  serial,
   doublePrecision,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
@@ -198,6 +199,23 @@ export const transparencyReports = pgTable("transparency_reports", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ─── Application Logs ────────────────────────────────────────────────────────
+export const appLogs = pgTable(
+  "app_logs",
+  {
+    id: serial("id").primaryKey(),
+    level: varchar("level", { length: 10 }).notNull(), // "info" | "warn" | "error"
+    source: varchar("source", { length: 100 }).notNull(), // e.g. "stripe:checkout", "webhook:stripe"
+    message: text("message").notNull(),
+    meta: jsonb("meta"), // arbitrary structured data
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("app_logs_created_idx").on(table.createdAt),
+    index("app_logs_level_created_idx").on(table.level, table.createdAt),
+  ]
+);
 
 // ─── Donations ───────────────────────────────────────────────────────────────
 export const donations = pgTable(

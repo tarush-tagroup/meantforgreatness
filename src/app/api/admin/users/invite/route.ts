@@ -5,6 +5,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { isValidRole } from "@/lib/permissions";
 import { eq } from "drizzle-orm";
 import { sendInviteEmail } from "@/lib/email/invite";
+import { logger } from "@/lib/logger";
 import type { Role } from "@/types/auth";
 
 export async function POST(request: NextRequest) {
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       roles: requestedRoles,
     });
   } catch (emailError) {
-    console.error("Failed to send invite email:", emailError);
+    logger.error("admin:invite", "Failed to send invite email", { email: email.toLowerCase().trim(), error: emailError instanceof Error ? emailError.message : String(emailError) });
     // User was created, but email failed — don't roll back
   }
 

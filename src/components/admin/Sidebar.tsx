@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { label: "Donations", href: "/admin/donations", permission: "donations:view" },
   { label: "Reports", href: "/admin/transparency", permission: "transparency:view" },
   { label: "Media", href: "/admin/media", permission: "media:upload" },
+  { label: "Logs", href: "/admin/logs", permission: "logs:view" },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {

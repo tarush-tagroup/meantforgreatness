@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const contactEmail = process.env.CONTACT_EMAIL;
     if (!contactEmail) {
-      console.error("CONTACT_EMAIL environment variable is not set");
+      logger.error("contact", "CONTACT_EMAIL environment variable is not set");
       return NextResponse.json(
         { error: "Contact form is not configured." },
         { status: 500 }
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY environment variable is not set");
+      logger.error("contact", "RESEND_API_KEY environment variable is not set");
       return NextResponse.json(
         { error: "Contact form is not configured." },
         { status: 500 }
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Contact form error:", err);
+    logger.error("contact", "Contact form error", { error: err instanceof Error ? err.message : String(err) });
     return NextResponse.json(
       { error: "An error occurred sending your message." },
       { status: 500 }

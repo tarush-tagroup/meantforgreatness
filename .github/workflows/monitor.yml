@@ -95,49 +95,108 @@ jobs:
           echo "$ERRORS" > /tmp/vercel-errors.txt
           echo "has_errors=true" >> "$GITHUB_OUTPUT"
 
+      # Fetch centralized application logs (Stripe, webhooks, contact, AI, etc.)
+      - name: Fetch centralized app logs
+        id: app_logs
+        env:
+          LOG_API_SECRET: ${{ secrets.LOG_API_SECRET }}
+          BASE_URL: https://www.meantforgreatness.org
+        run: |
+          SINCE=$(date -u -d '6 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v-6H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
+
+          if [ -z "$LOG_API_SECRET" ]; then
+            echo "LOG_API_SECRET not configured — skipping centralized log check."
+            echo "has_app_errors=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          APP_LOGS=$(curl -sf -H "Authorization: Bearer $LOG_API_SECRET" \
+            "$BASE_URL/api/admin/logs?level=error&since=$SINCE&limit=100" 2>/dev/null || echo "")
+
+          if [ -z "$APP_LOGS" ]; then
+            echo "Could not fetch centralized logs (API may be unreachable)."
+            echo "has_app_errors=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ERROR_COUNT=$(echo "$APP_LOGS" | jq '.pagination.total // 0' 2>/dev/null || echo "0")
+
+          if [ "$ERROR_COUNT" = "0" ]; then
+            echo "No application-level errors in centralized logs. ✅"
+            echo "has_app_errors=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Found $ERROR_COUNT application-level errors in centralized logs."
+          echo "$APP_LOGS" | jq -r '.data[] | "\(.createdAt) [\(.level)] [\(.source)] \(.message)"' > /tmp/app-errors.txt
+          echo "has_app_errors=true" >> "$GITHUB_OUTPUT"
+
       # Create a GitHub issue to notify about the errors
       - name: Create issue for detected errors
-        if: steps.logs.outputs.has_errors == 'true'
+        if: steps.logs.outputs.has_errors == 'true' || steps.app_logs.outputs.has_app_errors == 'true'
         id: issue
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ERRORS=$(cat /tmp/vercel-errors.txt)
+          VERCEL_ERRORS=""
+          if [ -f /tmp/vercel-errors.txt ]; then
+            VERCEL_ERRORS=$(cat /tmp/vercel-errors.txt)
+          fi
+
+          APP_ERRORS=""
+          if [ -f /tmp/app-errors.txt ]; then
+            APP_ERRORS=$(cat /tmp/app-errors.txt)
+          fi
+
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
 
-          ISSUE_URL=$(gh issue create \
-            --title "🚨 Production errors detected - $TIMESTAMP" \
-            --label "bug,automated" \
-            --body "$(cat <<EOF
-          ## Production Errors Detected
+          BODY="## Production Errors Detected
 
-          The automated Vercel monitor found errors in the production logs at **$TIMESTAMP**.
+          The automated monitor found errors at **$TIMESTAMP**."
 
-          ### Errors
+          if [ -n "$VERCEL_ERRORS" ]; then
+            BODY="$BODY
+
+          ### Vercel Runtime Errors
           \`\`\`
-          $ERRORS
+          $VERCEL_ERRORS
+          \`\`\`"
+          fi
+
+          if [ -n "$APP_ERRORS" ]; then
+            BODY="$BODY
+
+          ### Application Errors (Centralized Logs)
           \`\`\`
+          $APP_ERRORS
+          \`\`\`"
+          fi
+
+          BODY="$BODY
 
           ### Status
           ⏳ Claude Haiku is analyzing these errors and attempting to create a fix PR...
 
           ---
-          *This issue was created automatically by the [Vercel Error Monitor](https://github.com/${{ github.repository }}/actions/workflows/monitor.yml)*
-          EOF
-          )")
+          *This issue was created automatically by the [Error Monitor](https://github.com/${{ github.repository }}/actions/workflows/monitor.yml)*"
+
+          ISSUE_URL=$(gh issue create \
+            --title "🚨 Production errors detected - $TIMESTAMP" \
+            --label "bug,automated" \
+            --body "$BODY")
 
           echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
           echo "Created issue: $ISSUE_URL"
 
       # Install dependencies only if errors found (saves CI time on clean runs)
       - name: Install dependencies
-        if: steps.logs.outputs.has_errors == 'true'
+        if: steps.logs.outputs.has_errors == 'true' || steps.app_logs.outputs.has_app_errors == 'true'
         run: npm ci
 
       # If errors found, let Claude analyze and fix
       - name: Claude analyzes and fixes errors
         id: claude
-        if: steps.logs.outputs.has_errors == 'true'
+        if: steps.logs.outputs.has_errors == 'true' || steps.app_logs.outputs.has_app_errors == 'true'
         continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -145,15 +204,29 @@ jobs:
           # Install Claude Code
           npm i -g @anthropic-ai/claude-code
 
-          ERRORS=$(cat /tmp/vercel-errors.txt)
+          VERCEL_ERRORS=""
+          if [ -f /tmp/vercel-errors.txt ]; then
+            VERCEL_ERRORS=$(cat /tmp/vercel-errors.txt)
+          fi
+
+          APP_ERRORS=""
+          if [ -f /tmp/app-errors.txt ]; then
+            APP_ERRORS=$(cat /tmp/app-errors.txt)
+          fi
+
+          ALL_ERRORS="=== Vercel Runtime Errors ===
+          $VERCEL_ERRORS
+
+          === Application Errors (Centralized Logs) ===
+          $APP_ERRORS"
 
           claude -p \
             --model claude-haiku \
             --allowedTools "Read,Edit,Bash(npm test),Bash(npm run test),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
-            "You are an automated error-fixing agent. Here are production errors from Vercel logs:
+            "You are an automated error-fixing agent. Here are production errors:
 
           \`\`\`
-          $ERRORS
+          $ALL_ERRORS
           \`\`\`
 
           Please:
@@ -168,7 +241,7 @@ jobs:
 
       # Update the issue with Claude's result
       - name: Update issue with results
-        if: steps.logs.outputs.has_errors == 'true'
+        if: steps.logs.outputs.has_errors == 'true' || steps.app_logs.outputs.has_app_errors == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

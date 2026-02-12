@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { logger } from "@/lib/logger";
 
 export interface PhotoAnalysisResult {
   kidsCount: number;
@@ -210,7 +211,7 @@ export async function analyzeClassLogPhotos(
 ): Promise<ClassLogPhotoAnalysis | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    console.warn("ANTHROPIC_API_KEY not set — skipping AI photo analysis");
+    logger.warn("ai:photos", "ANTHROPIC_API_KEY not set — skipping AI photo analysis");
     return null;
   }
 
