@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 
-const presetAmounts = [25, 50, 100, 250];
+const oneTimeAmounts = [100, 250, 500];
+const monthlyAmounts = [50, 100, 500];
 
 export default function DonationForm() {
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
-  const [customAmount, setCustomAmount] = useState("");
-  const [isCustom, setIsCustom] = useState(false);
   const [frequency, setFrequency] = useState<"one_time" | "monthly">(
     "monthly"
   );
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
+  const [customAmount, setCustomAmount] = useState("");
+  const [isCustom, setIsCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -64,7 +65,12 @@ export default function DonationForm() {
         <div className="flex rounded-lg bg-warmgray-100 p-1">
           <button
             type="button"
-            onClick={() => setFrequency("one_time")}
+            onClick={() => {
+              setFrequency("one_time");
+              setSelectedAmount(100);
+              setIsCustom(false);
+              setCustomAmount("");
+            }}
             className={`flex-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
               frequency === "one_time"
                 ? "bg-white text-warmgray-900 shadow-sm"
@@ -75,7 +81,12 @@ export default function DonationForm() {
           </button>
           <button
             type="button"
-            onClick={() => setFrequency("monthly")}
+            onClick={() => {
+              setFrequency("monthly");
+              setSelectedAmount(50);
+              setIsCustom(false);
+              setCustomAmount("");
+            }}
             className={`flex-1 rounded-md py-2.5 text-sm font-medium transition-colors ${
               frequency === "monthly"
                 ? "bg-white text-warmgray-900 shadow-sm"
@@ -92,8 +103,8 @@ export default function DonationForm() {
         <label className="block text-sm font-medium text-warmgray-700 mb-3">
           Select Amount
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {presetAmounts.map((preset) => (
+        <div className="grid grid-cols-3 gap-3">
+          {(frequency === "monthly" ? monthlyAmounts : oneTimeAmounts).map((preset) => (
             <button
               key={preset}
               type="button"

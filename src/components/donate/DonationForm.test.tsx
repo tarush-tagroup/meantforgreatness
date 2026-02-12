@@ -47,12 +47,19 @@ describe("DonationForm", () => {
       expect(screen.getByText("Monthly")).toBeInTheDocument();
     });
 
-    it("renders preset amount buttons", () => {
+    it("renders monthly preset amount buttons by default", () => {
       render(<DonationForm />);
-      expect(getPresetButton(25)).toBeInTheDocument();
       expect(getPresetButton(50)).toBeInTheDocument();
       expect(getPresetButton(100)).toBeInTheDocument();
+      expect(getPresetButton(500)).toBeInTheDocument();
+    });
+
+    it("renders one-time preset amount buttons when switched", async () => {
+      render(<DonationForm />);
+      await user.click(screen.getByText("One-time"));
+      expect(getPresetButton(100)).toBeInTheDocument();
       expect(getPresetButton(250)).toBeInTheDocument();
+      expect(getPresetButton(500)).toBeInTheDocument();
     });
 
     it("renders custom amount input", () => {
@@ -89,8 +96,8 @@ describe("DonationForm", () => {
       render(<DonationForm />);
       const input = screen.getByPlaceholderText("Custom amount");
       await user.type(input, "75");
-      await user.click(getPresetButton(25));
-      expect(getSubmitButton().textContent).toMatch(/Donate \$25/);
+      await user.click(getPresetButton(100));
+      expect(getSubmitButton().textContent).toMatch(/Donate \$100/);
     });
   });
 
@@ -99,7 +106,7 @@ describe("DonationForm", () => {
       render(<DonationForm />);
       await user.click(screen.getByText("One-time"));
       const text = getSubmitButton().textContent!;
-      expect(text).toMatch(/Donate \$50/);
+      expect(text).toMatch(/Donate \$100/);
       expect(text).not.toMatch(/\/month/);
     });
 
@@ -126,7 +133,7 @@ describe("DonationForm", () => {
 
     it("shows 'Sponsor a Teacher' for amounts >= $250", async () => {
       render(<DonationForm />);
-      await user.click(getPresetButton(250));
+      await user.click(getPresetButton(500));
       expect(screen.getByText(/sponsor a teacher/i)).toBeInTheDocument();
     });
   });
@@ -193,13 +200,13 @@ describe("DonationForm", () => {
 
     it("sends correct payload for monthly donation", async () => {
       render(<DonationForm />);
-      await user.click(getPresetButton(250));
+      await user.click(getPresetButton(100));
       await user.click(getSubmitButton());
 
       expect(mockFetch).toHaveBeenCalledWith("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 250, frequency: "monthly" }),
+        body: JSON.stringify({ amount: 100, frequency: "monthly" }),
       });
     });
 
