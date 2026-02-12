@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       });
 
       const session = await getStripe().checkout.sessions.create({
+        ui_mode: "hosted",
         mode: "subscription",
         payment_method_types: ["card"],
         line_items: [{ price: price.id, quantity: 1 }],
@@ -58,10 +59,19 @@ export async function POST(req: NextRequest) {
         cancel_url: `${baseUrl}/donate`,
       });
 
+      if (!session.url) {
+        console.error("Stripe session created but no URL returned:", JSON.stringify(session, null, 2));
+        return NextResponse.json(
+          { error: "Checkout session created but no redirect URL was returned. Please try again." },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json({ url: session.url });
     } else {
       // One-time payment
       const session = await getStripe().checkout.sessions.create({
+        ui_mode: "hosted",
         mode: "payment",
         payment_method_types: ["card"],
         customer_creation: "always",
@@ -80,6 +90,14 @@ export async function POST(req: NextRequest) {
         success_url: `${baseUrl}/donate/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/donate`,
       });
+
+      if (!session.url) {
+        console.error("Stripe session created but no URL returned:", JSON.stringify(session, null, 2));
+        return NextResponse.json(
+          { error: "Checkout session created but no redirect URL was returned. Please try again." },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({ url: session.url });
     }
