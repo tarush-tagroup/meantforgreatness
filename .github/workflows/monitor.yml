@@ -9,6 +9,10 @@ on:
 jobs:
   monitor:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
@@ -53,9 +57,45 @@ jobs:
           echo "$ERRORS" > /tmp/vercel-errors.txt
           echo "has_errors=true" >> "$GITHUB_OUTPUT"
 
+      # Create a GitHub issue to notify about the errors
+      - name: Create issue for detected errors
+        if: steps.logs.outputs.has_errors == 'true'
+        id: issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ERRORS=$(cat /tmp/vercel-errors.txt)
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+
+          ISSUE_URL=$(gh issue create \
+            --title "🚨 Production errors detected - $TIMESTAMP" \
+            --label "bug,automated" \
+            --body "$(cat <<EOF
+          ## Production Errors Detected
+
+          The automated Vercel monitor found errors in the production logs at **$TIMESTAMP**.
+
+          ### Errors
+          \`\`\`
+          $ERRORS
+          \`\`\`
+
+          ### Status
+          ⏳ Claude Haiku is analyzing these errors and attempting to create a fix PR...
+
+          ---
+          *This issue was created automatically by the [Vercel Error Monitor](https://github.com/${{ github.repository }}/actions/workflows/monitor.yml)*
+          EOF
+          )")
+
+          echo "issue_url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
+          echo "Created issue: $ISSUE_URL"
+
       # If errors found, let Claude analyze and fix
       - name: Claude analyzes and fixes errors
+        id: claude
         if: steps.logs.outputs.has_errors == 'true'
+        continue-on-error: true
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -80,4 +120,54 @@ jobs:
           4. Run tests to verify the fix works
           5. Push the branch and create a PR with a clear description of what broke and how you fixed it
 
-          If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR."
+          If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR." \
+          2>&1 | tee /tmp/claude-output.txt
+
+      # Update the issue with Claude's result
+      - name: Update issue with results
+        if: steps.logs.outputs.has_errors == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CLAUDE_OUTPUT=$(cat /tmp/claude-output.txt 2>/dev/null || echo "No output captured")
+          # Truncate if too long for a comment
+          if [ ${#CLAUDE_OUTPUT} -gt 60000 ]; then
+            CLAUDE_OUTPUT="${CLAUDE_OUTPUT:0:60000}... (truncated)"
+          fi
+
+          if [ "${{ steps.claude.outcome }}" == "success" ]; then
+            gh issue comment "${{ steps.issue.outputs.issue_url }}" --body "$(cat <<EOF
+          ## ✅ Claude Haiku Analysis Complete
+
+          Claude analyzed the errors and took action. Check for a new PR linked to this issue.
+
+          <details>
+          <summary>Claude's full output</summary>
+
+          \`\`\`
+          $CLAUDE_OUTPUT
+          \`\`\`
+
+          </details>
+          EOF
+          )"
+          else
+            gh issue comment "${{ steps.issue.outputs.issue_url }}" --body "$(cat <<EOF
+          ## ❌ Claude could not fix the errors automatically
+
+          The automated fix attempt failed. Please investigate manually.
+
+          <details>
+          <summary>Claude's output</summary>
+
+          \`\`\`
+          $CLAUDE_OUTPUT
+          \`\`\`
+
+          </details>
+
+          ---
+          **Next steps:** Open Claude Code locally and investigate these production errors.
+          EOF
+          )"
+          fi
