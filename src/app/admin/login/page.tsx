@@ -12,9 +12,17 @@ export default async function AdminLoginPage({
 }: {
   searchParams: Promise<{ error?: string; callbackUrl?: string }>;
 }) {
-  const session = await auth();
-  if (session?.user) {
-    redirect("/admin");
+  // Redirect to dashboard if already logged in (try/catch prevents
+  // crashes when auth config has issues — the login page must always render)
+  try {
+    const session = await auth();
+    if (session?.user) {
+      redirect("/admin");
+    }
+  } catch (e) {
+    // Re-throw Next.js redirect (it uses throw internally)
+    if (e && typeof e === "object" && "digest" in e) throw e;
+    // Swallow auth errors — show login page anyway
   }
 
   const params = await searchParams;
