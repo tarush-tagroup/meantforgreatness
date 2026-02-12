@@ -49,10 +49,10 @@ async function seed() {
       studentCount: 20,
       classesPerWeek: 4,
       description:
-        "Chloe Orphanage is home to 20 students receiving beginner English instruction. With a small Kids group and a larger Junior class, students build foundational English skills through consistent, twice-weekly sessions.",
+        "Chloe Orphanage is home to 20 students receiving beginner English instruction. With a small Kids group and a larger Junior class, students build foundational English skills through consistent sessions four times per week.",
       classGroupsData: [
         { name: "Kids", studentCount: 4, ageRange: "8-9", sortOrder: 0 },
-        { name: "Junior", studentCount: 14, ageRange: "10-16", sortOrder: 1 },
+        { name: "Junior", studentCount: 16, ageRange: "10-16", sortOrder: 1 },
       ],
     },
     {
@@ -66,25 +66,25 @@ async function seed() {
       hoursPerWeek: 15,
       runningSince: "September 2024",
       description:
-        "Our largest program with over 40 students across 5 class levels. Seeds of Hope runs 15 classes per week, Monday through Friday, covering everything from beginner Kids groups to Pre-Intermediate level. This orphanage has been part of our program since the very beginning.",
+        "Our largest program with 46 students across 5 class levels. Seeds of Hope runs 15 classes per week, Monday through Friday, covering everything from beginner Kids groups to Pre-Intermediate level. This orphanage has been part of our program since the very beginning.",
       classGroupsData: [
-        { name: "Kids I", studentCount: 8, ageRange: "7-9", sortOrder: 0 },
-        { name: "Kids II", studentCount: 8, ageRange: "8-10", sortOrder: 1 },
+        { name: "Kids I", studentCount: 9, ageRange: "7-9", sortOrder: 0 },
+        { name: "Kids II", studentCount: 9, ageRange: "8-10", sortOrder: 1 },
         {
           name: "Junior Primary I & II",
-          studentCount: 10,
+          studentCount: 12,
           ageRange: "10-14",
           sortOrder: 2,
         },
         {
           name: "Young Adult I & II",
-          studentCount: 8,
+          studentCount: 9,
           ageRange: "15-18",
           sortOrder: 3,
         },
         {
           name: "Pre-Intermediate",
-          studentCount: 6,
+          studentCount: 7,
           ageRange: "16-19",
           sortOrder: 4,
         },
@@ -99,9 +99,9 @@ async function seed() {
       imageUrl: "/images/sekar-pengharapan.jpg",
       studentCount: 26,
       classesPerWeek: 4,
-      curriculum: "English for Everyone - Level 2",
+      curriculum: "English for Everyone – Level 2",
       description:
-        'Sekar Pengharapan serves 26 students in two focused class groups. Using the structured "English for Everyone - Level 2" curriculum, students progress through grammar, vocabulary, and conversation skills in a systematic way.',
+        'Sekar Pengharapan serves 26 students in two focused class groups. Using the structured "English for Everyone – Level 2" curriculum, students progress through grammar, vocabulary, and conversation skills across four classes per week.',
       classGroupsData: [
         { name: "Junior", studentCount: 14, ageRange: "13-15", sortOrder: 0 },
         {
@@ -122,9 +122,9 @@ async function seed() {
       studentCount: 17,
       classesPerWeek: 6,
       description:
-        "Sunya Giri Orphanage focuses on practical English skills, with vocabulary centered on jobs, occupations, and personal goals. The 17 students learn language they can directly apply to future career opportunities.",
+        "Sunya Giri Orphanage focuses on practical English skills, with vocabulary centered on jobs, occupations, and personal goals. The 17 students learn language they can directly apply to future career opportunities across six classes per week.",
       classGroupsData: [
-        { name: "Junior", studentCount: 9, ageRange: "10-17", sortOrder: 0 },
+        { name: "Junior", studentCount: 8, ageRange: "10-17", sortOrder: 0 },
         {
           name: "Young Adult",
           studentCount: 9,
