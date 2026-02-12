@@ -6,6 +6,7 @@ import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
 import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
+import { logger } from "@/lib/logger";
 
 const photoSchema = z.object({
   url: z.string().url(),
@@ -217,7 +218,7 @@ export async function PUT(
         }
       })
       .catch((err) => {
-        console.error("Background AI re-analysis failed for class log:", id, err);
+        logger.error("admin:class-logs", "Background AI re-analysis failed", { classLogId: id, error: err instanceof Error ? err.message : String(err) });
       });
   }
 

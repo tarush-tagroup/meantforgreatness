@@ -20,6 +20,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "transparency:generate",
     "transparency:publish",
     "media:upload",
+    "logs:view",
   ],
   teacher: [
     "orphanages:view",

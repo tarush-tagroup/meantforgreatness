@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 /**
  * Geocode an address to lat/long using OpenStreetMap Nominatim (free, no API key).
  * Falls back gracefully — returns null if geocoding fails.
@@ -48,7 +50,7 @@ export async function geocodeAddress(
       displayName: result.display_name || address,
     };
   } catch {
-    console.warn("Geocoding failed for address:", address);
+    logger.warn("geocode", "Geocoding failed for address", { address });
     return null;
   }
 }

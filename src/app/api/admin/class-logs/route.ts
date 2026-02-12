@@ -6,6 +6,7 @@ import { eq, desc, and, gte, lte, sql, asc } from "drizzle-orm";
 import { z } from "zod";
 import { analyzeClassLogPhotos, validatePhotoDate } from "@/lib/ai-photo-analysis";
 import { haversineDistance } from "@/lib/geocode";
+import { logger } from "@/lib/logger";
 
 const photoSchema = z.object({
   url: z.string().url(),
@@ -250,7 +251,7 @@ export async function POST(req: NextRequest) {
       }
     })
     .catch((err) => {
-      console.error("Background AI analysis failed for class log:", created.id, err);
+      logger.error("admin:class-logs", "Background AI analysis failed", { classLogId: created.id, error: err instanceof Error ? err.message : String(err) });
     });
 
   return NextResponse.json({ classLog: created }, { status: 201 });

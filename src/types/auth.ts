@@ -18,7 +18,8 @@ export type Permission =
   | "transparency:view"
   | "transparency:generate"
   | "transparency:publish"
-  | "media:upload";
+  | "media:upload"
+  | "logs:view";
 
 export interface SessionUser {
   id: string;

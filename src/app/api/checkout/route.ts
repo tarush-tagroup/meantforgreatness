@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
         cancel_url: `${baseUrl}/donate`,
       });
 
-      console.log("Stripe session created:", { id: session.id, url: session.url, status: session.status });
+      logger.info("stripe:checkout", "Stripe session created", { id: session.id, url: session.url, status: session.status });
 
       if (!session.url) {
         return NextResponse.json(
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
         cancel_url: `${baseUrl}/donate`,
       });
 
-      console.log("Stripe session created:", { id: session.id, url: session.url, status: session.status });
+      logger.info("stripe:checkout", "Stripe session created", { id: session.id, url: session.url, status: session.status });
 
       if (!session.url) {
         return NextResponse.json(
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url: session.url });
     }
   } catch (err) {
-    console.error("Checkout error:", err);
+    logger.error("stripe:checkout", "Checkout error", { error: err instanceof Error ? err.message : String(err) });
 
     // Return Stripe-specific error details for debugging
     if (err instanceof Error && "type" in err) {

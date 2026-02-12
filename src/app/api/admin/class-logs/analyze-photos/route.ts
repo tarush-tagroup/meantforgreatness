@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { classLogs, orphanages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const analyzeSchema = z.object({
   classLogId: z.string().uuid(),
@@ -172,7 +173,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("AI photo analysis error:", error);
+    logger.error("ai:photos", "AI photo analysis error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "AI analysis failed — please try again later" },
       { status: 500 }
