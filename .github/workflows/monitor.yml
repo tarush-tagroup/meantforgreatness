@@ -153,7 +153,7 @@ jobs:
           PROMPT_END
 
           cat /tmp/claude-prompt.txt | claude -p \
-            --model claude-haiku \
+            --model claude-haiku-4-5-20251001 \
             --allowedTools "Read,Edit,Bash(npm test),Bash(npm run test),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
           2>&1 | tee /tmp/claude-output.txt
 
@@ -205,7 +205,7 @@ jobs:
           curl -sf -X POST -H "Authorization: Bearer $LOG_API_SECRET" \
             -H "Content-Type: application/json" \
             "$BASE_URL/api/admin/anthropic-usage" \
-            -d "{\"useCase\":\"monitor\",\"model\":\"claude-haiku-3-5-20241022\",\"inputTokens\":$INPUT_TOKENS,\"outputTokens\":$OUTPUT_TOKENS}" \
+            -d "{\"useCase\":\"monitor\",\"model\":\"claude-haiku-4-5-20251001\",\"inputTokens\":$INPUT_TOKENS,\"outputTokens\":$OUTPUT_TOKENS}" \
             2>/dev/null || echo "Failed to record Claude usage (non-fatal)"
 
       # Step 6: Update issue with results
