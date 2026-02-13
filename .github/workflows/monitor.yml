@@ -130,27 +130,31 @@ jobs:
         run: |
           npm i -g @anthropic-ai/claude-code
 
-          ERRORS=$(cat /tmp/errors.txt)
+          # Build the prompt in a file to avoid shell escaping issues
+          cat > /tmp/claude-prompt.txt << 'PROMPT_END'
+          You are an automated error-fixing agent. Here are production errors from the centralized log:
 
-          claude -p \
-            --model claude-haiku \
-            --allowedTools "Read,Edit,Bash(npm test),Bash(npm run test),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
-            "You are an automated error-fixing agent. Here are production errors from the centralized log:
-
-          \`\`\`
-          $ERRORS
-          \`\`\`
+          ```
+          PROMPT_END
+          cat /tmp/errors.txt >> /tmp/claude-prompt.txt
+          cat >> /tmp/claude-prompt.txt << 'PROMPT_END'
+          ```
 
           These errors come from various sources: frontend:error (client-side JS errors), frontend:error-boundary (React error boundaries), api:* (API route errors/timeouts), db:error (database query failures), db:slow-query (slow DB queries), request:auth-rejected (middleware auth failures), request:slow (slow middleware), vercel:runtime (Vercel function errors), webhook:stripe (Stripe payment/subscription issues), webhook:resend (email delivery issues), stripe:checkout (checkout flow), contact (contact form), ai:photos (photo analysis), geocode (geocoding).
 
           Please:
           1. Analyze these errors and identify the root cause
           2. Find the relevant source files in this repo
-          3. Create a fix on a new branch (use format: fix/auto-$(date +%Y-%m-%d)-description)
+          3. Create a fix on a new branch (use format: fix/auto-YYYY-MM-DD-description)
           4. Run tests to verify the fix works
           5. Push the branch and create a PR with a clear description of what broke and how you fixed it
 
-          If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR." \
+          If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR.
+          PROMPT_END
+
+          cat /tmp/claude-prompt.txt | claude -p \
+            --model claude-haiku \
+            --allowedTools "Read,Edit,Bash(npm test),Bash(npm run test),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
           2>&1 | tee /tmp/claude-output.txt
 
       # Step 4: Record monitor run in centralized logs
