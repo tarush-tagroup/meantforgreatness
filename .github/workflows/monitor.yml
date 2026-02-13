@@ -85,6 +85,10 @@ jobs:
           The automated monitor found **$ERROR_COUNT errors** at **$TIMESTAMP**.
 
           All errors below come from the centralized log (Vercel Blob storage), which includes:
+          - Frontend JS errors (\`frontend:error\`, \`frontend:error-boundary\`)
+          - API route errors (\`api:checkout\`, \`api:webhook:stripe\`, \`api:contact\`, \`api:class-logs\`)
+          - DB errors (\`db:error\`, \`db:slow-query\`)
+          - Middleware (\`request:auth-rejected\`, \`request:slow\`)
           - Vercel runtime errors (\`vercel:runtime\`)
           - Stripe webhook errors (\`webhook:stripe\`)
           - Resend email errors (\`webhook:resend\`)
@@ -100,6 +104,9 @@ jobs:
 
           ---
           *This issue was created automatically by the [Error Monitor](https://github.com/${{ github.repository }}/actions/workflows/monitor.yml)*"
+
+          # Ensure labels exist (create if missing — prevents workflow failure)
+          gh label create "automated" --description "Created by automated monitor" --color "0E8A16" 2>/dev/null || true
 
           ISSUE_URL=$(gh issue create \
             --title "🚨 Production errors detected - $TIMESTAMP" \
@@ -134,7 +141,7 @@ jobs:
           $ERRORS
           \`\`\`
 
-          These errors come from various sources: vercel:runtime (Vercel function errors), webhook:stripe (Stripe payment/subscription issues), webhook:resend (email delivery issues), stripe:checkout (checkout flow), contact (contact form), ai:photos (photo analysis), geocode (geocoding).
+          These errors come from various sources: frontend:error (client-side JS errors), frontend:error-boundary (React error boundaries), api:* (API route errors/timeouts), db:error (database query failures), db:slow-query (slow DB queries), request:auth-rejected (middleware auth failures), request:slow (slow middleware), vercel:runtime (Vercel function errors), webhook:stripe (Stripe payment/subscription issues), webhook:resend (email delivery issues), stripe:checkout (checkout flow), contact (contact form), ai:photos (photo analysis), geocode (geocoding).
 
           Please:
           1. Analyze these errors and identify the root cause
