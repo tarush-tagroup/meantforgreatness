@@ -52,7 +52,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-warmgray-700 pt-6 text-center text-sm text-warmgray-400">
+        <div className="mt-10 border-t border-warmgray-700 pt-6 text-center text-sm text-warmgray-400" suppressHydrationWarning>
           &copy; {new Date().getFullYear()} Meant for Greatness. All rights
           reserved.
         </div>

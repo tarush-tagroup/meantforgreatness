@@ -132,7 +132,7 @@ jobs:
 
           # Build the prompt in a file to avoid shell escaping issues
           cat > /tmp/claude-prompt.txt << 'PROMPT_END'
-          You are an automated error-fixing agent. Here are production errors from the centralized log:
+          You are an automated error-fixing agent for a Next.js 16 + React 19 charity website (Meant for Greatness). Here are production errors from the centralized log:
 
           ```
           PROMPT_END
@@ -140,21 +140,27 @@ jobs:
           cat >> /tmp/claude-prompt.txt << 'PROMPT_END'
           ```
 
-          These errors come from various sources: frontend:error (client-side JS errors), frontend:error-boundary (React error boundaries), api:* (API route errors/timeouts), db:error (database query failures), db:slow-query (slow DB queries), request:auth-rejected (middleware auth failures), request:slow (slow middleware), vercel:runtime (Vercel function errors), webhook:stripe (Stripe payment/subscription issues), webhook:resend (email delivery issues), stripe:checkout (checkout flow), contact (contact form), ai:photos (photo analysis), geocode (geocoding).
+          Error sources: frontend:error (client-side JS errors), frontend:error-boundary (React error boundaries), api:* (API route errors/timeouts), db:error (database query failures), db:slow-query (slow DB queries >200ms), request:auth-rejected (middleware auth failures), request:slow (slow middleware >2s), vercel:runtime (Vercel function errors), webhook:stripe (Stripe payment/subscription issues), webhook:resend (email delivery issues), stripe:checkout (checkout flow), contact (contact form), ai:photos (photo analysis), geocode (geocoding).
 
-          Please:
-          1. Analyze these errors and identify the root cause
-          2. Find the relevant source files in this repo
-          3. Create a fix on a new branch (use format: fix/auto-YYYY-MM-DD-description)
-          4. Run tests to verify the fix works
-          5. Push the branch and create a PR with a clear description of what broke and how you fixed it
+          IMPORTANT GUIDELINES:
+          - Read the CLAUDE.md file first for project context and architecture
+          - Make MINIMAL, surgical fixes — do NOT remove features or make unrelated changes
+          - React hydration errors (#418, #423) are often caused by browser extensions or dynamic content in server components — use suppressHydrationWarning where appropriate rather than converting server components to client components
+          - If errors are transient (network timeouts, rate limits, browser extensions) and NOT caused by our code, just log your analysis and do NOT create a PR
+          - Run `npm run build` and `npx vitest run` to verify your fix before pushing
 
-          If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR.
+          Steps:
+          1. Read CLAUDE.md for project context
+          2. Analyze the errors and identify the root cause
+          3. Find the relevant source files
+          4. If a code fix is needed, create a branch (format: fix/auto-YYYY-MM-DD-description)
+          5. Make the minimal fix, verify with build + tests
+          6. Push and create a PR with a clear description
           PROMPT_END
 
           cat /tmp/claude-prompt.txt | claude -p \
-            --model claude-haiku-4-5-20251001 \
-            --allowedTools "Read,Edit,Bash(npm test),Bash(npm run test),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
+            --model claude-sonnet-4-5-20250929 \
+            --allowedTools "Read,Glob,Grep,Edit,Bash(npm run build),Bash(npm test),Bash(npx vitest run),Bash(git checkout -b *),Bash(git add *),Bash(git commit *),Bash(git push *),Bash(gh pr create *),Bash(git diff *),Bash(git status),Bash(git config *)" \
           2>&1 | tee /tmp/claude-output.txt
 
       # Step 4: Record monitor run in centralized logs
@@ -205,7 +211,7 @@ jobs:
           curl -sf -X POST -H "Authorization: Bearer $LOG_API_SECRET" \
             -H "Content-Type: application/json" \
             "$BASE_URL/api/admin/anthropic-usage" \
-            -d "{\"useCase\":\"monitor\",\"model\":\"claude-haiku-4-5-20251001\",\"inputTokens\":$INPUT_TOKENS,\"outputTokens\":$OUTPUT_TOKENS}" \
+            -d "{\"useCase\":\"monitor\",\"model\":\"claude-sonnet-4-5-20250929\",\"inputTokens\":$INPUT_TOKENS,\"outputTokens\":$OUTPUT_TOKENS}" \
             2>/dev/null || echo "Failed to record Claude usage (non-fatal)"
 
       # Step 6: Update issue with results
