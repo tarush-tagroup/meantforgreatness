@@ -203,9 +203,35 @@ describe("PUT /api/admin/class-logs/[id]", () => {
     mockWithAuth.mockResolvedValue([adminUser, null]);
     mockHasPermission.mockReturnValue(true);
 
-    // For fetching existing log
-    mockSelect.mockReturnValue({ from: mockFrom });
-    mockFrom.mockReturnValue({ where: mockWhere });
+    // PUT does multiple select calls:
+    //   1. Fetch existing log: select().from(classLogs).where().limit()
+    //   2. (If photos provided) Fetch existing photos: select().from(classLogPhotos).where().orderBy()
+    //   3. (If photos changed) Fetch orphanage name: select().from(orphanages).where().limit()
+    let selectCallCount = 0;
+    const mockPhotosOrderBy = vi.fn().mockResolvedValue([]);
+    const mockPhotosWhere = vi.fn().mockReturnValue({ orderBy: mockPhotosOrderBy });
+
+    // For 3rd+ select calls (orphanage name lookup)
+    const mockOrphanageLimit = vi.fn().mockResolvedValue([{ name: "Test Orphanage" }]);
+    const mockOrphanageWhere = vi.fn().mockReturnValue({ limit: mockOrphanageLimit });
+
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      return { from: mockFrom };
+    });
+
+    mockFrom.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        // First select: fetch existing log
+        return { where: mockWhere };
+      }
+      if (selectCallCount === 2) {
+        // Second select: fetch existing photos (for URL comparison)
+        return { where: mockPhotosWhere };
+      }
+      // Third+ select: fetch orphanage name for AI re-analysis
+      return { where: mockOrphanageWhere };
+    });
     mockWhere.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([mockLog]);
 

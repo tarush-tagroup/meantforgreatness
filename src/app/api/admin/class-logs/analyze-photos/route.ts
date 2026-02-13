@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
   const orphanageName = row.orphanageName || row.orphanageId;
 
   try {
-    const analysis = await analyzeClassLogPhotos(photoUrls, orphanageName);
+    const analysis = await analyzeClassLogPhotos(photoUrls, orphanageName, classLogId);
 
     if (!analysis) {
       return NextResponse.json(

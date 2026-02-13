@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
   const photoUrls = parsed.data.photos.map((p) => p.url);
   const photoGps = parsed.data.photoGps;
   const exifDateTaken = parsed.data.exifDateTaken;
-  analyzeClassLogPhotos(photoUrls, orphanage.name)
+  analyzeClassLogPhotos(photoUrls, orphanage.name, created.id)
     .then(async (analysis) => {
       if (analysis) {
         // ── Location: GPS + AI vision (do both, prefer GPS) ──

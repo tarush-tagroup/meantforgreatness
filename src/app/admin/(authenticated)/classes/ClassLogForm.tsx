@@ -84,6 +84,7 @@ export default function ClassLogForm({
   );
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
   const [error, setError] = useState("");
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -132,6 +133,41 @@ export default function ClassLogForm({
 
   function removePhoto(index: number) {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleRerunAnalysis() {
+    if (!initialData?.id || photos.length === 0) return;
+
+    setRerunning(true);
+    setError("");
+
+    try {
+      const firstGps = photos.find((p) => p.gps)?.gps || null;
+      const firstExifDate = photos.find((p) => p.exifDateTaken)?.exifDateTaken || null;
+
+      const res = await fetch("/api/admin/class-logs/analyze-photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          classLogId: initialData.id,
+          photoUrls: photos.map((p) => p.url),
+          photoGps: firstGps,
+          exifDateTaken: firstExifDate,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "AI analysis failed");
+      }
+
+      // Refresh the page to show updated AI metadata
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI analysis failed");
+    } finally {
+      setRerunning(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -392,7 +428,7 @@ export default function ClassLogForm({
       </div>
 
       {/* AI Photo Analysis Metadata (read-only) */}
-      {aiMetadata?.aiAnalyzedAt && (
+      {isEditing && aiMetadata?.aiAnalyzedAt && (
         <div className="rounded-lg border border-purple-200 bg-purple-50 p-5">
           <div className="flex items-center gap-2 mb-3">
             <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -444,6 +480,39 @@ export default function ClassLogForm({
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={handleRerunAnalysis}
+            disabled={rerunning}
+            className="mt-3 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors disabled:opacity-50"
+          >
+            {rerunning ? "Re-analyzing..." : "Re-run AI Analysis"}
+          </button>
+        </div>
+      )}
+
+      {/* AI analysis pending state */}
+      {isEditing && !aiMetadata?.aiAnalyzedAt && photos.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-600 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-sm font-medium text-amber-800">AI photo analysis pending</p>
+          </div>
+          <p className="text-xs text-amber-600 mt-1">
+            Analysis runs automatically after photos are uploaded. It may take a minute to complete.
+          </p>
+          <button
+            type="button"
+            onClick={handleRerunAnalysis}
+            disabled={rerunning}
+            className="mt-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-200 transition-colors disabled:opacity-50"
+          >
+            {rerunning ? "Analyzing..." : "Run AI Analysis Now"}
+          </button>
         </div>
       )}
 

@@ -3,6 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+interface JobHistoryEntry {
+  id: number;
+  jobName: string;
+  status: string;
+  message: string | null;
+  itemsProcessed: number | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
 interface LogActionsProps {
   lastRun: {
     status: string;
@@ -11,6 +21,7 @@ interface LogActionsProps {
     finishedAt: string | null;
     itemsProcessed: number | null;
   } | null;
+  recentJobs: JobHistoryEntry[];
 }
 
 interface ErrorEntry {
@@ -19,7 +30,7 @@ interface ErrorEntry {
   message: string;
 }
 
-export default function LogActions({ lastRun }: LogActionsProps) {
+export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
   const router = useRouter();
   const [ingestLoading, setIngestLoading] = useState(false);
   const [checkLoading, setCheckLoading] = useState(false);
@@ -226,6 +237,61 @@ export default function LogActions({ lastRun }: LogActionsProps) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Job History */}
+      {recentJobs.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-warmgray-700 mb-2">
+            Job History
+          </h3>
+          <div className="rounded-md border border-warmgray-200 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-warmgray-50">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-warmgray-600 w-36">Time</th>
+                  <th className="text-left px-3 py-2 font-medium text-warmgray-600 w-40">Job</th>
+                  <th className="text-left px-3 py-2 font-medium text-warmgray-600 w-20">Status</th>
+                  <th className="text-left px-3 py-2 font-medium text-warmgray-600">Message</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-warmgray-100 bg-white">
+                {recentJobs.map((job) => (
+                  <tr key={job.id} className="hover:bg-warmgray-50/50">
+                    <td className="px-3 py-2 text-warmgray-500 font-mono whitespace-nowrap">
+                      {new Date(job.startedAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </td>
+                    <td className="px-3 py-2 text-warmgray-700 font-mono">
+                      {job.jobName}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          job.status === "success"
+                            ? "bg-teal-100 text-teal-700"
+                            : job.status === "error"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {job.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-warmgray-900 max-w-md truncate" title={job.message || ""}>
+                      {job.message || "\u2014"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

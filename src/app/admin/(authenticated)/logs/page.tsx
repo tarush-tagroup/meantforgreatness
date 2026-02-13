@@ -35,8 +35,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
 
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Fetch logs, sources, and last ingest run in parallel
-  const [logPage, sources, lastIngestRun] = await Promise.all([
+  // Fetch logs, sources, last ingest run, and recent jobs in parallel
+  const [logPage, sources, lastIngestRun, recentJobRows] = await Promise.all([
     listLogs(
       {
         level: levelFilter || undefined,
@@ -61,6 +61,21 @@ export default async function LogsPage({ searchParams }: PageProps) {
       .limit(1)
       .then((rows) => rows[0] || null)
       .catch(() => null),
+    // Get last 10 job runs across all job types
+    db
+      .select({
+        id: cronRuns.id,
+        jobName: cronRuns.jobName,
+        status: cronRuns.status,
+        message: cronRuns.message,
+        itemsProcessed: cronRuns.itemsProcessed,
+        startedAt: cronRuns.startedAt,
+        finishedAt: cronRuns.finishedAt,
+      })
+      .from(cronRuns)
+      .orderBy(desc(cronRuns.startedAt))
+      .limit(10)
+      .catch(() => [] as typeof cronRuns.$inferSelect[]),
   ]);
 
   const { entries: logs, total } = logPage;
@@ -96,6 +111,17 @@ export default async function LogsPage({ searchParams }: PageProps) {
       }
     : null;
 
+  // Serialize recent jobs for the client component
+  const recentJobsData = recentJobRows.map((job) => ({
+    id: job.id,
+    jobName: job.jobName,
+    status: job.status,
+    message: job.message,
+    itemsProcessed: job.itemsProcessed,
+    startedAt: job.startedAt.toISOString(),
+    finishedAt: job.finishedAt?.toISOString() || null,
+  }));
+
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -106,7 +132,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
       </div>
 
       {/* Action bar with last run status + buttons */}
-      <LogActions lastRun={lastRunData} />
+      <LogActions lastRun={lastRunData} recentJobs={recentJobsData} />
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-3 items-center">

@@ -226,6 +226,26 @@ export const donations = pgTable(
   ]
 );
 
+// ─── Anthropic Usage ────────────────────────────────────────────────────────
+export const anthropicUsage = pgTable(
+  "anthropic_usage",
+  {
+    id: serial("id").primaryKey(),
+    useCase: varchar("use_case", { length: 50 }).notNull(), // "photo_analysis" | "monitor"
+    model: varchar("model", { length: 100 }).notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costCents: integer("cost_cents").notNull().default(0), // USD cents for precision
+    classLogId: uuid("class_log_id"), // nullable, only for photo analysis
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("anthropic_usage_use_case_idx").on(table.useCase),
+    index("anthropic_usage_created_at_idx").on(table.createdAt),
+  ]
+);
+
 // ─── Cron Runs ──────────────────────────────────────────────────────────────
 export const cronRuns = pgTable(
   "cron_runs",

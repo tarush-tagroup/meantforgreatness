@@ -92,17 +92,16 @@ export default async function ClassLogDetailPage({
   const canDelete = (isOwner && canDeleteOwn) || canDeleteAll;
 
   // Prepare AI metadata for both views
-  const aiMetadata = row.aiAnalyzedAt
-    ? {
-        aiKidsCount: row.aiKidsCount,
-        aiLocation: row.aiLocation,
-        aiPhotoTimestamp: row.aiPhotoTimestamp,
-        aiOrphanageMatch: row.aiOrphanageMatch,
-        aiConfidenceNotes: row.aiConfidenceNotes,
-        aiPrimaryPhotoUrl: row.aiPrimaryPhotoUrl,
-        aiAnalyzedAt: row.aiAnalyzedAt?.toISOString() || null,
-      }
-    : null;
+  // Always pass the object so the form can show "pending" state when aiAnalyzedAt is null
+  const aiMetadata = {
+    aiKidsCount: row.aiKidsCount,
+    aiLocation: row.aiLocation,
+    aiPhotoTimestamp: row.aiPhotoTimestamp,
+    aiOrphanageMatch: row.aiOrphanageMatch,
+    aiConfidenceNotes: row.aiConfidenceNotes,
+    aiPrimaryPhotoUrl: row.aiPrimaryPhotoUrl,
+    aiAnalyzedAt: row.aiAnalyzedAt?.toISOString() || null,
+  };
 
   if (canEdit) {
     // Editable mode: show form
@@ -241,7 +240,7 @@ export default async function ClassLogDetailPage({
         </div>
 
         {/* AI Photo Analysis Metadata (read-only) */}
-        {aiMetadata && (
+        {aiMetadata.aiAnalyzedAt && (
           <div className="rounded-lg border border-purple-200 bg-purple-50 p-5">
             <div className="flex items-center gap-2 mb-3">
               <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">

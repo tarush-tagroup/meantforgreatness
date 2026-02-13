@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { label: "Reports", href: "/admin/transparency", permission: "transparency:view" },
   { label: "Media", href: "/admin/media", permission: "media:upload" },
   { label: "Logs", href: "/admin/logs", permission: "logs:view" },
+  { label: "API Costs", href: "/admin/costs", permission: "costs:view" },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {

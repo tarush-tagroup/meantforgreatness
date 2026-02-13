@@ -34,6 +34,14 @@ export default async function AdminOrphanagesPage() {
             {rows.length} orphanage{rows.length !== 1 ? "s" : ""} in the program
           </p>
         </div>
+        {canEdit && (
+          <Link
+            href="/admin/orphanages/new"
+            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700"
+          >
+            Add Orphanage
+          </Link>
+        )}
       </div>
 
       <div className="grid gap-4">

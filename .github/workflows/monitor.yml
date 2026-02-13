@@ -146,7 +146,58 @@ jobs:
           If the errors are transient (network timeouts, rate limits, etc.) and not caused by our code, just log your analysis and do NOT create a PR." \
           2>&1 | tee /tmp/claude-output.txt
 
-      # Step 4: Update issue with results
+      # Step 4: Record monitor run in centralized logs
+      - name: Record monitor run
+        if: always()
+        env:
+          LOG_API_SECRET: ${{ secrets.LOG_API_SECRET }}
+          BASE_URL: https://www.meantforgreatness.org
+        run: |
+          ERROR_COUNT="${{ steps.check.outputs.error_count || '0' }}"
+          HAS_ERRORS="${{ steps.check.outputs.has_errors || 'false' }}"
+
+          if [ "$HAS_ERRORS" = "true" ]; then
+            MSG="Monitor completed: found $ERROR_COUNT errors"
+            LEVEL="warn"
+          else
+            MSG="Monitor completed: no errors found"
+            LEVEL="info"
+          fi
+
+          curl -sf -X POST -H "Authorization: Bearer $LOG_API_SECRET" \
+            -H "Content-Type: application/json" \
+            "$BASE_URL/api/admin/logs/ingest" \
+            -d "{\"entries\":[{\"level\":\"$LEVEL\",\"source\":\"monitor\",\"message\":\"$MSG\"}]}" \
+            2>/dev/null || echo "Failed to record monitor run (non-fatal)"
+
+      # Step 5: Record Claude API usage for cost tracking
+      - name: Record Claude API usage
+        if: steps.check.outputs.has_errors == 'true' && steps.claude.outcome == 'success'
+        continue-on-error: true
+        env:
+          LOG_API_SECRET: ${{ secrets.LOG_API_SECRET }}
+          BASE_URL: https://www.meantforgreatness.org
+        run: |
+          # Try to extract token counts from Claude CLI output
+          # Claude Code outputs usage info like "Input tokens: 1234" and "Output tokens: 567"
+          INPUT_TOKENS=$(grep -oP 'input.*?(\d[\d,]+)' /tmp/claude-output.txt 2>/dev/null | grep -oP '\d[\d,]+' | tail -1 | tr -d ',' || echo "0")
+          OUTPUT_TOKENS=$(grep -oP 'output.*?(\d[\d,]+)' /tmp/claude-output.txt 2>/dev/null | grep -oP '\d[\d,]+' | tail -1 | tr -d ',' || echo "0")
+
+          # Default to rough estimates if parsing fails
+          if [ "$INPUT_TOKENS" = "0" ] && [ "$OUTPUT_TOKENS" = "0" ]; then
+            # Estimate based on output length (rough heuristic)
+            OUTPUT_CHARS=$(wc -c < /tmp/claude-output.txt 2>/dev/null || echo "0")
+            INPUT_TOKENS=$((OUTPUT_CHARS / 2))
+            OUTPUT_TOKENS=$((OUTPUT_CHARS / 4))
+          fi
+
+          curl -sf -X POST -H "Authorization: Bearer $LOG_API_SECRET" \
+            -H "Content-Type: application/json" \
+            "$BASE_URL/api/admin/anthropic-usage" \
+            -d "{\"useCase\":\"monitor\",\"model\":\"claude-haiku-3-5-20241022\",\"inputTokens\":$INPUT_TOKENS,\"outputTokens\":$OUTPUT_TOKENS}" \
+            2>/dev/null || echo "Failed to record Claude usage (non-fatal)"
+
+      # Step 6: Update issue with results
       - name: Update issue with results
         if: steps.check.outputs.has_errors == 'true'
         env:

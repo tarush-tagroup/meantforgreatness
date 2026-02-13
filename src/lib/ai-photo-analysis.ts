@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "@/lib/logger";
+import { db } from "@/db";
+import { anthropicUsage } from "@/db/schema";
 
 export interface PhotoAnalysisResult {
   kidsCount: number;
@@ -121,15 +123,32 @@ function parseTimeToHour(time: string): number | null {
   return null;
 }
 
+/** Token usage from a single API call */
+interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/**
+ * Calculate cost in USD cents from token usage.
+ * Pricing for Claude Sonnet: $3/1M input, $15/1M output.
+ */
+function calculateCostCents(usage: TokenUsage): number {
+  const inputCost = (usage.inputTokens / 1_000_000) * 300; // $3 = 300 cents
+  const outputCost = (usage.outputTokens / 1_000_000) * 1500; // $15 = 1500 cents
+  return Math.round(inputCost + outputCost);
+}
+
 /**
  * Analyze a single class log photo using Claude Vision API.
  * Extracts: kid count, location hints, timestamp, and whether it looks like it's at the named orphanage.
+ * Also returns token usage for cost tracking.
  */
 async function analyzePhoto(
   client: Anthropic,
   photoUrl: string,
   orphanageName: string
-): Promise<PhotoAnalysisResult> {
+): Promise<{ result: PhotoAnalysisResult; usage: TokenUsage }> {
   const response = await client.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 1024,
@@ -165,38 +184,52 @@ Respond ONLY in this exact JSON format (no markdown, no backticks):
     ],
   });
 
+  const usage: TokenUsage = {
+    inputTokens: response.usage?.input_tokens ?? 0,
+    outputTokens: response.usage?.output_tokens ?? 0,
+  };
+
   const textBlock = response.content.find((block) => block.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     return {
-      kidsCount: 0,
-      location: null,
-      photoTimestamp: null,
-      orphanageMatch: "uncertain",
-      confidenceNotes: "AI analysis returned no text response",
+      result: {
+        kidsCount: 0,
+        location: null,
+        photoTimestamp: null,
+        orphanageMatch: "uncertain",
+        confidenceNotes: "AI analysis returned no text response",
+      },
+      usage,
     };
   }
 
   try {
-    const result = JSON.parse(textBlock.text.trim());
+    const parsed = JSON.parse(textBlock.text.trim());
     return {
-      kidsCount: typeof result.kidsCount === "number" ? result.kidsCount : 0,
-      location: result.location || null,
-      photoTimestamp: result.photoTimestamp || null,
-      orphanageMatch: ["high", "likely", "uncertain", "unlikely"].includes(
-        result.orphanageMatch
-      )
-        ? result.orphanageMatch
-        : "uncertain",
-      confidenceNotes:
-        result.confidenceNotes || "No additional confidence notes",
+      result: {
+        kidsCount: typeof parsed.kidsCount === "number" ? parsed.kidsCount : 0,
+        location: parsed.location || null,
+        photoTimestamp: parsed.photoTimestamp || null,
+        orphanageMatch: ["high", "likely", "uncertain", "unlikely"].includes(
+          parsed.orphanageMatch
+        )
+          ? parsed.orphanageMatch
+          : "uncertain",
+        confidenceNotes:
+          parsed.confidenceNotes || "No additional confidence notes",
+      },
+      usage,
     };
   } catch {
     return {
-      kidsCount: 0,
-      location: null,
-      photoTimestamp: null,
-      orphanageMatch: "uncertain",
-      confidenceNotes: `AI analysis response could not be parsed: ${textBlock.text.substring(0, 200)}`,
+      result: {
+        kidsCount: 0,
+        location: null,
+        photoTimestamp: null,
+        orphanageMatch: "uncertain",
+        confidenceNotes: `AI analysis response could not be parsed: ${textBlock.text.substring(0, 200)}`,
+      },
+      usage,
     };
   }
 }
@@ -204,10 +237,12 @@ Respond ONLY in this exact JSON format (no markdown, no backticks):
 /**
  * Analyze all photos for a class log. Returns aggregated metadata using the
  * photo with the most kids detected as the primary source.
+ * Also records token usage to the anthropic_usage table.
  */
 export async function analyzeClassLogPhotos(
   photoUrls: string[],
-  orphanageName: string
+  orphanageName: string,
+  classLogId?: string
 ): Promise<ClassLogPhotoAnalysis | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -224,12 +259,35 @@ export async function analyzeClassLogPhotos(
     photoUrls.map((url) => analyzePhoto(client, url, orphanageName))
   );
 
-  const successfulResults: { url: string; result: PhotoAnalysisResult }[] = [];
+  const successfulResults: { url: string; result: PhotoAnalysisResult; usage: TokenUsage }[] = [];
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+
   for (let i = 0; i < results.length; i++) {
     const r = results[i];
     if (r.status === "fulfilled") {
-      successfulResults.push({ url: photoUrls[i], result: r.value });
+      successfulResults.push({ url: photoUrls[i], result: r.value.result, usage: r.value.usage });
+      totalInputTokens += r.value.usage.inputTokens;
+      totalOutputTokens += r.value.usage.outputTokens;
     }
+  }
+
+  // Record aggregated usage (fire-and-forget)
+  if (totalInputTokens > 0 || totalOutputTokens > 0) {
+    const totalCostCents = calculateCostCents({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens });
+    db.insert(anthropicUsage)
+      .values({
+        useCase: "photo_analysis",
+        model: "claude-sonnet-4-20250514",
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        costCents: totalCostCents,
+        classLogId: classLogId || null,
+        metadata: { photoCount: photoUrls.length, successCount: successfulResults.length },
+      })
+      .catch((err) => {
+        console.error("[ai-photo-analysis] Failed to record usage:", err);
+      });
   }
 
   if (successfulResults.length === 0) {

@@ -156,20 +156,36 @@ export async function PUT(
   if (parsed.data.studentCount !== undefined) updateData.studentCount = parsed.data.studentCount;
   if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
 
-  // Replace photos if provided
+  // Replace photos if provided — but only re-analyze if photo URLs actually changed
   let photosChanged = false;
   if (parsed.data.photos) {
-    photosChanged = true;
-    updateData.photoUrl = parsed.data.photos[0]?.url || null; // keep legacy field
-    // Clear AI metadata — will be re-generated
-    updateData.aiKidsCount = null;
-    updateData.aiLocation = null;
-    updateData.aiPhotoTimestamp = null;
-    updateData.aiOrphanageMatch = null;
-    updateData.aiConfidenceNotes = null;
-    updateData.aiPrimaryPhotoUrl = null;
-    updateData.aiAnalyzedAt = null;
+    // Check if photo URLs actually changed
+    const existingPhotos = await db
+      .select({ url: classLogPhotos.url })
+      .from(classLogPhotos)
+      .where(eq(classLogPhotos.classLogId, id))
+      .orderBy(asc(classLogPhotos.sortOrder));
 
+    const oldUrls = existingPhotos.map((p) => p.url).sort();
+    const newUrls = parsed.data.photos.map((p) => p.url).sort();
+    const urlsChanged =
+      oldUrls.length !== newUrls.length ||
+      oldUrls.some((url, i) => url !== newUrls[i]);
+
+    if (urlsChanged) {
+      photosChanged = true;
+      updateData.photoUrl = parsed.data.photos[0]?.url || null; // keep legacy field
+      // Clear AI metadata — will be re-generated
+      updateData.aiKidsCount = null;
+      updateData.aiLocation = null;
+      updateData.aiPhotoTimestamp = null;
+      updateData.aiOrphanageMatch = null;
+      updateData.aiConfidenceNotes = null;
+      updateData.aiPrimaryPhotoUrl = null;
+      updateData.aiAnalyzedAt = null;
+    }
+
+    // Always update photos (captions/order may have changed)
     await db.delete(classLogPhotos).where(eq(classLogPhotos.classLogId, id));
     if (parsed.data.photos.length > 0) {
       await db.insert(classLogPhotos).values(
@@ -200,7 +216,7 @@ export async function PUT(
     const orphanageName = orphanageRow?.name || effectiveOrphanageId;
     const photoUrls = parsed.data.photos.map((p) => p.url);
 
-    analyzeClassLogPhotos(photoUrls, orphanageName)
+    analyzeClassLogPhotos(photoUrls, orphanageName, id)
       .then(async (analysis) => {
         if (analysis) {
           await db

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import type { Role } from "@/types/auth";
+import { logger } from "@/lib/logger";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -19,51 +20,79 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider !== "google" || !user.email) {
+        logger.warn("auth", "Non-Google provider attempted", {
+          email: user.email || "unknown",
+          provider: account?.provider || "none",
+        });
         return false;
       }
 
-      // Look up the user by email in our users table
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, user.email))
-        .limit(1);
+      try {
+        // Look up the user by email in our users table
+        const [existingUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, user.email))
+          .limit(1);
 
-      if (!existingUser) {
-        // Not invited — reject login
-        return "/admin/login?error=not-invited";
-      }
+        if (!existingUser) {
+          // Not invited — reject login
+          logger.warn("auth", "Sign-in rejected: not invited", {
+            email: user.email,
+          });
+          return "/admin/login?error=not-invited";
+        }
 
-      if (existingUser.status === "deactivated") {
-        return "/admin/login?error=deactivated";
-      }
+        if (existingUser.status === "deactivated") {
+          logger.warn("auth", "Sign-in rejected: deactivated", {
+            email: user.email,
+          });
+          return "/admin/login?error=deactivated";
+        }
 
-      if (existingUser.status === "invited") {
-        // First-time login: activate the account
-        await db
-          .update(users)
-          .set({
-            status: "active",
-            googleId: account.providerAccountId,
+        if (existingUser.status === "invited") {
+          // First-time login: activate the account
+          await db
+            .update(users)
+            .set({
+              status: "active",
+              googleId: account.providerAccountId,
+              name: user.name || existingUser.name,
+              image: user.image || existingUser.image,
+              activatedAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, existingUser.id));
+
+          logger.info("auth", "User account activated", {
+            email: user.email,
             name: user.name || existingUser.name,
-            image: user.image || existingUser.image,
-            activatedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, existingUser.id));
-      } else {
-        // Returning user: update profile info
-        await db
-          .update(users)
-          .set({
-            name: user.name || existingUser.name,
-            image: user.image || existingUser.image,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, existingUser.id));
-      }
+          });
+        } else {
+          // Returning user: update profile info
+          await db
+            .update(users)
+            .set({
+              name: user.name || existingUser.name,
+              image: user.image || existingUser.image,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, existingUser.id));
 
-      return true;
+          logger.info("auth", "User signed in", {
+            email: user.email,
+            name: user.name || existingUser.name,
+          });
+        }
+
+        return true;
+      } catch (err) {
+        logger.error("auth", "Sign-in error", {
+          email: user.email || "unknown",
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return false;
+      }
     },
 
     async jwt({ token, user, account }) {
