@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { logger } from "@/lib/logger";
+import { withLogging } from "@/lib/with-logging";
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   try {
     const body = await req.json();
     const rawName = body.name;
@@ -88,3 +89,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withLogging(postHandler, { source: "contact" });

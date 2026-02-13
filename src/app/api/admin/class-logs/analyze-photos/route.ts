@@ -8,6 +8,7 @@ import { classLogs, orphanages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
+import { withLogging } from "@/lib/with-logging";
 
 const analyzeSchema = z.object({
   classLogId: z.string().uuid(),
@@ -24,7 +25,7 @@ const analyzeSchema = z.object({
   exifDateTaken: z.string().nullable().optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const [user, authError] = await withAuth("class_logs:create");
   if (authError) return authError;
 
@@ -180,3 +181,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withLogging(postHandler, { source: "class-logs:analyze" });

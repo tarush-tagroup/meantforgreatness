@@ -3,6 +3,8 @@ import { Geist } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Analytics } from "@vercel/analytics/react";
+import ErrorReporter from "@/components/ErrorReporter";
+import PageViewTracker from "@/components/PageViewTracker";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,6 +48,8 @@ export default function RootLayout({
         <main className="min-h-screen">{children}</main>
         <Footer />
         <Analytics />
+        <ErrorReporter />
+        <PageViewTracker />
       </body>
     </html>
   );

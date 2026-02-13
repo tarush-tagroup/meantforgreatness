@@ -5,10 +5,11 @@ import { db } from "@/db";
 import { donations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+import { withLogging } from "@/lib/with-logging";
 
 export const runtime = "nodejs";
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
 
@@ -247,6 +248,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     metadata: null,
   });
 }
+
+export const POST = withLogging(postHandler, { source: "webhook:stripe" });
 
 async function handleChargeRefunded(charge: Stripe.Charge) {
   // Find the donation by looking up the payment intent's checkout session

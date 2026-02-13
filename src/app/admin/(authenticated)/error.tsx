@@ -11,6 +11,26 @@ export default function AdminError({
 }) {
   useEffect(() => {
     console.error("Admin panel error:", error);
+
+    // Report to centralized logs
+    fetch("/api/log-client", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entries: [
+          {
+            level: "error",
+            source: "frontend:error-boundary",
+            message: error.message || "Unknown admin panel error",
+            meta: {
+              digest: error.digest,
+              stack: error.stack?.slice(0, 1000),
+              url: window.location.pathname,
+            },
+          },
+        ],
+      }),
+    }).catch(() => {});
   }, [error]);
 
   return (

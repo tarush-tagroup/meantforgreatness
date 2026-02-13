@@ -7,6 +7,7 @@ import { z } from "zod";
 import { analyzeClassLogPhotos, validatePhotoDate } from "@/lib/ai-photo-analysis";
 import { haversineDistance } from "@/lib/geocode";
 import { logger } from "@/lib/logger";
+import { withLogging } from "@/lib/with-logging";
 
 const photoSchema = z.object({
   url: z.string().url(),
@@ -31,7 +32,7 @@ const createSchema = z.object({
   exifDateTaken: z.string().nullable().optional(),
 });
 
-export async function GET(req: NextRequest) {
+async function getHandler(req: NextRequest) {
   const [, authError] = await withAuth("class_logs:view_all");
   if (authError) return authError;
 
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest) {
   });
 }
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest) {
   const [user, authError] = await withAuth("class_logs:create");
   if (authError) return authError;
 
@@ -256,3 +257,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ classLog: created }, { status: 201 });
 }
+
+export const GET = withLogging(getHandler, { source: "class-logs" });
+export const POST = withLogging(postHandler, { source: "class-logs" });
