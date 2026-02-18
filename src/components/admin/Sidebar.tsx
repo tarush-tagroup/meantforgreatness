@@ -37,10 +37,10 @@ const operationsItems: NavItem[] = [
   { label: "Transparency Reports", href: "/admin/transparency", permission: "transparency:view" },
 ];
 
-/* Fundraising */
+/* Fundraising — admin only */
 const fundraisingItems: NavItem[] = [
   { label: "Donations", href: "/admin/donations", permission: "donations:view" },
-  { label: "Donor Platforms", href: "/admin/platforms", permission: "users:view" },
+  { label: "Donor Platforms", href: "/admin/platforms", permission: "donations:view" },
 ];
 
 /* Developer */
@@ -50,7 +50,7 @@ const developerItems: NavItem[] = [
   { label: "Media", href: "/admin/media", permission: "media:upload" },
 ];
 
-/* Settings */
+/* Settings — admin & teacher_manager only */
 const settingsItems: NavItem[] = [
   { label: "Users", href: "/admin/users", permission: "users:view" },
 ];

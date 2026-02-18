@@ -44,12 +44,11 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "transparency:generate",
   ],
   donor_manager: [
-    "donations:view",
-    "users:view",
     "orphanages:view",
     "kids:view",
     "class_logs:view_all",
     "events:view",
+    "transparency:view",
   ],
 };
 
