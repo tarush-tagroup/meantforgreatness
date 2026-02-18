@@ -84,3 +84,27 @@ export async function PUT(
 
   return NextResponse.json({ success: true });
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const [, authError] = await withAuth("transparency:publish");
+  if (authError) return authError;
+
+  const { id } = await context.params;
+
+  const [existing] = await db
+    .select({ id: transparencyReports.id })
+    .from(transparencyReports)
+    .where(eq(transparencyReports.id, id))
+    .limit(1);
+
+  if (!existing) {
+    return NextResponse.json({ error: "Report not found" }, { status: 404 });
+  }
+
+  await db.delete(transparencyReports).where(eq(transparencyReports.id, id));
+
+  return NextResponse.json({ success: true });
+}

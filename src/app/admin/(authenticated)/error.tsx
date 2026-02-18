@@ -50,21 +50,21 @@ export default function AdminError({
           />
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-warmgray-900 mb-2">
+      <h2 className="text-xl font-semibold text-sand-900 mb-2">
         Something went wrong
       </h2>
-      <p className="text-sm text-warmgray-500 mb-6 max-w-md">
+      <p className="text-sm text-sand-500 mb-6 max-w-md">
         An unexpected error occurred. Please try again, or contact support if the
         problem persists.
       </p>
       {error.digest && (
-        <p className="text-xs text-warmgray-400 mb-4">
+        <p className="text-xs text-sand-400 mb-4">
           Error ID: {error.digest}
         </p>
       )}
       <button
         onClick={reset}
-        className="rounded-lg bg-warmgray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-warmgray-800 transition-colors"
+        className="rounded-lg bg-sand-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-sand-800 transition-colors"
       >
         Try Again
       </button>

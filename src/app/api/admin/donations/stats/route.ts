@@ -17,8 +17,8 @@ export async function GET() {
     .from(donations)
     .where(eq(donations.status, "completed"));
 
-  // Monthly recurring total (active monthly subscriptions)
-  const [monthlyResult] = await db
+  // Recurring total (monthly + yearly subscriptions)
+  const [recurringResult] = await db
     .select({
       total: sql<number>`COALESCE(SUM(amount), 0)`,
       count: sql<number>`count(*)`,
@@ -27,7 +27,7 @@ export async function GET() {
     .where(
       and(
         eq(donations.status, "completed"),
-        eq(donations.frequency, "monthly")
+        sql`${donations.frequency} IN ('monthly', 'yearly')`
       )
     );
 
@@ -57,8 +57,11 @@ export async function GET() {
     stats: {
       totalRaised: Number(totalResult?.total || 0),
       totalDonations: Number(totalResult?.count || 0),
-      monthlyRecurring: Number(monthlyResult?.total || 0),
-      monthlyCount: Number(monthlyResult?.count || 0),
+      recurringTotal: Number(recurringResult?.total || 0),
+      recurringCount: Number(recurringResult?.count || 0),
+      // Keep old keys for backwards compatibility
+      monthlyRecurring: Number(recurringResult?.total || 0),
+      monthlyCount: Number(recurringResult?.count || 0),
       oneTimeTotal: Number(oneTimeResult?.total || 0),
       oneTimeCount: Number(oneTimeResult?.count || 0),
       uniqueDonors: Number(donorCount?.count || 0),

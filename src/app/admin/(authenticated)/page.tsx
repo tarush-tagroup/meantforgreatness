@@ -261,8 +261,8 @@ export default async function AdminDashboard({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-warmgray-900">Dashboard</h1>
-      <p className="mt-2 text-sm text-warmgray-500">
+      <h1 className="text-2xl font-bold text-sand-900">Dashboard</h1>
+      <p className="mt-2 text-sm text-sand-500">
         Welcome back, {user.name || user.email}.
       </p>
 
@@ -271,7 +271,7 @@ export default async function AdminDashboard({
         {user.roles.map((role: Role) => (
           <span
             key={role}
-            className="inline-flex items-center rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700 ring-1 ring-inset ring-teal-600/20"
+            className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20"
           >
             {role.replace("_", " ")}
           </span>
@@ -297,7 +297,7 @@ export default async function AdminDashboard({
       </div>
 
       {/* ── Period tabs ── */}
-      <div className="mt-8 border-b border-warmgray-200">
+      <div className="mt-8 border-b border-sand-200">
         <nav className="-mb-px flex gap-6" aria-label="Time period">
           {(["week", "month", "year"] as const).map((p) => (
             <Link
@@ -305,8 +305,8 @@ export default async function AdminDashboard({
               href={periodUrl(p)}
               className={`whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
                 period === p
-                  ? "border-teal-600 text-teal-600"
-                  : "border-transparent text-warmgray-500 hover:border-warmgray-300 hover:text-warmgray-700"
+                  ? "border-green-600 text-green-600"
+                  : "border-transparent text-sand-500 hover:border-sand-300 hover:text-sand-700"
               }`}
             >
               {p === "week" ? "Week" : p === "month" ? "Month" : "Year"}
@@ -360,48 +360,70 @@ export default async function AdminDashboard({
       {canViewClasses && recentClassesResult.length > 0 && (
         <div className="mt-8">
           <SectionHeader title="Recent Classes" href="/admin/classes" showViewAll={classTotal > PAGE_SIZE} />
-          <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
-            <table className="min-w-full divide-y divide-warmgray-200">
-              <thead className="bg-warmgray-50">
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {recentClassesResult.map((c) => (
+              <Link
+                key={c.id}
+                href={`/admin/classes/${c.id}`}
+                className="block rounded-lg border border-sand-200 bg-white p-3 hover:bg-sand-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-sand-900">
+                    {c.orphanageName || "\u2014"}
+                  </span>
+                  <span className="text-xs text-sand-500">{c.classDate}</span>
+                </div>
+                <p className="text-xs text-sand-600 mt-1">
+                  {c.teacherName || "Unknown"} · {c.studentCount ?? "?"} students
+                  {c.aiKidsCount != null ? ` · AI: ${c.aiKidsCount}` : ""}
+                </p>
+              </Link>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
+            <table className="min-w-full divide-y divide-sand-200">
+              <thead className="bg-sand-50">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Orphanage
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Teacher
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Students
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     AI Count
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-warmgray-100">
+              <tbody className="divide-y divide-sand-100">
                 {recentClassesResult.map((c) => (
-                  <tr key={c.id} className="hover:bg-warmgray-50">
-                    <td className="px-4 py-2.5 text-sm text-warmgray-900 whitespace-nowrap">
+                  <tr key={c.id} className="hover:bg-sand-50">
+                    <td className="px-4 py-2.5 text-sm text-sand-900 whitespace-nowrap">
                       <Link
                         href={`/admin/classes/${c.id}`}
-                        className="text-teal-600 hover:text-teal-700"
+                        className="text-green-600 hover:text-green-700"
                       >
                         {c.classDate}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-700">
+                    <td className="px-4 py-2.5 text-sm text-sand-700">
                       {c.orphanageName || "\u2014"}
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-700">
+                    <td className="px-4 py-2.5 text-sm text-sand-700">
                       {c.teacherName || "\u2014"}
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-700">
+                    <td className="px-4 py-2.5 text-sm text-sand-700">
                       {c.studentCount ?? "\u2014"}
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-400">
+                    <td className="px-4 py-2.5 text-sm text-sand-400">
                       {c.aiKidsCount ?? "\u2014"}
                     </td>
                   </tr>
@@ -424,47 +446,76 @@ export default async function AdminDashboard({
       {canViewClasses && recentEventsResult.length > 0 && (
         <div className="mt-8">
           <SectionHeader title="Recent Events" href="/admin/events" showViewAll={eventTotal > PAGE_SIZE} />
-          <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
-            <table className="min-w-full divide-y divide-warmgray-200">
-              <thead className="bg-warmgray-50">
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {recentEventsResult.map((e) => (
+              <Link
+                key={e.id}
+                href={`/admin/events/${e.id}`}
+                className="block rounded-lg border border-sand-200 bg-white p-3 hover:bg-sand-50 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-sand-900 truncate">
+                    {e.title}
+                  </span>
+                  <span
+                    className={`shrink-0 ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      e.active
+                        ? "bg-green-50 text-green-700"
+                        : "bg-sand-100 text-sand-500"
+                    }`}
+                  >
+                    {e.active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <p className="text-xs text-sand-600 mt-1">
+                  {e.eventDate || "No date"} · {e.orphanageName || "General"}
+                </p>
+              </Link>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
+            <table className="min-w-full divide-y divide-sand-200">
+              <thead className="bg-sand-50">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Title
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Orphanage
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Status
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-warmgray-100">
+              <tbody className="divide-y divide-sand-100">
                 {recentEventsResult.map((e) => (
-                  <tr key={e.id} className="hover:bg-warmgray-50">
-                    <td className="px-4 py-2.5 text-sm text-warmgray-900 whitespace-nowrap">
+                  <tr key={e.id} className="hover:bg-sand-50">
+                    <td className="px-4 py-2.5 text-sm text-sand-900 whitespace-nowrap">
                       {e.eventDate || "\u2014"}
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-700">
+                    <td className="px-4 py-2.5 text-sm text-sand-700">
                       <Link
                         href={`/admin/events/${e.id}`}
-                        className="text-teal-600 hover:text-teal-700"
+                        className="text-green-600 hover:text-green-700"
                       >
                         {e.title}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-700">
+                    <td className="px-4 py-2.5 text-sm text-sand-700">
                       {e.orphanageName || "General"}
                     </td>
                     <td className="px-4 py-2.5 text-sm">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           e.active
-                            ? "bg-teal-50 text-teal-700"
-                            : "bg-warmgray-100 text-warmgray-500"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-sand-100 text-sand-500"
                         }`}
                       >
                         {e.active ? "Active" : "Inactive"}
@@ -490,28 +541,62 @@ export default async function AdminDashboard({
       {canViewDonations && recentDonationsResult.length > 0 && (
         <div className="mt-8">
           <SectionHeader title="Recent Donations" href="/admin/donations" showViewAll={donationTotal > PAGE_SIZE} />
-          <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
-            <table className="min-w-full divide-y divide-warmgray-200">
-              <thead className="bg-warmgray-50">
+          {/* Mobile cards */}
+          <div className="space-y-3 md:hidden">
+            {recentDonationsResult.map((d) => (
+              <div
+                key={d.id}
+                className="rounded-lg border border-sand-200 bg-white p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-sand-900">
+                    {formatCurrency(d.amount)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      d.frequency === "monthly"
+                        ? "bg-green-50 text-green-700"
+                        : "bg-sage-50 text-sage-700"
+                    }`}
+                  >
+                    {d.frequency === "monthly" ? "Monthly" : "One-time"}
+                  </span>
+                </div>
+                <p className="text-xs text-sand-600 mt-1">
+                  {d.donorName || d.donorEmail} ·{" "}
+                  {d.createdAt
+                    ? new Date(d.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "\u2014"}
+                </p>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
+            <table className="min-w-full divide-y divide-sand-200">
+              <thead className="bg-sand-50">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Donor
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Type
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-warmgray-100">
+              <tbody className="divide-y divide-sand-100">
                 {recentDonationsResult.map((d) => (
-                  <tr key={d.id} className="hover:bg-warmgray-50">
-                    <td className="px-4 py-2.5 text-sm text-warmgray-900 whitespace-nowrap">
+                  <tr key={d.id} className="hover:bg-sand-50">
+                    <td className="px-4 py-2.5 text-sm text-sand-900 whitespace-nowrap">
                       {d.createdAt
                         ? new Date(d.createdAt).toLocaleDateString("en-US", {
                             month: "short",
@@ -520,18 +605,18 @@ export default async function AdminDashboard({
                           })
                         : "\u2014"}
                     </td>
-                    <td className="px-4 py-2.5 text-sm text-warmgray-700">
+                    <td className="px-4 py-2.5 text-sm text-sand-700">
                       {d.donorName || d.donorEmail}
                     </td>
-                    <td className="px-4 py-2.5 text-sm font-medium text-warmgray-900">
+                    <td className="px-4 py-2.5 text-sm font-medium text-sand-900">
                       {formatCurrency(d.amount)}
                     </td>
                     <td className="px-4 py-2.5 text-sm">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           d.frequency === "monthly"
-                            ? "bg-teal-50 text-teal-700"
-                            : "bg-amber-50 text-amber-700"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-sage-50 text-sage-700"
                         }`}
                       >
                         {d.frequency === "monthly" ? "Monthly" : "One-time"}
@@ -574,11 +659,11 @@ function StatCard({
 }) {
   const content = (
     <div
-      className={`rounded-lg border border-warmgray-200 bg-white p-5 h-full ${href ? "hover:border-teal-300 hover:shadow-sm transition-all" : ""}`}
+      className={`rounded-lg border border-sand-200 bg-white p-5 h-full ${href ? "hover:border-green-300 hover:shadow-sm transition-all" : ""}`}
     >
-      <p className="text-sm font-medium text-warmgray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-warmgray-900">{value}</p>
-      <p className="mt-0.5 text-xs text-warmgray-400">
+      <p className="text-sm font-medium text-sand-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-sand-900">{value}</p>
+      <p className="mt-0.5 text-xs text-sand-400">
         {subtitle || "\u00A0"}
       </p>
     </div>
@@ -601,11 +686,11 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <h2 className="text-lg font-semibold text-warmgray-900">{title}</h2>
+      <h2 className="text-lg font-semibold text-sand-900">{title}</h2>
       {showViewAll && (
         <Link
           href={href}
-          className="text-sm font-medium text-teal-600 hover:text-teal-700"
+          className="text-sm font-medium text-green-600 hover:text-green-700"
         >
           View all &rarr;
         </Link>
@@ -627,14 +712,14 @@ function Pagination({
 }) {
   return (
     <div className="mt-3 flex items-center justify-between">
-      <p className="text-xs text-warmgray-500">
+      <p className="text-xs text-sand-500">
         Page {current} of {total}
       </p>
       <div className="flex gap-2">
         {current > 1 && (
           <Link
             href={buildUrl(param, current - 1)}
-            className="rounded-md border border-warmgray-200 bg-white px-3 py-1.5 text-xs font-medium text-warmgray-700 hover:bg-warmgray-50 transition-colors"
+            className="rounded-md border border-sand-200 bg-white px-3 py-1.5 text-xs font-medium text-sand-700 hover:bg-sand-50 transition-colors"
           >
             Previous
           </Link>
@@ -642,7 +727,7 @@ function Pagination({
         {current < total && (
           <Link
             href={buildUrl(param, current + 1)}
-            className="rounded-md border border-warmgray-200 bg-white px-3 py-1.5 text-xs font-medium text-warmgray-700 hover:bg-warmgray-50 transition-colors"
+            className="rounded-md border border-sand-200 bg-white px-3 py-1.5 text-xs font-medium text-sand-700 hover:bg-sand-50 transition-colors"
           >
             Next
           </Link>

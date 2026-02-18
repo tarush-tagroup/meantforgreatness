@@ -1,44 +1,53 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-amber-50: #fffbeb;
-  --color-amber-100: #fef3c7;
-  --color-amber-200: #fde68a;
-  --color-amber-300: #fcd34d;
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #d97706;
-  --color-amber-700: #b45309;
-  --color-amber-800: #92400e;
-  --color-amber-900: #78350f;
+  --color-sage-50: #f7f7f2;
+  --color-sage-100: #eceee4;
+  --color-sage-200: #d8dcc9;
+  --color-sage-300: #c0c6a9;
+  --color-sage-400: #a0a882;
+  --color-sage-500: #819067;
+  --color-sage-600: #6b7856;
+  --color-sage-700: #556045;
+  --color-sage-800: #3f4833;
+  --color-sage-900: #2a3022;
 
-  --color-teal-50: #f0fdfa;
-  --color-teal-100: #ccfbf1;
-  --color-teal-200: #99f6e4;
-  --color-teal-300: #5eead4;
-  --color-teal-400: #2dd4bf;
-  --color-teal-500: #14b8a6;
-  --color-teal-600: #0d9488;
-  --color-teal-700: #0f766e;
-  --color-teal-800: #115e59;
-  --color-teal-900: #134e4a;
+  --color-green-50: #f0f5f0;
+  --color-green-100: #d4e5d5;
+  --color-green-200: #a8c9aa;
+  --color-green-300: #7cad7f;
+  --color-green-400: #508f54;
+  --color-green-500: #2d7231;
+  --color-green-600: #1a5c1e;
+  --color-green-700: #0A400C;
+  --color-green-800: #073008;
+  --color-green-900: #042005;
 
-  --color-warmgray-50: #fafaf9;
-  --color-warmgray-100: #f5f5f4;
-  --color-warmgray-200: #e7e5e4;
-  --color-warmgray-300: #d6d3d1;
-  --color-warmgray-400: #a8a29e;
-  --color-warmgray-500: #78716c;
-  --color-warmgray-600: #57534e;
-  --color-warmgray-700: #44403c;
-  --color-warmgray-800: #292524;
-  --color-warmgray-900: #1c1917;
+  --color-sand-50: #F5F5F0;
+  --color-sand-100: #ECEAE4;
+  --color-sand-200: #DDDBD4;
+  --color-sand-300: #C7C4BB;
+  --color-sand-400: #A8A598;
+  --color-sand-500: #8A877B;
+  --color-sand-600: #6B6960;
+  --color-sand-700: #504E47;
+  --color-sand-800: #35342F;
+  --color-sand-900: #1C1B18;
 
   --font-sans: var(--font-geist-sans);
 }
 
 body {
-  background: #fafaf9;
-  color: #1c1917;
+  background: #F5F5F0;
+  color: #1a1915;
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

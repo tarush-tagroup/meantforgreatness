@@ -12,7 +12,7 @@ export default function LoginForm({
       onClick={() =>
         signIn("google", { callbackUrl: callbackUrl || "/admin" })
       }
-      className="flex w-full items-center justify-center gap-3 rounded-lg border border-warmgray-300 bg-white px-4 py-3 text-sm font-medium text-warmgray-700 shadow-sm transition-colors hover:bg-warmgray-50"
+      className="flex w-full items-center justify-center gap-3 rounded-lg border border-sand-300 bg-white px-4 py-3 text-sm font-medium text-sand-700 shadow-sm transition-colors hover:bg-sand-50"
     >
       <svg className="h-5 w-5" viewBox="0 0 24 24">
         <path

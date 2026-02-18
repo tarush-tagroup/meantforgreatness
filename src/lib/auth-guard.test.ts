@@ -6,6 +6,15 @@ vi.mock("@/lib/auth", () => ({
   auth: () => mockAuth(),
 }));
 
+// Mock logger (used by auth-guard for 403 logging)
+vi.mock("@/lib/logger", () => ({
+  logger: {
+    error: vi.fn().mockResolvedValue(undefined),
+    warn: vi.fn().mockResolvedValue(undefined),
+    info: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 // Import after mocking
 import { getSessionUser, withAuth } from "./auth-guard";
 
@@ -40,7 +49,7 @@ describe("auth-guard", () => {
           email: "test@example.com",
           name: "Test User",
           image: "https://example.com/photo.jpg",
-          roles: ["admin", "teacher"],
+          roles: ["admin", "teacher_manager"],
         },
       });
 
@@ -50,7 +59,7 @@ describe("auth-guard", () => {
         email: "test@example.com",
         name: "Test User",
         image: "https://example.com/photo.jpg",
-        roles: ["admin", "teacher"],
+        roles: ["admin", "teacher_manager"],
       });
     });
 
@@ -103,11 +112,12 @@ describe("auth-guard", () => {
           email: "teacher@example.com",
           name: "Teacher",
           image: "",
-          roles: ["teacher"],
+          roles: ["teacher_manager"],
         },
       });
 
-      const [user, error] = await withAuth("users:view");
+      // teacher_manager does not have users:deactivate
+      const [user, error] = await withAuth("users:deactivate");
       expect(user).toBeNull();
       expect(error).not.toBeNull();
       expect(error!.status).toBe(403);
@@ -130,14 +140,14 @@ describe("auth-guard", () => {
       expect(error).toBeNull();
     });
 
-    it("teacher can access class_logs:view_all", async () => {
+    it("teacher_manager can access class_logs:view_all", async () => {
       mockAuth.mockResolvedValue({
         user: {
           id: "teacher-1",
           email: "teacher@example.com",
           name: "Teacher",
           image: "",
-          roles: ["teacher"],
+          roles: ["teacher_manager"],
         },
       });
 
@@ -153,7 +163,7 @@ describe("auth-guard", () => {
           email: "teacher@example.com",
           name: "Teacher",
           image: "",
-          roles: ["teacher"],
+          roles: ["teacher_manager"],
         },
       });
 
@@ -179,7 +189,7 @@ describe("auth-guard", () => {
       expect(error).toBeNull();
     });
 
-    it("donor_manager cannot access class_logs:view_all", async () => {
+    it("donor_manager cannot access class_logs:create", async () => {
       mockAuth.mockResolvedValue({
         user: {
           id: "donor-1",
@@ -190,7 +200,7 @@ describe("auth-guard", () => {
         },
       });
 
-      const [user, error] = await withAuth("class_logs:view_all");
+      const [user, error] = await withAuth("class_logs:create");
       expect(user).toBeNull();
       expect(error!.status).toBe(403);
     });

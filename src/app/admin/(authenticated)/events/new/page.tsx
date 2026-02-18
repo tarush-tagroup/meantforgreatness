@@ -20,7 +20,7 @@ export default async function NewEventPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-warmgray-900">New Event</h1>
+        <h1 className="text-2xl font-bold text-sand-900">New Event</h1>
       </div>
       <div className="max-w-2xl">
         <EventForm orphanages={orphanageOptions} />

@@ -92,8 +92,12 @@ export function checkRateLimit(
 
 /** Pre-configured rate limits */
 export const RATE_LIMITS = {
-  /** Upload: 20 requests per hour per user */
-  upload: { maxRequests: 20, windowMs: 60 * 60 * 1000 } as RateLimitConfig,
+  /** Upload: 100 requests per hour per user */
+  upload: { maxRequests: 100, windowMs: 60 * 60 * 1000 } as RateLimitConfig,
   /** AI analysis: 30 requests per hour per user */
   aiAnalysis: { maxRequests: 30, windowMs: 60 * 60 * 1000 } as RateLimitConfig,
+  /** OTP send: 5 per 15 minutes per email (prevents email bombing) */
+  otpSend: { maxRequests: 5, windowMs: 15 * 60 * 1000 } as RateLimitConfig,
+  /** OTP verify: 10 attempts per 15 minutes per email (prevents brute force) */
+  otpVerify: { maxRequests: 10, windowMs: 15 * 60 * 1000 } as RateLimitConfig,
 } as const;

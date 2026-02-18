@@ -8,7 +8,7 @@ export default function MediaLoading() {
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="aspect-square rounded-lg bg-warmgray-100"
+            className="aspect-square rounded-lg bg-sand-100"
             style={{ opacity: 1 - i * 0.1 }}
           />
         ))}

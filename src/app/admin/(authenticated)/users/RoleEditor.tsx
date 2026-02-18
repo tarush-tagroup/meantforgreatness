@@ -6,7 +6,6 @@ import type { Role } from "@/types/auth";
 
 const ALL_ROLES: { value: Role; label: string }[] = [
   { value: "admin", label: "Admin" },
-  { value: "teacher", label: "Teacher" },
   { value: "teacher_manager", label: "Teacher Manager" },
   { value: "donor_manager", label: "Donor Manager" },
 ];
@@ -62,14 +61,14 @@ export default function RoleEditor({
         {currentRoles.map((role) => (
           <span
             key={role}
-            className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 ring-1 ring-inset ring-teal-600/20"
+            className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20"
           >
             {role.replace("_", " ")}
           </span>
         ))}
         <button
           onClick={() => setEditing(true)}
-          className="ml-1 text-xs text-warmgray-400 hover:text-warmgray-600"
+          className="ml-1 text-xs text-sand-400 hover:text-sand-600"
           title="Edit roles"
         >
           edit
@@ -98,7 +97,7 @@ export default function RoleEditor({
                   setRoles(roles.filter((r) => r !== value));
                 }
               }}
-              className="rounded border-warmgray-300"
+              className="rounded border-sand-300"
             />
             {label}
           </label>
@@ -108,7 +107,7 @@ export default function RoleEditor({
         <button
           onClick={handleSave}
           disabled={saving || roles.length === 0}
-          className="rounded bg-teal-600 px-2 py-1 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+          className="rounded bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
           {saving ? "..." : "Save"}
         </button>
@@ -117,7 +116,7 @@ export default function RoleEditor({
             setRoles(currentRoles);
             setEditing(false);
           }}
-          className="rounded px-2 py-1 text-xs font-medium text-warmgray-500 hover:text-warmgray-700"
+          className="rounded px-2 py-1 text-xs font-medium text-sand-500 hover:text-sand-700"
         >
           Cancel
         </button>

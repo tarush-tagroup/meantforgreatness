@@ -86,8 +86,8 @@ export default function MediaGalleryPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-warmgray-900">Media Gallery</h1>
-          <p className="mt-1 text-sm text-warmgray-500">
+          <h1 className="text-2xl font-bold text-sand-900">Media Gallery</h1>
+          <p className="mt-1 text-sm text-sand-500">
             Upload and manage images
           </p>
         </div>
@@ -103,7 +103,7 @@ export default function MediaGalleryPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
           >
             {uploading ? "Uploading..." : "Upload Images"}
           </button>
@@ -117,12 +117,12 @@ export default function MediaGalleryPage() {
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-warmgray-200 bg-white p-12 text-center">
-          <p className="text-warmgray-500">Loading...</p>
+        <div className="rounded-lg border border-sand-200 bg-white p-12 text-center">
+          <p className="text-sand-500">Loading...</p>
         </div>
       ) : media.length === 0 ? (
-        <div className="rounded-lg border border-warmgray-200 bg-white p-12 text-center">
-          <p className="text-warmgray-500">No media uploaded yet.</p>
+        <div className="rounded-lg border border-sand-200 bg-white p-12 text-center">
+          <p className="text-sand-500">No media uploaded yet.</p>
         </div>
       ) : (
         <>
@@ -130,7 +130,7 @@ export default function MediaGalleryPage() {
             {media.map((item) => (
               <div
                 key={item.id}
-                className="group rounded-lg border border-warmgray-200 bg-white overflow-hidden"
+                className="group rounded-lg border border-sand-200 bg-white overflow-hidden"
               >
                 <div className="relative aspect-square">
                   <Image
@@ -142,10 +142,10 @@ export default function MediaGalleryPage() {
                   />
                 </div>
                 <div className="p-2">
-                  <p className="text-xs text-warmgray-600 truncate" title={item.filename}>
+                  <p className="text-xs text-sand-600 truncate" title={item.filename}>
                     {item.filename}
                   </p>
-                  <p className="text-xs text-warmgray-400">
+                  <p className="text-xs text-sand-400">
                     {formatBytes(item.sizeBytes)}
                     {item.width && item.height && ` \u00b7 ${item.width}\u00d7${item.height}`}
                   </p>
@@ -159,17 +159,17 @@ export default function MediaGalleryPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50 disabled:opacity-50"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50 disabled:opacity-50"
               >
                 Previous
               </button>
-              <span className="text-sm text-warmgray-500">
+              <span className="text-sm text-sand-500">
                 Page {page} of {totalPages}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50 disabled:opacity-50"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50 disabled:opacity-50"
               >
                 Next
               </button>

@@ -183,6 +183,7 @@ describe("POST /api/admin/class-logs", () => {
 
   const validBody = {
     orphanageId: "chloe",
+    teacherId: "admin-1",
     classDate: "2026-02-12",
     classTime: "10:00 AM",
     studentCount: 15,
@@ -194,9 +195,23 @@ describe("POST /api/admin/class-logs", () => {
     vi.clearAllMocks();
     mockWithAuth.mockResolvedValue([adminUser, null]);
 
-    // For orphanage existence check
-    mockSelect.mockReturnValue({ from: mockFrom });
-    mockFrom.mockReturnValue({ where: mockWhere });
+    // POST does two selects: 1) orphanage check, 2) teacher check
+    let selectCallCount = 0;
+    mockSelect.mockImplementation(() => {
+      selectCallCount++;
+      return { from: mockFrom };
+    });
+
+    const mockTeacherWhere = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([{ id: "admin-1" }]) });
+
+    mockFrom.mockImplementation(() => {
+      if (selectCallCount <= 1) {
+        // First select: orphanage check
+        return { where: mockWhere };
+      }
+      // Second select: teacher check
+      return { where: mockTeacherWhere };
+    });
     mockWhere.mockReturnValue({ limit: mockLimit });
     mockLimit.mockResolvedValue([{ id: "chloe" }]);
 
@@ -256,6 +271,7 @@ describe("POST /api/admin/class-logs", () => {
     const res = await POST(
       makePostRequest({
         orphanageId: "nonexistent",
+        teacherId: "admin-1",
         classDate: "2026-02-12",
         photos: [{ url: "https://example.com/photo.jpg" }],
       })
@@ -263,7 +279,7 @@ describe("POST /api/admin/class-logs", () => {
     expect(res.status).toBe(404);
   });
 
-  it("creates class log with teacherId locked to current user", async () => {
+  it("creates class log with selected teacherId", async () => {
     const res = await POST(makePostRequest(validBody));
     expect(res.status).toBe(201);
 

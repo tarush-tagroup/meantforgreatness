@@ -151,9 +151,9 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
         </div>
       )}
 
-      <div className="rounded-lg border border-warmgray-200 bg-white p-6 space-y-5">
+      <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-5">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-warmgray-700 mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-sand-700 mb-1">
             Title *
           </label>
           <input
@@ -162,12 +162,12 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           />
         </div>
 
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-warmgray-700 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-sand-700 mb-1">
             Description *
           </label>
           <textarea
@@ -176,12 +176,12 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
             onChange={(e) => setDescription(e.target.value)}
             required
             rows={4}
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900 resize-none"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900 resize-none"
           />
         </div>
 
         <div>
-          <label htmlFor="eventDate" className="block text-sm font-medium text-warmgray-700 mb-1">
+          <label htmlFor="eventDate" className="block text-sm font-medium text-sand-700 mb-1">
             Event Date
           </label>
           <input
@@ -189,19 +189,19 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
             id="eventDate"
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           />
         </div>
 
         <div>
-          <label htmlFor="orphanageId" className="block text-sm font-medium text-warmgray-700 mb-1">
+          <label htmlFor="orphanageId" className="block text-sm font-medium text-sand-700 mb-1">
             Related Orphanage
           </label>
           <select
             id="orphanageId"
             value={orphanageId}
             onChange={(e) => setOrphanageId(e.target.value)}
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-700"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-700"
           >
             <option value="">None (general event)</option>
             {orphanages.map((o) => (
@@ -214,15 +214,15 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
 
         {/* Photos (up to 3) */}
         <div>
-          <label className="block text-sm font-medium text-warmgray-700 mb-1">
-            Photos <span className="text-warmgray-400 font-normal">(up to 3)</span>
+          <label className="block text-sm font-medium text-sand-700 mb-1">
+            Photos <span className="text-sand-400 font-normal">(up to 3)</span>
           </label>
 
           {photos.length > 0 && (
             <div className="grid grid-cols-3 gap-3 mb-3">
               {photos.map((photo, index) => (
                 <div key={index} className="space-y-1">
-                  <div className="relative group aspect-video rounded-lg overflow-hidden border border-warmgray-200">
+                  <div className="relative group aspect-video rounded-lg overflow-hidden border border-sand-200">
                     <Image
                       src={photo.url}
                       alt={photo.caption || `Photo ${index + 1}`}
@@ -239,7 +239,7 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
                       &times;
                     </button>
                     {index === 0 && (
-                      <span className="absolute bottom-1 left-1 bg-teal-600 text-white text-[10px] px-1.5 py-0.5 rounded">
+                      <span className="absolute bottom-1 left-1 bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">
                         Cover
                       </span>
                     )}
@@ -249,7 +249,7 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
                     value={photo.caption}
                     onChange={(e) => updateCaption(index, e.target.value)}
                     placeholder="Caption (optional)"
-                    className="w-full rounded border border-warmgray-200 px-2 py-1 text-xs text-warmgray-700"
+                    className="w-full rounded border border-sand-200 px-2 py-1 text-xs text-sand-700"
                   />
                 </div>
               ))}
@@ -271,7 +271,7 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="rounded-lg border border-dashed border-warmgray-300 px-4 py-3 text-sm text-warmgray-600 hover:border-teal-500 hover:text-teal-600 transition-colors w-full disabled:opacity-50"
+                className="rounded-lg border border-dashed border-sand-300 px-4 py-3 text-sm text-sand-600 hover:border-green-500 hover:text-green-600 transition-colors w-full disabled:opacity-50"
               >
                 {uploading
                   ? "Uploading..."
@@ -279,7 +279,7 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
                   ? "Upload Photos"
                   : `Add More Photos (${3 - photos.length} remaining)`}
               </button>
-              <p className="text-xs text-warmgray-400 mt-1">
+              <p className="text-xs text-sand-400 mt-1">
                 JPEG, PNG, or WebP. Max 10 MB per file. First photo becomes the cover image.
               </p>
             </div>
@@ -292,9 +292,9 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
             id="active"
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
-            className="rounded border-warmgray-300 text-teal-600 focus:ring-teal-500"
+            className="rounded border-sand-300 text-green-600 focus:ring-green-500"
           />
-          <label htmlFor="active" className="text-sm text-warmgray-700">
+          <label htmlFor="active" className="text-sm text-sand-700">
             Active (visible on public site)
           </label>
         </div>
@@ -304,14 +304,14 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
         <button
           type="submit"
           disabled={saving || !title || !description}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? "Saving..." : isEditing ? "Update Event" : "Create Event"}
         </button>
         <button
           type="button"
           onClick={() => router.push("/admin/events")}
-          className="rounded-lg border border-warmgray-200 px-4 py-2 text-sm font-medium text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+          className="rounded-lg border border-sand-200 px-4 py-2 text-sm font-medium text-sand-600 hover:bg-sand-50 transition-colors"
         >
           Cancel
         </button>

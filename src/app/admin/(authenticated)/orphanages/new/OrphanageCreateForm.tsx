@@ -113,7 +113,7 @@ export default function OrphanageCreateForm() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Name *
           </label>
           <input
@@ -122,11 +122,11 @@ export default function OrphanageCreateForm() {
             onChange={handleChange}
             required
             placeholder="e.g. Bali Children's Home"
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Indonesian Name
           </label>
           <input
@@ -134,13 +134,13 @@ export default function OrphanageCreateForm() {
             value={form.indonesianName}
             onChange={handleChange}
             placeholder="e.g. Panti Asuhan Anak Bali"
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-warmgray-700">
+        <label className="block text-sm font-medium text-sand-700">
           Location *
         </label>
         <input
@@ -149,12 +149,12 @@ export default function OrphanageCreateForm() {
           onChange={handleChange}
           required
           placeholder="e.g. Ubud, Bali"
-          className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-warmgray-700">
+        <label className="block text-sm font-medium text-sand-700">
           Address
         </label>
         <input
@@ -162,15 +162,15 @@ export default function OrphanageCreateForm() {
           value={form.address}
           onChange={handleChange}
           placeholder="Full street address for GPS geocoding"
-          className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
-        <p className="mt-1 text-xs text-warmgray-400">
+        <p className="mt-1 text-xs text-sand-400">
           GPS coordinates will be computed automatically when saved
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-warmgray-700">
+        <label className="block text-sm font-medium text-sand-700">
           Website URL
         </label>
         <input
@@ -178,12 +178,12 @@ export default function OrphanageCreateForm() {
           value={form.websiteUrl}
           onChange={handleChange}
           placeholder="https://example.com/orphanage-page"
-          className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-warmgray-700">
+        <label className="block text-sm font-medium text-sand-700">
           Description *
         </label>
         <textarea
@@ -193,13 +193,13 @@ export default function OrphanageCreateForm() {
           required
           rows={4}
           placeholder="Describe the orphanage, its mission, and the children it serves..."
-          className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Student Count *
           </label>
           <input
@@ -209,11 +209,11 @@ export default function OrphanageCreateForm() {
             value={form.studentCount}
             onChange={handleChange}
             required
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Classes per Week *
           </label>
           <input
@@ -223,11 +223,11 @@ export default function OrphanageCreateForm() {
             value={form.classesPerWeek}
             onChange={handleChange}
             required
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Hours per Week
           </label>
           <input
@@ -236,14 +236,14 @@ export default function OrphanageCreateForm() {
             min={0}
             value={form.hoursPerWeek}
             onChange={handleChange}
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Curriculum
           </label>
           <input
@@ -251,11 +251,11 @@ export default function OrphanageCreateForm() {
             value={form.curriculum}
             onChange={handleChange}
             placeholder="e.g. Basic English, Conversation"
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-warmgray-700">
+          <label className="block text-sm font-medium text-sand-700">
             Running Since
           </label>
           <input
@@ -263,13 +263,13 @@ export default function OrphanageCreateForm() {
             value={form.runningSince}
             onChange={handleChange}
             placeholder="e.g. September 2024"
-            className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-warmgray-700">
+        <label className="block text-sm font-medium text-sand-700">
           Image
         </label>
         {imageUrl && (
@@ -287,10 +287,10 @@ export default function OrphanageCreateForm() {
           accept="image/jpeg,image/png,image/webp"
           onChange={handleImageUpload}
           disabled={uploading}
-          className="mt-1 block w-full text-sm text-warmgray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-teal-700 hover:file:bg-teal-100"
+          className="mt-1 block w-full text-sm text-sand-500 file:mr-4 file:rounded-lg file:border-0 file:bg-green-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-green-700 hover:file:bg-green-100"
         />
         {uploading && (
-          <p className="mt-1 text-xs text-warmgray-400">Uploading...</p>
+          <p className="mt-1 text-xs text-sand-400">Uploading...</p>
         )}
       </div>
 
@@ -298,14 +298,14 @@ export default function OrphanageCreateForm() {
         <button
           type="submit"
           disabled={saving}
-          className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-50"
+          className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-50"
         >
           {saving ? "Creating..." : "Create Orphanage"}
         </button>
         <button
           type="button"
           onClick={() => router.push("/admin/orphanages")}
-          className="rounded-lg border border-warmgray-300 px-4 py-2.5 text-sm font-medium text-warmgray-700 transition-colors hover:bg-warmgray-50"
+          className="rounded-lg border border-sand-300 px-4 py-2.5 text-sm font-medium text-sand-700 transition-colors hover:bg-sand-50"
         >
           Cancel
         </button>

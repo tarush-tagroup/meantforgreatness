@@ -27,7 +27,7 @@ The centralized logs capture: Stripe checkout/webhooks, contact form/email (Rese
 - **Auth:** NextAuth v5 with Google OAuth, JWT sessions
 - **Payments:** Stripe checkout + webhooks at `/api/webhooks/stripe`
 - **Logger:** `src/lib/logger.ts` — writes to Vercel Blob storage + console
-- **Permissions:** Role-based (admin, teacher, teacher_manager, donor_manager) at `src/lib/permissions.ts`
+- **Permissions:** Role-based (admin, teacher_manager, donor_manager) at `src/lib/permissions.ts`
 - **Monitor:** GitHub Actions runs every 6h, checks Vercel + centralized logs, auto-fixes with Claude
 
 ## Common Commands
@@ -47,6 +47,15 @@ Critical env vars (all in Vercel):
 - `NEXT_PUBLIC_BASE_URL` — Must be `https://www.meantforgreatness.org` (no trailing newline!)
 - `LOG_API_SECRET` — Bearer token for logs API (also in GitHub secrets)
 - `CRON_SECRET` — Vercel cron auth
+
+## Design System
+
+- **Brand colors** (defined in `globals.css` via `@theme inline`):
+  - **green** (primary): `#0A400C` at 700, range 50–900 — headings, CTAs, links
+  - **sage** (secondary): `#819067` at 500, range 50–900 — buttons, accents
+  - **sand** (neutral): `#F5F5F0` at 50 (cool gray bg), `#A8A598` at 400, range 50–900 — text, borders, backgrounds
+- **Logo**: SVG at `public/logo.svg` (dark green text) and `public/logo-white.svg` (cream text for dark backgrounds)
+- **Layout**: Public pages use `(public)` route group with Header + Footer; admin pages at `/admin` have their own `AdminShell` layout (no site Header/Footer)
 
 ## Lessons Learned
 

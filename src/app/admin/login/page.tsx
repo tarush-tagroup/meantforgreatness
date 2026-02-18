@@ -28,17 +28,17 @@ export default async function AdminLoginPage({
   const params = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-warmgray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-sand-50 px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-warmgray-900">
+          <h1 className="text-2xl font-bold text-sand-900">
             Meant for Greatness
           </h1>
-          <p className="mt-2 text-sm text-warmgray-500">Admin Panel</p>
+          <p className="mt-2 text-sm text-sand-500">Admin Panel</p>
         </div>
 
-        <div className="rounded-xl bg-white border border-warmgray-200 shadow-sm p-8">
-          <h2 className="text-lg font-semibold text-warmgray-900 text-center mb-6">
+        <div className="rounded-xl bg-white border border-sand-200 shadow-sm p-8">
+          <h2 className="text-lg font-semibold text-sand-900 text-center mb-6">
             Sign in to continue
           </h2>
 
@@ -64,7 +64,7 @@ export default async function AdminLoginPage({
           <LoginForm callbackUrl={params.callbackUrl} />
         </div>
 
-        <p className="mt-6 text-center text-xs text-warmgray-400">
+        <p className="mt-6 text-center text-xs text-sand-400">
           Only invited members can access the admin panel.
         </p>
       </div>

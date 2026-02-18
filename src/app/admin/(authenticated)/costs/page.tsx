@@ -160,49 +160,49 @@ export default async function CostsPage({ searchParams }: PageProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-warmgray-900">API Costs</h1>
-        <span className="text-sm text-warmgray-500">
+        <h1 className="text-2xl font-bold text-sand-900">API Costs</h1>
+        <span className="text-sm text-sand-500">
           {Number(totalJobs)} total jobs
         </span>
       </div>
 
       {/* All-time totals */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="rounded-lg border border-warmgray-200 bg-white p-5 h-full">
-          <p className="text-sm font-medium text-warmgray-500">Total Spend</p>
-          <p className="mt-1 text-2xl font-bold text-warmgray-900">
+        <div className="rounded-lg border border-sand-200 bg-white p-5 h-full">
+          <p className="text-sm font-medium text-sand-500">Total Spend</p>
+          <p className="mt-1 text-2xl font-bold text-sand-900">
             {formatCents(allTimeTotals.totalCents)}
           </p>
-          <p className="mt-0.5 text-xs text-warmgray-400">
+          <p className="mt-0.5 text-xs text-sand-400">
             {Number(allTimeTotals.totalInput).toLocaleString()} input / {Number(allTimeTotals.totalOutput).toLocaleString()} output tokens
           </p>
         </div>
-        <div className="rounded-lg border border-warmgray-200 bg-white p-5 h-full">
-          <p className="text-sm font-medium text-warmgray-500">Photo Analysis Tasks</p>
-          <p className="mt-1 text-2xl font-bold text-warmgray-900">
+        <div className="rounded-lg border border-sand-200 bg-white p-5 h-full">
+          <p className="text-sm font-medium text-sand-500">Photo Analysis Tasks</p>
+          <p className="mt-1 text-2xl font-bold text-sand-900">
             {Number(allTimePhotoCount)}
           </p>
-          <p className="mt-0.5 text-xs text-warmgray-400">All time</p>
+          <p className="mt-0.5 text-xs text-sand-400">All time</p>
         </div>
-        <div className="rounded-lg border border-warmgray-200 bg-white p-5 h-full">
-          <p className="text-sm font-medium text-warmgray-500">Monitor Tasks</p>
-          <p className="mt-1 text-2xl font-bold text-warmgray-900">
+        <div className="rounded-lg border border-sand-200 bg-white p-5 h-full">
+          <p className="text-sm font-medium text-sand-500">Monitor Tasks</p>
+          <p className="mt-1 text-2xl font-bold text-sand-900">
             {Number(allTimeMonitorCount)}
           </p>
-          <p className="mt-0.5 text-xs text-warmgray-400">All time</p>
+          <p className="mt-0.5 text-xs text-sand-400">All time</p>
         </div>
       </div>
 
       {/* Period tabs */}
-      <div className="flex rounded-lg bg-warmgray-100 p-1 mb-4 w-fit">
+      <div className="flex rounded-lg bg-sand-100 p-1 mb-4 w-fit">
         {(["week", "month", "year"] as Period[]).map((p) => (
           <a
             key={p}
             href={buildUrl({ period: p, page: "1" })}
             className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               period === p
-                ? "bg-white text-warmgray-900 shadow-sm"
-                : "text-warmgray-500 hover:text-warmgray-700"
+                ? "bg-white text-sand-900 shadow-sm"
+                : "text-sand-500 hover:text-sand-700"
             }`}
           >
             {p === "week" ? "Week" : p === "month" ? "Month" : "Year"}
@@ -212,76 +212,76 @@ export default async function CostsPage({ searchParams }: PageProps) {
 
       {/* Period-filtered metrics */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="rounded-lg border border-warmgray-200 bg-white p-5 h-full">
-          <p className="text-sm font-medium text-warmgray-500">
+        <div className="rounded-lg border border-sand-200 bg-white p-5 h-full">
+          <p className="text-sm font-medium text-sand-500">
             Spend {getPeriodLabel(period)}
           </p>
-          <p className="mt-1 text-2xl font-bold text-warmgray-900">
+          <p className="mt-1 text-2xl font-bold text-sand-900">
             {formatCents(periodTotals.totalCents)}
           </p>
-          <p className="mt-0.5 text-xs text-warmgray-400">{"\u00A0"}</p>
+          <p className="mt-0.5 text-xs text-sand-400">{"\u00A0"}</p>
         </div>
-        <div className="rounded-lg border border-warmgray-200 bg-white p-5 h-full">
-          <p className="text-sm font-medium text-warmgray-500">
+        <div className="rounded-lg border border-sand-200 bg-white p-5 h-full">
+          <p className="text-sm font-medium text-sand-500">
             Photo Analysis {getPeriodLabel(period)}
           </p>
-          <p className="mt-1 text-2xl font-bold text-warmgray-900">
+          <p className="mt-1 text-2xl font-bold text-sand-900">
             {Number(periodPhotoCount)}
           </p>
-          <p className="mt-0.5 text-xs text-warmgray-400">{"\u00A0"}</p>
+          <p className="mt-0.5 text-xs text-sand-400">{"\u00A0"}</p>
         </div>
-        <div className="rounded-lg border border-warmgray-200 bg-white p-5 h-full">
-          <p className="text-sm font-medium text-warmgray-500">
+        <div className="rounded-lg border border-sand-200 bg-white p-5 h-full">
+          <p className="text-sm font-medium text-sand-500">
             Monitor {getPeriodLabel(period)}
           </p>
-          <p className="mt-1 text-2xl font-bold text-warmgray-900">
+          <p className="mt-1 text-2xl font-bold text-sand-900">
             {Number(periodMonitorCount)}
           </p>
-          <p className="mt-0.5 text-xs text-warmgray-400">{"\u00A0"}</p>
+          <p className="mt-0.5 text-xs text-sand-400">{"\u00A0"}</p>
         </div>
       </div>
 
       {/* Job list table */}
-      <div className="overflow-x-auto rounded-lg border border-warmgray-200">
+      <div className="overflow-x-auto rounded-lg border border-sand-200">
         <table className="w-full text-sm">
-          <thead className="bg-warmgray-50 border-b border-warmgray-200">
+          <thead className="bg-sand-50 border-b border-sand-200">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-44">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-44">
                 Date
               </th>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-36">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-36">
                 Use Case
               </th>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-48">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-48">
                 Model
               </th>
-              <th className="text-right px-4 py-3 font-medium text-warmgray-600 w-28">
+              <th className="text-right px-4 py-3 font-medium text-sand-600 w-28">
                 Input Tokens
               </th>
-              <th className="text-right px-4 py-3 font-medium text-warmgray-600 w-28">
+              <th className="text-right px-4 py-3 font-medium text-sand-600 w-28">
                 Output Tokens
               </th>
-              <th className="text-right px-4 py-3 font-medium text-warmgray-600 w-24">
+              <th className="text-right px-4 py-3 font-medium text-sand-600 w-24">
                 Cost
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-warmgray-100">
+          <tbody className="divide-y divide-sand-100">
             {recentJobs.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center">
-                  <p className="text-warmgray-400 text-base font-medium">
+                  <p className="text-sand-400 text-base font-medium">
                     No API usage recorded yet
                   </p>
-                  <p className="text-warmgray-400 text-sm mt-1">
+                  <p className="text-sand-400 text-sm mt-1">
                     Usage will appear here when AI photo analysis runs or the monitor fires.
                   </p>
                 </td>
               </tr>
             ) : (
               recentJobs.map((job) => (
-                <tr key={job.id} className="hover:bg-warmgray-50">
-                  <td className="px-4 py-3 text-warmgray-500 font-mono text-xs whitespace-nowrap">
+                <tr key={job.id} className="hover:bg-sand-50">
+                  <td className="px-4 py-3 text-sand-500 font-mono text-xs whitespace-nowrap">
                     {job.createdAt
                       ? new Date(job.createdAt).toLocaleString("en-US", {
                           month: "short",
@@ -298,23 +298,23 @@ export default async function CostsPage({ searchParams }: PageProps) {
                         job.useCase === "photo_analysis"
                           ? "bg-blue-100 text-blue-700"
                           : job.useCase === "monitor"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-warmgray-100 text-warmgray-600"
+                            ? "bg-sage-100 text-sage-700"
+                            : "bg-sand-100 text-sand-600"
                       }`}
                     >
                       {useCaseLabels[job.useCase] || job.useCase}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-warmgray-700 font-mono text-xs">
+                  <td className="px-4 py-3 text-sand-700 font-mono text-xs">
                     {job.model}
                   </td>
-                  <td className="px-4 py-3 text-right text-warmgray-700 font-mono text-xs">
+                  <td className="px-4 py-3 text-right text-sand-700 font-mono text-xs">
                     {job.inputTokens.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-warmgray-700 font-mono text-xs">
+                  <td className="px-4 py-3 text-right text-sand-700 font-mono text-xs">
                     {job.outputTokens.toLocaleString()}
                   </td>
-                  <td className="px-4 py-3 text-right text-warmgray-900 font-medium text-xs">
+                  <td className="px-4 py-3 text-right text-sand-900 font-medium text-xs">
                     {formatCents(job.costCents)}
                   </td>
                 </tr>
@@ -327,14 +327,14 @@ export default async function CostsPage({ searchParams }: PageProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-sm text-warmgray-500">
+          <span className="text-sm text-sand-500">
             Page {page} of {totalPages}
           </span>
           <div className="flex gap-2">
             {page > 1 && (
               <Link
                 href={buildUrl({ page: String(page - 1) })}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50 transition-colors"
               >
                 Previous
               </Link>
@@ -342,7 +342,7 @@ export default async function CostsPage({ searchParams }: PageProps) {
             {page < totalPages && (
               <Link
                 href={buildUrl({ page: String(page + 1) })}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50 transition-colors"
               >
                 Next
               </Link>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
  * POST /api/webhooks/resend
@@ -37,38 +38,8 @@ interface ResendWebhookEvent {
   };
 }
 
-export async function POST(req: NextRequest) {
-  // Verify webhook signature if secret is configured
-  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const svixId = req.headers.get("svix-id");
-    const svixTimestamp = req.headers.get("svix-timestamp");
-    const svixSignature = req.headers.get("svix-signature");
-
-    if (!svixId || !svixTimestamp || !svixSignature) {
-      logger.error("webhook:resend", "Missing Svix signature headers");
-      return NextResponse.json(
-        { error: "Missing signature headers" },
-        { status: 400 }
-      );
-    }
-
-    // Resend uses Svix for webhooks — verify the signature
-    // For now we log a warning if we can't verify, but still process
-    // Full Svix verification would require the `svix` package
-    // TODO: Add svix package for full signature verification if needed
-  }
-
-  let event: ResendWebhookEvent;
-  try {
-    event = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON payload" },
-      { status: 400 }
-    );
-  }
-
+/** Log a webhook event and return response */
+function processEvent(event: ResendWebhookEvent): NextResponse {
   const { type, data } = event;
   const to = data.to?.join(", ") || "unknown";
   const subject = data.subject || "unknown";
@@ -141,4 +112,88 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+export async function POST(req: NextRequest) {
+  // Verify webhook signature if secret is configured
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const svixId = req.headers.get("svix-id");
+    const svixTimestamp = req.headers.get("svix-timestamp");
+    const svixSignature = req.headers.get("svix-signature");
+
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      logger.error("webhook:resend", "Missing Svix signature headers");
+      return NextResponse.json(
+        { error: "Missing signature headers" },
+        { status: 400 }
+      );
+    }
+
+    // Verify timestamp is recent (within 5 minutes) to prevent replay attacks
+    const timestampSeconds = parseInt(svixTimestamp, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (isNaN(timestampSeconds) || Math.abs(now - timestampSeconds) > 300) {
+      logger.error("webhook:resend", "Webhook timestamp too old or invalid");
+      return NextResponse.json(
+        { error: "Invalid timestamp" },
+        { status: 400 }
+      );
+    }
+
+    // Verify HMAC-SHA256 signature (Svix format)
+    // Svix signs: "{svixId}.{timestamp}.{body}"
+    const bodyText = await req.text();
+    const signedContent = `${svixId}.${svixTimestamp}.${bodyText}`;
+
+    // Svix webhook secrets are base64-encoded with "whsec_" prefix
+    const secretBytes = Buffer.from(webhookSecret.replace("whsec_", ""), "base64");
+    const { createHmac } = await import("crypto");
+    const expectedSig = createHmac("sha256", secretBytes)
+      .update(signedContent)
+      .digest("base64");
+
+    // Svix sends multiple signatures separated by spaces, each prefixed with "v1,"
+    // Use timing-safe comparison to prevent timing attacks
+    const signatures = svixSignature.split(" ");
+    const isValid = signatures.some((sig) => {
+      const sigValue = sig.replace("v1,", "");
+      return timingSafeEqual(sigValue, expectedSig);
+    });
+
+    if (!isValid) {
+      logger.error("webhook:resend", "Invalid webhook signature");
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 }
+      );
+    }
+
+    // Parse the body we already read
+    let event: ResendWebhookEvent;
+    try {
+      event = JSON.parse(bodyText);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON payload" },
+        { status: 400 }
+      );
+    }
+
+    // Process the verified event
+    return processEvent(event);
+  }
+
+  // No webhook secret configured — accept without verification (dev mode)
+  let event: ResendWebhookEvent;
+  try {
+    event = await req.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON payload" },
+      { status: 400 }
+    );
+  }
+
+  return processEvent(event);
 }

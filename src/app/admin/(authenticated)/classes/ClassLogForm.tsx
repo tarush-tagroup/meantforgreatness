@@ -30,11 +30,11 @@ interface ClassLogFormProps {
   orphanages: { id: string; name: string }[];
   teachers: { id: string; name: string | null; email: string }[];
   currentUserId: string;
-  isTeacherLocked: boolean;
   aiMetadata?: AiMetadata | null;
   initialData?: {
     id: string;
     orphanageId: string;
+    teacherId: string;
     classDate: string;
     classTime: string | null;
     studentCount: number | null;
@@ -48,13 +48,13 @@ function matchBadgeColor(match: string | null) {
     case "high":
       return "bg-green-100 text-green-800";
     case "likely":
-      return "bg-teal-100 text-teal-800";
+      return "bg-green-100 text-green-800";
     case "uncertain":
-      return "bg-amber-100 text-amber-800";
+      return "bg-sage-100 text-sage-800";
     case "unlikely":
       return "bg-red-100 text-red-800";
     default:
-      return "bg-warmgray-100 text-warmgray-600";
+      return "bg-sand-100 text-sand-600";
   }
 }
 
@@ -62,7 +62,6 @@ export default function ClassLogForm({
   orphanages,
   teachers,
   currentUserId,
-  isTeacherLocked,
   aiMetadata,
   initialData,
 }: ClassLogFormProps) {
@@ -71,6 +70,7 @@ export default function ClassLogForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [orphanageId, setOrphanageId] = useState(initialData?.orphanageId || "");
+  const [teacherId, setTeacherId] = useState(initialData?.teacherId || currentUserId);
   const [classDate, setClassDate] = useState(
     initialData?.classDate || new Date().toISOString().split("T")[0]
   );
@@ -188,6 +188,7 @@ export default function ClassLogForm({
 
       const payload: Record<string, unknown> = {
         orphanageId,
+        teacherId,
         classDate,
         photos: photos.map((p, i) => ({
           url: p.url,
@@ -233,12 +234,12 @@ export default function ClassLogForm({
         </div>
       )}
 
-      <div className="rounded-lg border border-warmgray-200 bg-white p-6 space-y-5">
+      <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-5">
         {/* Orphanage */}
         <div>
           <label
             htmlFor="orphanageId"
-            className="block text-sm font-medium text-warmgray-700 mb-1"
+            className="block text-sm font-medium text-sand-700 mb-1"
           >
             Orphanage *
           </label>
@@ -247,7 +248,7 @@ export default function ClassLogForm({
             value={orphanageId}
             onChange={(e) => setOrphanageId(e.target.value)}
             required
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           >
             <option value="">Select orphanage</option>
             {orphanages.map((o) => (
@@ -258,32 +259,35 @@ export default function ClassLogForm({
           </select>
         </div>
 
-        {/* Teacher (locked for teacher role) */}
+        {/* Teacher */}
         <div>
           <label
-            htmlFor="teacher"
-            className="block text-sm font-medium text-warmgray-700 mb-1"
+            htmlFor="teacherId"
+            className="block text-sm font-medium text-sand-700 mb-1"
           >
-            Teacher
+            Teacher *
           </label>
-          {isTeacherLocked ? (
-            <div className="rounded-lg bg-warmgray-50 border border-warmgray-200 px-3 py-2 text-sm text-warmgray-600">
-              {teachers.find((t) => t.id === currentUserId)?.name || "You"}{" "}
-              <span className="text-warmgray-400">(locked to your account)</span>
-            </div>
-          ) : (
-            <div className="rounded-lg bg-warmgray-50 border border-warmgray-200 px-3 py-2 text-sm text-warmgray-600">
-              {teachers.find((t) => t.id === currentUserId)?.name || "You"}{" "}
-              <span className="text-warmgray-400">(your account)</span>
-            </div>
-          )}
+          <select
+            id="teacherId"
+            value={teacherId}
+            onChange={(e) => setTeacherId(e.target.value)}
+            required
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
+          >
+            <option value="">Select teacher</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name || t.email}{t.id === currentUserId ? " (you)" : ""}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Date */}
         <div>
           <label
             htmlFor="classDate"
-            className="block text-sm font-medium text-warmgray-700 mb-1"
+            className="block text-sm font-medium text-sand-700 mb-1"
           >
             Class Date *
           </label>
@@ -293,7 +297,7 @@ export default function ClassLogForm({
             value={classDate}
             onChange={(e) => setClassDate(e.target.value)}
             required
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           />
         </div>
 
@@ -301,7 +305,7 @@ export default function ClassLogForm({
         <div>
           <label
             htmlFor="classTime"
-            className="block text-sm font-medium text-warmgray-700 mb-1"
+            className="block text-sm font-medium text-sand-700 mb-1"
           >
             Class Time
           </label>
@@ -311,7 +315,7 @@ export default function ClassLogForm({
             value={classTime}
             onChange={(e) => setClassTime(e.target.value)}
             placeholder="e.g. 10:00 AM"
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           />
         </div>
 
@@ -319,7 +323,7 @@ export default function ClassLogForm({
         <div>
           <label
             htmlFor="studentCount"
-            className="block text-sm font-medium text-warmgray-700 mb-1"
+            className="block text-sm font-medium text-sand-700 mb-1"
           >
             Students Present
           </label>
@@ -330,14 +334,14 @@ export default function ClassLogForm({
             onChange={(e) => setStudentCount(e.target.value)}
             min="0"
             placeholder="Number of students"
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           />
         </div>
 
         {/* Photos (required) */}
         <div>
-          <label className="block text-sm font-medium text-warmgray-700 mb-1">
-            Photos * <span className="text-warmgray-400 font-normal">(at least 1 required)</span>
+          <label className="block text-sm font-medium text-sand-700 mb-1">
+            Photos * <span className="text-sand-400 font-normal">(at least 1 required)</span>
           </label>
 
           {/* Photo upload instructions */}
@@ -355,7 +359,7 @@ export default function ClassLogForm({
           {photos.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
               {photos.map((photo, index) => (
-                <div key={index} className="relative group aspect-video rounded-lg overflow-hidden border border-warmgray-200">
+                <div key={index} className="relative group aspect-video rounded-lg overflow-hidden border border-sand-200">
                   <Image
                     src={photo.url}
                     alt={photo.caption || `Photo ${index + 1}`}
@@ -372,7 +376,7 @@ export default function ClassLogForm({
                     &times;
                   </button>
                   {index === 0 && (
-                    <span className="absolute bottom-1 left-1 bg-teal-600 text-white text-xs px-1.5 py-0.5 rounded">
+                    <span className="absolute bottom-1 left-1 bg-green-600 text-white text-xs px-1.5 py-0.5 rounded">
                       Primary
                     </span>
                   )}
@@ -395,14 +399,14 @@ export default function ClassLogForm({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="rounded-lg border border-dashed border-warmgray-300 px-4 py-3 text-sm text-warmgray-600 hover:border-teal-500 hover:text-teal-600 transition-colors w-full disabled:opacity-50"
+              className="rounded-lg border border-dashed border-sand-300 px-4 py-3 text-sm text-sand-600 hover:border-green-500 hover:text-green-600 transition-colors w-full disabled:opacity-50"
             >
               {uploading ? "Uploading..." : photos.length === 0 ? "Upload Photos (required)" : "Add More Photos"}
             </button>
           </div>
 
           {photos.length === 0 && (
-            <p className="text-xs text-warmgray-400 mt-1">
+            <p className="text-xs text-sand-400 mt-1">
               JPEG, PNG, or WebP. Max 10 MB per file.
             </p>
           )}
@@ -412,7 +416,7 @@ export default function ClassLogForm({
         <div>
           <label
             htmlFor="notes"
-            className="block text-sm font-medium text-warmgray-700 mb-1"
+            className="block text-sm font-medium text-sand-700 mb-1"
           >
             Notes
           </label>
@@ -422,7 +426,7 @@ export default function ClassLogForm({
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
             placeholder="What was covered in class, observations, etc."
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900 resize-none"
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900 resize-none"
           />
         </div>
       </div>
@@ -494,22 +498,22 @@ export default function ClassLogForm({
 
       {/* AI analysis pending state */}
       {isEditing && !aiMetadata?.aiAnalyzedAt && photos.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-lg border border-sage-200 bg-sage-50 p-4">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-amber-600 animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-sage-600 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p className="text-sm font-medium text-amber-800">AI photo analysis pending</p>
+            <p className="text-sm font-medium text-sage-800">AI photo analysis pending</p>
           </div>
-          <p className="text-xs text-amber-600 mt-1">
+          <p className="text-xs text-sage-600 mt-1">
             Analysis runs automatically after photos are uploaded. It may take a minute to complete.
           </p>
           <button
             type="button"
             onClick={handleRerunAnalysis}
             disabled={rerunning}
-            className="mt-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-200 transition-colors disabled:opacity-50"
+            className="mt-2 rounded-lg bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-800 hover:bg-sage-200 transition-colors disabled:opacity-50"
           >
             {rerunning ? "Analyzing..." : "Run AI Analysis Now"}
           </button>
@@ -519,15 +523,15 @@ export default function ClassLogForm({
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={saving || uploading || !orphanageId || !classDate || photos.length === 0}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={saving || uploading || !orphanageId || !teacherId || !classDate || photos.length === 0}
+          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? "Saving..." : isEditing ? "Update Class Log" : "Save Class Log"}
         </button>
         <button
           type="button"
           onClick={() => router.push("/admin/classes")}
-          className="rounded-lg border border-warmgray-200 px-4 py-2 text-sm font-medium text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+          className="rounded-lg border border-sand-200 px-4 py-2 text-sm font-medium text-sand-600 hover:bg-sand-50 transition-colors"
         >
           Cancel
         </button>

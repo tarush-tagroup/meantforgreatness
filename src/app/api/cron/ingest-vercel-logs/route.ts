@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { db } from "@/db";
 import { cronRuns } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
  * GET /api/cron/ingest-vercel-logs
@@ -34,8 +35,8 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
   const isAuthed =
-    (token && cronSecret && token === cronSecret) ||
-    (token && logApiSecret && token === logApiSecret);
+    (token && cronSecret && timingSafeEqual(token, cronSecret)) ||
+    (token && logApiSecret && timingSafeEqual(token, logApiSecret));
   if (!isAuthed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

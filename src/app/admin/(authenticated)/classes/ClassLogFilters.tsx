@@ -45,16 +45,16 @@ export default function ClassLogFilters({
     currentFilters.dateTo;
 
   return (
-    <div className="mb-6 rounded-lg border border-warmgray-200 bg-white p-4">
+    <div className="mb-6 rounded-lg border border-sand-200 bg-white p-4">
       <div className="flex flex-wrap items-end gap-4">
         <div className="min-w-[160px]">
-          <label className="block text-xs font-medium text-warmgray-500 mb-1">
+          <label className="block text-xs font-medium text-sand-500 mb-1">
             Orphanage
           </label>
           <select
             value={currentFilters.orphanageId || ""}
             onChange={(e) => updateFilter("orphanageId", e.target.value)}
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-700"
+            className="w-full rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
           >
             <option value="">All orphanages</option>
             {orphanages.map((o) => (
@@ -66,13 +66,13 @@ export default function ClassLogFilters({
         </div>
 
         <div className="min-w-[160px]">
-          <label className="block text-xs font-medium text-warmgray-500 mb-1">
+          <label className="block text-xs font-medium text-sand-500 mb-1">
             Teacher
           </label>
           <select
             value={currentFilters.teacherId || ""}
             onChange={(e) => updateFilter("teacherId", e.target.value)}
-            className="w-full rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-700"
+            className="w-full rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
           >
             <option value="">All teachers</option>
             {teachers.map((t) => (
@@ -84,33 +84,33 @@ export default function ClassLogFilters({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-warmgray-500 mb-1">
+          <label className="block text-xs font-medium text-sand-500 mb-1">
             From
           </label>
           <input
             type="date"
             value={currentFilters.dateFrom || ""}
             onChange={(e) => updateFilter("dateFrom", e.target.value)}
-            className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-700"
+            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-warmgray-500 mb-1">
+          <label className="block text-xs font-medium text-sand-500 mb-1">
             To
           </label>
           <input
             type="date"
             value={currentFilters.dateTo || ""}
             onChange={(e) => updateFilter("dateTo", e.target.value)}
-            className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-700"
+            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
           />
         </div>
 
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50"
+            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50"
           >
             Clear filters
           </button>

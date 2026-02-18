@@ -38,7 +38,7 @@ function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean;
     );
   }
   return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 px-1 py-0.5 rounded" title={tooltip || `Could not be verified by ${label}`}>
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-sage-700 bg-sage-50 px-1 py-0.5 rounded" title={tooltip || `Could not be verified by ${label}`}>
       <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
       {label}
     </span>
@@ -122,7 +122,7 @@ export default async function AdminClassesPage({
     .select({ id: users.id, name: users.name })
     .from(users)
     .where(
-      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher', 'teacher_manager', 'admin']::text[]`
+      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
     )
     .orderBy(users.name);
 
@@ -132,15 +132,15 @@ export default async function AdminClassesPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-warmgray-900">Class Logs</h1>
-          <p className="mt-1 text-sm text-warmgray-500">
+          <h1 className="text-2xl font-bold text-sand-900">Class Logs</h1>
+          <p className="mt-1 text-sm text-sand-500">
             {total} class log{total !== 1 ? "s" : ""} recorded
           </p>
         </div>
         {canCreate && (
           <Link
             href="/admin/classes/new"
-            className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
           >
             Log a Class
           </Link>
@@ -154,148 +154,236 @@ export default async function AdminClassesPage({
       />
 
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-warmgray-200 bg-white p-12 text-center">
-          <p className="text-warmgray-500">No class logs found.</p>
+        <div className="rounded-lg border border-sand-200 bg-white p-12 text-center">
+          <p className="text-sand-500">No class logs found.</p>
           {canCreate && (
             <Link
               href="/admin/classes/new"
-              className="mt-3 inline-block text-sm font-medium text-teal-600 hover:text-teal-700"
+              className="mt-3 inline-block text-sm font-medium text-green-600 hover:text-green-700"
             >
               Log your first class &rarr;
             </Link>
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-warmgray-200 bg-white overflow-hidden">
-          <table className="min-w-full divide-y divide-warmgray-200">
-            <thead className="bg-warmgray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider w-14">
-                  Photo
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
-                  Orphanage
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
-                  Teacher
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
-                  Students
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
-                  Time
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-warmgray-500 uppercase tracking-wider">
-                  Notes
-                </th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-warmgray-100">
-              {rows.map((log) => {
-                const hasAi = !!log.aiAnalyzedAt;
-                const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
-                const dateVerified = isDateVerified(log.aiDateMatch);
-                // Determine verification method from confidence notes
-                const hasGps = log.aiConfidenceNotes?.includes("GPS (");
-                const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
+        <>
+          {/* Mobile card layout */}
+          <div className="space-y-3 md:hidden">
+            {rows.map((log) => {
+              const hasAi = !!log.aiAnalyzedAt;
+              const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
+              const dateVerified = isDateVerified(log.aiDateMatch);
+              const hasGps = log.aiConfidenceNotes?.includes("GPS (");
+              const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
 
-                return (
-                  <tr key={log.id} className="hover:bg-warmgray-50">
-                    <td className="px-4 py-3">
-                      {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
-                        <div className="relative w-10 h-10 rounded overflow-hidden border border-warmgray-200">
-                          <Image
-                            src={log.aiPrimaryPhotoUrl || log.photoUrl!}
-                            alt="Class photo"
-                            fill
-                            className="object-cover"
-                            sizes="40px"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-warmgray-100 flex items-center justify-center">
-                          <svg className="w-4 h-4 text-warmgray-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-                          </svg>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-warmgray-900 whitespace-nowrap">
-                      <span>{log.classDate}</span>
-                      {dateVerified !== null && (
-                        <span className="ml-1.5">
-                          <VerifiedBadge verified={dateVerified} label="EXIF" tooltip={log.aiDateNotes || undefined} />
+              return (
+                <Link
+                  key={log.id}
+                  href={`/admin/classes/${log.id}`}
+                  className="block rounded-lg border border-sand-200 bg-white p-3 hover:bg-sand-50 transition-colors"
+                >
+                  <div className="flex gap-3">
+                    {/* Photo thumbnail */}
+                    {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
+                      <div className="relative w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-sand-200">
+                        <Image
+                          src={log.aiPrimaryPhotoUrl || log.photoUrl!}
+                          alt="Class photo"
+                          fill
+                          className="object-cover"
+                          sizes="56px"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 shrink-0 rounded-lg bg-sand-100 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-sand-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                        </svg>
+                      </div>
+                    )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-sand-900">
+                          {log.orphanageName || log.orphanageId}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-warmgray-700">
-                      <span>{log.orphanageName || log.orphanageId}</span>
-                      {orphanageVerified !== null && (
-                        <span className="ml-1.5">
+                        <span className="text-xs text-sand-500">{log.classDate}</span>
+                      </div>
+                      <p className="text-xs text-sand-600 mt-0.5">
+                        {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students{log.classTime ? ` · ${log.classTime}` : ""}
+                      </p>
+                      {/* Verification badges */}
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {orphanageVerified !== null && (
                           <VerifiedBadge
                             verified={orphanageVerified}
                             label={locationMethod || "AI"}
                             tooltip={log.aiConfidenceNotes || undefined}
                           />
-                        </span>
+                        )}
+                        {dateVerified !== null && (
+                          <VerifiedBadge verified={dateVerified} label="EXIF" tooltip={log.aiDateNotes || undefined} />
+                        )}
+                        {hasAi && log.aiKidsCount != null && (
+                          <span
+                            className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
+                              log.studentCount != null &&
+                              Math.abs(log.aiKidsCount - log.studentCount) <= 3
+                                ? "text-green-700 bg-green-50"
+                                : "text-sage-700 bg-sage-50"
+                            }`}
+                          >
+                            AI: {log.aiKidsCount} kids
+                          </span>
+                        )}
+                      </div>
+                      {log.notes && (
+                        <p className="text-xs text-sand-400 mt-1 truncate">{log.notes}</p>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-warmgray-700">
-                      {log.teacherName || "Unknown"}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-warmgray-700 whitespace-nowrap">
-                      {log.studentCount ?? "\u2014"}
-                      {hasAi && log.aiKidsCount != null && (
-                        <span
-                          className={`ml-1 text-xs ${
-                            log.studentCount != null &&
-                            Math.abs(log.aiKidsCount - log.studentCount) <= 3
-                              ? "text-green-600"
-                              : "text-amber-600"
-                          }`}
-                          title={`AI detected ${log.aiKidsCount} student${log.aiKidsCount !== 1 ? "s" : ""} in photos`}
+                    </div>
+
+                    {/* Chevron */}
+                    <svg className="w-4 h-4 text-sand-400 shrink-0 self-center" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
+            <table className="min-w-full divide-y divide-sand-200">
+              <thead className="bg-sand-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider w-14">
+                    Photo
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Orphanage
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Teacher
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Students
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Time
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Notes
+                  </th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-sand-100">
+                {rows.map((log) => {
+                  const hasAi = !!log.aiAnalyzedAt;
+                  const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
+                  const dateVerified = isDateVerified(log.aiDateMatch);
+                  const hasGps = log.aiConfidenceNotes?.includes("GPS (");
+                  const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
+
+                  return (
+                    <tr key={log.id} className="hover:bg-sand-50">
+                      <td className="px-4 py-3">
+                        {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
+                          <div className="relative w-10 h-10 rounded overflow-hidden border border-sand-200">
+                            <Image
+                              src={log.aiPrimaryPhotoUrl || log.photoUrl!}
+                              alt="Class photo"
+                              fill
+                              className="object-cover"
+                              sizes="40px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-sand-100 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-sand-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                            </svg>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-sand-900 whitespace-nowrap">
+                        <span>{log.classDate}</span>
+                        {dateVerified !== null && (
+                          <span className="ml-1.5">
+                            <VerifiedBadge verified={dateVerified} label="EXIF" tooltip={log.aiDateNotes || undefined} />
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-sand-700">
+                        <span>{log.orphanageName || log.orphanageId}</span>
+                        {orphanageVerified !== null && (
+                          <span className="ml-1.5">
+                            <VerifiedBadge
+                              verified={orphanageVerified}
+                              label={locationMethod || "AI"}
+                              tooltip={log.aiConfidenceNotes || undefined}
+                            />
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-sand-700">
+                        {log.teacherName || "Unknown"}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-sand-700 whitespace-nowrap">
+                        {log.studentCount ?? "\u2014"}
+                        {hasAi && log.aiKidsCount != null && (
+                          <span
+                            className={`ml-1 text-xs ${
+                              log.studentCount != null &&
+                              Math.abs(log.aiKidsCount - log.studentCount) <= 3
+                                ? "text-green-600"
+                                : "text-sage-600"
+                            }`}
+                            title={`AI detected ${log.aiKidsCount} student${log.aiKidsCount !== 1 ? "s" : ""} in photos`}
+                          >
+                            ({log.aiKidsCount})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-sand-500 whitespace-nowrap">
+                        <span>{log.classTime || "\u2014"}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-sand-500 max-w-xs truncate">
+                        {log.notes || "\u2014"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/admin/classes/${log.id}`}
+                          className="text-sm font-medium text-green-600 hover:text-green-700"
                         >
-                          ({log.aiKidsCount})
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-warmgray-500 whitespace-nowrap">
-                      <span>{log.classTime || "\u2014"}</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-warmgray-500 max-w-xs truncate">
-                      {log.notes || "\u2014"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/classes/${log.id}`}
-                        className="text-sm font-medium text-teal-600 hover:text-teal-700"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-sm text-warmgray-500">
+          <p className="text-sm text-sand-500">
             Page {page} of {totalPages}
           </p>
           <div className="flex gap-2">
             {page > 1 && (
               <Link
                 href={buildFilterUrl(params, page - 1)}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50"
               >
                 Previous
               </Link>
@@ -303,7 +391,7 @@ export default async function AdminClassesPage({
             {page < totalPages && (
               <Link
                 href={buildFilterUrl(params, page + 1)}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50"
               >
                 Next
               </Link>
@@ -313,7 +401,7 @@ export default async function AdminClassesPage({
       )}
 
       {/* Legend for AI badges */}
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-warmgray-400">
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-sand-400">
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={true} label="GPS" />
           <span>= GPS verified</span>

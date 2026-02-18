@@ -17,6 +17,7 @@ const photoSchema = z.object({
 
 const createSchema = z.object({
   orphanageId: z.string().min(1),
+  teacherId: z.string().min(1, "Teacher is required"),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
   classTime: z.string().max(20).optional(),
   studentCount: z.number().int().min(0).optional(),
@@ -161,12 +162,30 @@ async function postHandler(req: NextRequest) {
     );
   }
 
-  // Teachers are locked to their own ID
+  // Verify teacher exists and is active
+  const [teacher] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        eq(users.id, parsed.data.teacherId),
+        sql`${users.status} = 'active'`
+      )
+    )
+    .limit(1);
+
+  if (!teacher) {
+    return NextResponse.json(
+      { error: "Teacher not found or inactive" },
+      { status: 404 }
+    );
+  }
+
   const [created] = await db
     .insert(classLogs)
     .values({
       orphanageId: parsed.data.orphanageId,
-      teacherId: user!.id,
+      teacherId: parsed.data.teacherId,
       classDate: parsed.data.classDate,
       classTime: parsed.data.classTime || null,
       studentCount: parsed.data.studentCount ?? null,

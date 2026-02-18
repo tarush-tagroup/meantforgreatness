@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { listLogs } from "@/lib/blob-logs";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
  * GET /api/admin/logs
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   let isAuthed = false;
 
-  if (bearerToken && logApiSecret && bearerToken === logApiSecret) {
+  if (bearerToken && logApiSecret && timingSafeEqual(bearerToken, logApiSecret)) {
     isAuthed = true;
   } else {
     // Fall back to session auth

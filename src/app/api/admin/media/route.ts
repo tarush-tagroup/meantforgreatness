@@ -5,7 +5,7 @@ import { media } from "@/db/schema";
 import { desc, sql } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
-  const [, authError] = await withAuth("media:upload");
+  const [user, authError] = await withAuth("media:upload");
   if (authError) return authError;
 
   const url = req.nextUrl;

@@ -16,13 +16,13 @@ function matchBadgeColor(match: string | null) {
     case "high":
       return "bg-green-100 text-green-800";
     case "likely":
-      return "bg-teal-100 text-teal-800";
+      return "bg-green-100 text-green-800";
     case "uncertain":
-      return "bg-amber-100 text-amber-800";
+      return "bg-sage-100 text-sage-800";
     case "unlikely":
       return "bg-red-100 text-red-800";
     default:
-      return "bg-warmgray-100 text-warmgray-600";
+      return "bg-sand-100 text-sand-600";
   }
 }
 
@@ -114,23 +114,18 @@ export default async function ClassLogDetailPage({
       .select({ id: users.id, name: users.name, email: users.email })
       .from(users)
       .where(
-        sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher', 'teacher_manager', 'admin']::text[]`
+        sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
       )
       .orderBy(asc(users.name));
-
-    const isTeacherOnly =
-      user.roles.includes("teacher") &&
-      !user.roles.includes("admin") &&
-      !user.roles.includes("teacher_manager");
 
     return (
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-warmgray-900">
+            <h1 className="text-2xl font-bold text-sand-900">
               Edit Class Log
             </h1>
-            <p className="mt-1 text-sm text-warmgray-500">
+            <p className="mt-1 text-sm text-sand-500">
               {row.classDate} at {row.orphanageName || row.orphanageId}
             </p>
           </div>
@@ -142,11 +137,11 @@ export default async function ClassLogDetailPage({
             orphanages={orphanageOptions}
             teachers={teacherOptions}
             currentUserId={user.id}
-            isTeacherLocked={isTeacherOnly}
             aiMetadata={aiMetadata}
             initialData={{
               id: row.id,
               orphanageId: row.orphanageId,
+              teacherId: row.teacherId,
               classDate: row.classDate,
               classTime: row.classTime,
               studentCount: row.studentCount,
@@ -165,43 +160,43 @@ export default async function ClassLogDetailPage({
       <div className="mb-6">
         <Link
           href="/admin/classes"
-          className="text-sm text-warmgray-500 hover:text-warmgray-700"
+          className="text-sm text-sand-500 hover:text-sand-700"
         >
           &larr; Back to class logs
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-warmgray-900">
+        <h1 className="mt-2 text-2xl font-bold text-sand-900">
           Class Log Details
         </h1>
       </div>
 
       <div className="max-w-2xl space-y-4">
-        <div className="rounded-lg border border-warmgray-200 bg-white p-6 space-y-4">
+        <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs font-medium text-warmgray-500">Date</p>
-              <p className="text-sm text-warmgray-900">{row.classDate}</p>
+              <p className="text-xs font-medium text-sand-500">Date</p>
+              <p className="text-sm text-sand-900">{row.classDate}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-warmgray-500">Time</p>
-              <p className="text-sm text-warmgray-900">{row.classTime || "\u2014"}</p>
+              <p className="text-xs font-medium text-sand-500">Time</p>
+              <p className="text-sm text-sand-900">{row.classTime || "\u2014"}</p>
             </div>
             <div>
-              <p className="text-xs font-medium text-warmgray-500">Orphanage</p>
-              <p className="text-sm text-warmgray-900">
+              <p className="text-xs font-medium text-sand-500">Orphanage</p>
+              <p className="text-sm text-sand-900">
                 {row.orphanageName || row.orphanageId}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-warmgray-500">Teacher</p>
-              <p className="text-sm text-warmgray-900">
+              <p className="text-xs font-medium text-sand-500">Teacher</p>
+              <p className="text-sm text-sand-900">
                 {row.teacherName || "Unknown"}
               </p>
             </div>
             <div>
-              <p className="text-xs font-medium text-warmgray-500">
+              <p className="text-xs font-medium text-sand-500">
                 Students Present
               </p>
-              <p className="text-sm text-warmgray-900">
+              <p className="text-sm text-sand-900">
                 {row.studentCount ?? "\u2014"}
               </p>
             </div>
@@ -209,13 +204,13 @@ export default async function ClassLogDetailPage({
 
           {/* Photos */}
           {photos.length > 0 && (
-            <div className="pt-4 border-t border-warmgray-100">
-              <p className="text-xs font-medium text-warmgray-500 mb-2">
+            <div className="pt-4 border-t border-sand-100">
+              <p className="text-xs font-medium text-sand-500 mb-2">
                 Photos ({photos.length})
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {photos.map((photo) => (
-                  <div key={photo.id} className="relative aspect-video rounded-lg overflow-hidden border border-warmgray-200">
+                  <div key={photo.id} className="relative aspect-video rounded-lg overflow-hidden border border-sand-200">
                     <Image
                       src={photo.url}
                       alt={photo.caption || "Class photo"}
@@ -230,9 +225,9 @@ export default async function ClassLogDetailPage({
           )}
 
           {row.notes && (
-            <div className="pt-4 border-t border-warmgray-100">
-              <p className="text-xs font-medium text-warmgray-500 mb-1">Notes</p>
-              <p className="text-sm text-warmgray-700 whitespace-pre-wrap">
+            <div className="pt-4 border-t border-sand-100">
+              <p className="text-xs font-medium text-sand-500 mb-1">Notes</p>
+              <p className="text-sm text-sand-700 whitespace-pre-wrap">
                 {row.notes}
               </p>
             </div>

@@ -24,10 +24,10 @@ export default function Partnership() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* A) Section Header */}
         <div className="mx-auto max-w-3xl text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-warmgray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-sand-900 mb-4">
             Our Teaching Partner
           </h2>
-          <p className="text-lg text-warmgray-600 leading-relaxed">
+          <p className="text-lg text-sand-600 leading-relaxed">
             Every class we fund is delivered by Bahasa Bule &mdash; an
             established Bali-based language school whose teachers visit
             orphanages almost every afternoon to teach English, fully funded.
@@ -47,14 +47,14 @@ export default function Partnership() {
             />
           </div>
 
-          <div className="rounded-xl bg-teal-50 border border-teal-200 p-8 sm:p-10">
-            <div className="text-xs font-semibold text-teal-600 uppercase tracking-wide mb-3">
+          <div className="rounded-xl bg-green-50 border border-green-200 p-8 sm:p-10">
+            <div className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-3">
               Founded 2021 in Bali
             </div>
-            <h3 className="text-xl font-semibold text-teal-800 mb-4">
+            <h3 className="text-xl font-semibold text-green-800 mb-4">
               Bahasa Bule &amp; TransforMe Academy
             </h3>
-            <p className="text-warmgray-700 leading-relaxed mb-4">
+            <p className="text-sand-700 leading-relaxed mb-4">
               <span className="font-semibold">Bahasa Bule</span> is an
               established language institute in Bali with hundreds of learners
               from around the world. Their programs span General English,
@@ -62,7 +62,7 @@ export default function Partnership() {
               &mdash; all taught through structured courses with clear levels
               and custom materials.
             </p>
-            <p className="text-warmgray-700 leading-relaxed mb-4">
+            <p className="text-sand-700 leading-relaxed mb-4">
               Through{" "}
               <span className="font-semibold">TransforMe Academy</span>, their
               social impact arm, Bahasa Bule provides fully funded English
@@ -71,7 +71,7 @@ export default function Partnership() {
               visit orphanages almost every afternoon, teaching everything from
               phonics basics to conversational English.
             </p>
-            <p className="text-warmgray-700 leading-relaxed">
+            <p className="text-sand-700 leading-relaxed">
               We partner with TransforMe Academy to deliver every class we fund.
               Their teaching expertise and deep relationships with orphanage
               communities, combined with our mission to reach every orphanage in
@@ -86,12 +86,12 @@ export default function Partnership() {
           {highlights.map((item) => (
             <div
               key={item.title}
-              className="rounded-xl bg-white p-6 shadow-sm border border-warmgray-200"
+              className="rounded-xl bg-white p-6 shadow-sm border border-sand-200"
             >
-              <h3 className="text-lg font-semibold text-teal-700 mb-3">
+              <h3 className="text-lg font-semibold text-green-700 mb-3">
                 {item.title}
               </h3>
-              <p className="text-warmgray-600 text-sm leading-relaxed">
+              <p className="text-sand-600 text-sm leading-relaxed">
                 {item.description}
               </p>
             </div>
@@ -100,14 +100,14 @@ export default function Partnership() {
 
         {/* D) Teacher Quote */}
         <div className="mx-auto max-w-3xl">
-          <div className="rounded-xl bg-warmgray-50 border border-warmgray-200 p-8 sm:p-10 text-center">
-            <blockquote className="text-lg sm:text-xl text-warmgray-700 leading-relaxed italic">
+          <div className="rounded-xl bg-sand-50 border border-sand-200 p-8 sm:p-10 text-center">
+            <blockquote className="text-lg sm:text-xl text-sand-700 leading-relaxed italic">
               &ldquo;No matter how much I teach them, it always feels like
               it&apos;s nothing compared to what these kids have taught me. They
               teach me gratitude, sincerity, and most importantly, how to find
               wonder and magic in the small, ordinary parts of life.&rdquo;
             </blockquote>
-            <p className="mt-4 text-sm font-semibold text-warmgray-500">
+            <p className="mt-4 text-sm font-semibold text-sand-500">
               &mdash; Leonika, Head Teacher at Bahasa Bule
             </p>
           </div>
