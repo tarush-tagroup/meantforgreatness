@@ -87,20 +87,17 @@ describe("permissions", () => {
     });
 
     // ─── Donor Manager permissions ────────────────────────────────────
-    it("donor_manager can view donations", () => {
-      expect(hasPermission(["donor_manager"], "donations:view")).toBe(true);
-    });
-
-    it("donor_manager can view class logs", () => {
-      expect(hasPermission(["donor_manager"], "class_logs:view_all")).toBe(true);
-    });
-
-    it("donor_manager can view orphanages", () => {
+    it("donor_manager can view operations data", () => {
       expect(hasPermission(["donor_manager"], "orphanages:view")).toBe(true);
+      expect(hasPermission(["donor_manager"], "kids:view")).toBe(true);
+      expect(hasPermission(["donor_manager"], "class_logs:view_all")).toBe(true);
+      expect(hasPermission(["donor_manager"], "events:view")).toBe(true);
+      expect(hasPermission(["donor_manager"], "transparency:view")).toBe(true);
     });
 
-    it("donor_manager can view but not invite users", () => {
-      expect(hasPermission(["donor_manager"], "users:view")).toBe(true);
+    it("donor_manager cannot view donations or users", () => {
+      expect(hasPermission(["donor_manager"], "donations:view")).toBe(false);
+      expect(hasPermission(["donor_manager"], "users:view")).toBe(false);
       expect(hasPermission(["donor_manager"], "users:invite")).toBe(false);
     });
 

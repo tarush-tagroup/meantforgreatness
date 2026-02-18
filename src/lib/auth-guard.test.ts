@@ -173,7 +173,7 @@ describe("auth-guard", () => {
       expect(error!.status).toBe(403);
     });
 
-    it("donor_manager can access donations:view", async () => {
+    it("donor_manager can access orphanages:view", async () => {
       mockAuth.mockResolvedValue({
         user: {
           id: "donor-1",
@@ -184,7 +184,7 @@ describe("auth-guard", () => {
         },
       });
 
-      const [user, error] = await withAuth("donations:view");
+      const [user, error] = await withAuth("orphanages:view");
       expect(user).not.toBeNull();
       expect(error).toBeNull();
     });
