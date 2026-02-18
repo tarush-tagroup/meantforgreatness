@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import type { Permission, Role, SessionUser } from "@/types/auth";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 /**
  * Get the current authenticated user from the session.
@@ -40,6 +41,14 @@ export async function requireAuth(
   }
 
   if (requiredPermission && !hasPermission(user.roles, requiredPermission)) {
+    logger
+      .error("auth", `Forbidden: ${user.email} lacks ${requiredPermission}`, {
+        email: user.email,
+        userId: user.id,
+        roles: user.roles,
+        requiredPermission,
+      })
+      .catch(() => {});
     throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
