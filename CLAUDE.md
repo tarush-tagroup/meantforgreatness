@@ -7,14 +7,10 @@ Charity website for English education at Bali orphanages. Next.js 16 + React 19 
 
 When debugging ANY error or issue:
 
-1. **Check centralized logs first:**
+1. **Check centralized logs first** (stored in Vercel Blob, queried via API):
    ```bash
    curl -s -H "Authorization: Bearer $LOG_API_SECRET" \
      "https://www.meantforgreatness.org/api/admin/logs?level=error&limit=20" | python3 -m json.tool
-   ```
-   Or query the Neon DB directly:
-   ```sql
-   SELECT * FROM app_logs WHERE level = 'error' ORDER BY created_at DESC LIMIT 20;
    ```
    Neon project ID: `cold-night-96404029`
 
@@ -30,7 +26,7 @@ The centralized logs capture: Stripe checkout/webhooks, contact form/email (Rese
 - **ORM:** Drizzle ORM, config at `drizzle.config.ts`
 - **Auth:** NextAuth v5 with Google OAuth, JWT sessions
 - **Payments:** Stripe checkout + webhooks at `/api/webhooks/stripe`
-- **Logger:** `src/lib/logger.ts` — writes to `app_logs` table + console
+- **Logger:** `src/lib/logger.ts` — writes to Vercel Blob storage + console
 - **Permissions:** Role-based (admin, teacher, teacher_manager, donor_manager) at `src/lib/permissions.ts`
 - **Monitor:** GitHub Actions runs every 6h, checks Vercel + centralized logs, auto-fixes with Claude
 
