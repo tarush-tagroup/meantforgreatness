@@ -108,6 +108,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.userId = dbUser.id;
           token.roles = dbUser.roles as Role[];
         }
+      } else if (token.userId) {
+        // Refresh roles from DB on every token refresh
+        // Ensures role changes take effect without re-login
+        const [dbUser] = await db
+          .select({ roles: users.roles })
+          .from(users)
+          .where(eq(users.id, token.userId as string))
+          .limit(1);
+
+        if (dbUser) {
+          token.roles = dbUser.roles as Role[];
+        }
       }
       return token;
     },
