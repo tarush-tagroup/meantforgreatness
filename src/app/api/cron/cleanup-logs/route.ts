@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { deleteOldLogs } from "@/lib/blob-logs";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
  * GET /api/cron/cleanup-logs
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
 
   // Verify the request is from Vercel Cron
   const authHeader = req.headers.get("authorization");
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!cronSecret || !bearerToken || !timingSafeEqual(bearerToken, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -11,15 +11,10 @@ const AVAILABLE_ROLES: { value: Role; label: string; description: string }[] = [
     description: "Full access — manage users, settings, and all content",
   },
   {
-    value: "teacher",
-    label: "Teacher",
-    description: "View classes, create/edit own class logs, manage events",
-  },
-  {
     value: "teacher_manager",
     label: "Teacher Manager",
     description:
-      "Everything a teacher can do, plus edit any class log and manage orphanages",
+      "Manage classes, orphanages, events, and transparency reports",
   },
   {
     value: "donor_manager",
@@ -97,7 +92,7 @@ export default function InviteForm() {
       <div>
         <label
           htmlFor="email"
-          className="block text-sm font-medium text-warmgray-700"
+          className="block text-sm font-medium text-sand-700"
         >
           Email address
         </label>
@@ -107,23 +102,23 @@ export default function InviteForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="teacher@example.com"
-          className="mt-1 block w-full rounded-lg border border-warmgray-300 px-3 py-2 text-sm shadow-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           required
         />
-        <p className="mt-1 text-xs text-warmgray-400">
+        <p className="mt-1 text-xs text-sand-400">
           They must have a Google account with this email to log in.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-warmgray-700">
+        <label className="block text-sm font-medium text-sand-700">
           Roles
         </label>
         <div className="mt-2 space-y-3">
           {AVAILABLE_ROLES.map(({ value, label, description }) => (
             <label
               key={value}
-              className="flex items-start gap-3 rounded-lg border border-warmgray-200 p-3 transition-colors hover:bg-warmgray-50 cursor-pointer"
+              className="flex items-start gap-3 rounded-lg border border-sand-200 p-3 transition-colors hover:bg-sand-50 cursor-pointer"
             >
               <input
                 type="checkbox"
@@ -135,13 +130,13 @@ export default function InviteForm() {
                     setRoles(roles.filter((r) => r !== value));
                   }
                 }}
-                className="mt-0.5 rounded border-warmgray-300"
+                className="mt-0.5 rounded border-sand-300"
               />
               <div>
-                <p className="text-sm font-medium text-warmgray-900">
+                <p className="text-sm font-medium text-sand-900">
                   {label}
                 </p>
-                <p className="text-xs text-warmgray-500">{description}</p>
+                <p className="text-xs text-sand-500">{description}</p>
               </div>
             </label>
           ))}
@@ -151,7 +146,7 @@ export default function InviteForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-50"
+        className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-50"
       >
         {loading ? "Sending invitation..." : "Send Invitation"}
       </button>

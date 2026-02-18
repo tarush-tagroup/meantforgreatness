@@ -96,7 +96,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
 
   const levelColors: Record<string, string> = {
     error: "bg-red-100 text-red-700",
-    warn: "bg-amber-100 text-amber-700",
+    warn: "bg-sage-100 text-sage-700",
     info: "bg-blue-100 text-blue-700",
   };
 
@@ -125,10 +125,10 @@ export default async function LogsPage({ searchParams }: PageProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-warmgray-900">
+        <h1 className="text-2xl font-bold text-sand-900">
           Application Logs
         </h1>
-        <span className="text-sm text-warmgray-500">{total} entries</span>
+        <span className="text-sm text-sand-500">{total} entries</span>
       </div>
 
       {/* Action bar with last run status + buttons */}
@@ -137,13 +137,13 @@ export default async function LogsPage({ searchParams }: PageProps) {
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-3 items-center">
         {/* Level filter */}
-        <div className="flex rounded-lg bg-warmgray-100 p-1">
+        <div className="flex rounded-lg bg-sand-100 p-1">
           <a
             href={buildUrl({ level: "", page: "1" })}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               !levelFilter
-                ? "bg-white text-warmgray-900 shadow-sm"
-                : "text-warmgray-500 hover:text-warmgray-700"
+                ? "bg-white text-sand-900 shadow-sm"
+                : "text-sand-500 hover:text-sand-700"
             }`}
           >
             All
@@ -154,8 +154,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
               href={buildUrl({ level: l, page: "1" })}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 levelFilter === l
-                  ? "bg-white text-warmgray-900 shadow-sm"
-                  : "text-warmgray-500 hover:text-warmgray-700"
+                  ? "bg-white text-sand-900 shadow-sm"
+                  : "text-sand-500 hover:text-sand-700"
               }`}
             >
               {l.charAt(0).toUpperCase() + l.slice(1)}
@@ -170,7 +170,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
           <select
             name="source"
             defaultValue={sourceFilter}
-            className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-700 bg-white"
+            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700 bg-white"
           >
             <option value="">All sources</option>
             {sources.map((s) => (
@@ -181,7 +181,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
           </select>
           <button
             type="submit"
-            className="rounded-lg bg-warmgray-100 px-3 py-1.5 text-sm font-medium text-warmgray-700 hover:bg-warmgray-200 transition-colors"
+            className="rounded-lg bg-sand-100 px-3 py-1.5 text-sm font-medium text-sand-700 hover:bg-sand-200 transition-colors"
           >
             Filter
           </button>
@@ -196,11 +196,11 @@ export default async function LogsPage({ searchParams }: PageProps) {
             name="search"
             placeholder="Search messages..."
             defaultValue={searchFilter}
-            className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-700 bg-white placeholder:text-warmgray-400 w-64"
+            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700 bg-white placeholder:text-sand-400 w-64"
           />
           <button
             type="submit"
-            className="rounded-lg bg-warmgray-100 px-3 py-1.5 text-sm font-medium text-warmgray-700 hover:bg-warmgray-200 transition-colors"
+            className="rounded-lg bg-sand-100 px-3 py-1.5 text-sm font-medium text-sand-700 hover:bg-sand-200 transition-colors"
           >
             Search
           </button>
@@ -210,7 +210,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
         {(levelFilter || sourceFilter || searchFilter) && (
           <Link
             href="/admin/logs"
-            className="text-sm text-teal-600 hover:text-teal-700 font-medium"
+            className="text-sm text-green-600 hover:text-green-700 font-medium"
           >
             Clear filters
           </Link>
@@ -218,38 +218,38 @@ export default async function LogsPage({ searchParams }: PageProps) {
       </div>
 
       {/* Logs table */}
-      <div className="overflow-x-auto rounded-lg border border-warmgray-200">
+      <div className="overflow-x-auto rounded-lg border border-sand-200">
         <table className="w-full text-sm">
-          <thead className="bg-warmgray-50 border-b border-warmgray-200">
+          <thead className="bg-sand-50 border-b border-sand-200">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-44">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-44">
                 Timestamp
               </th>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-20">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-20">
                 Level
               </th>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-36">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-36">
                 Source
               </th>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600">
+              <th className="text-left px-4 py-3 font-medium text-sand-600">
                 Message
               </th>
-              <th className="text-left px-4 py-3 font-medium text-warmgray-600 w-64">
+              <th className="text-left px-4 py-3 font-medium text-sand-600 w-64">
                 Meta
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-warmgray-100">
+          <tbody className="divide-y divide-sand-100">
             {logs.length === 0 ? (
               <tr>
                 <td
                   colSpan={5}
                   className="px-4 py-12 text-center"
                 >
-                  <p className="text-warmgray-400 text-base font-medium">
+                  <p className="text-sand-400 text-base font-medium">
                     No log entries found
                   </p>
-                  <p className="text-warmgray-400 text-sm mt-1">
+                  <p className="text-sand-400 text-sm mt-1">
                     {levelFilter || sourceFilter || searchFilter
                       ? "Try adjusting your filters."
                       : "Click \"Run Ingest\" above to pull Vercel runtime logs, or wait for events to flow through the system."}
@@ -258,8 +258,8 @@ export default async function LogsPage({ searchParams }: PageProps) {
               </tr>
             ) : (
               logs.map((log, idx) => (
-                <tr key={`${log.timestamp}-${idx}`} className="hover:bg-warmgray-50">
-                  <td className="px-4 py-3 text-warmgray-500 font-mono text-xs whitespace-nowrap">
+                <tr key={`${log.timestamp}-${idx}`} className="hover:bg-sand-50">
+                  <td className="px-4 py-3 text-sand-500 font-mono text-xs whitespace-nowrap">
                     {log.timestamp
                       ? new Date(log.timestamp).toLocaleString("en-US", {
                           month: "short",
@@ -274,19 +274,19 @@ export default async function LogsPage({ searchParams }: PageProps) {
                   <td className="px-4 py-3">
                     <span
                       className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                        levelColors[log.level] || "bg-warmgray-100 text-warmgray-600"
+                        levelColors[log.level] || "bg-sand-100 text-sand-600"
                       }`}
                     >
                       {log.level}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-warmgray-700 font-mono text-xs">
+                  <td className="px-4 py-3 text-sand-700 font-mono text-xs">
                     {log.source}
                   </td>
-                  <td className="px-4 py-3 text-warmgray-900 max-w-md truncate">
+                  <td className="px-4 py-3 text-sand-900 max-w-md truncate">
                     {log.message}
                   </td>
-                  <td className="px-4 py-3 text-warmgray-500 font-mono text-xs max-w-xs truncate">
+                  <td className="px-4 py-3 text-sand-500 font-mono text-xs max-w-xs truncate">
                     {log.meta ? JSON.stringify(log.meta) : "\u2014"}
                   </td>
                 </tr>
@@ -299,14 +299,14 @@ export default async function LogsPage({ searchParams }: PageProps) {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-sm text-warmgray-500">
+          <span className="text-sm text-sand-500">
             Page {page} of {totalPages}
           </span>
           <div className="flex gap-2">
             {page > 1 && (
               <a
                 href={buildUrl({ page: String(page - 1) })}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50 transition-colors"
               >
                 Previous
               </a>
@@ -314,7 +314,7 @@ export default async function LogsPage({ searchParams }: PageProps) {
             {page < totalPages && (
               <a
                 href={buildUrl({ page: String(page + 1) })}
-                className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50 transition-colors"
               >
                 Next
               </a>

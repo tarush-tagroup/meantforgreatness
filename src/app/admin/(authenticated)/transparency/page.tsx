@@ -121,17 +121,51 @@ export default function TransparencyReportsPage() {
     }
   }
 
+  async function handleUnpublish(id: string) {
+    if (!confirm("Unpublish this report? It will revert to draft and be removed from the public page.")) return;
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/transparency-reports/${id}/publish`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to unpublish");
+      }
+      await fetchReports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unpublish failed");
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this report permanently? This cannot be undone.")) return;
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/transparency-reports/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete");
+      }
+      await fetchReports();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    }
+  }
+
   if (editingId) {
     return (
       <div>
         <div className="mb-6">
           <button
             onClick={() => setEditingId(null)}
-            className="text-sm text-warmgray-500 hover:text-warmgray-700"
+            className="text-sm text-sand-500 hover:text-sand-700"
           >
             &larr; Back to reports
           </button>
-          <h1 className="mt-2 text-2xl font-bold text-warmgray-900">Edit Report</h1>
+          <h1 className="mt-2 text-2xl font-bold text-sand-900">Edit Report</h1>
         </div>
 
         {error && (
@@ -142,7 +176,7 @@ export default function TransparencyReportsPage() {
 
         <div className="max-w-3xl space-y-4">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-warmgray-700 mb-1">
+            <label htmlFor="title" className="block text-sm font-medium text-sand-700 mb-1">
               Title
             </label>
             <input
@@ -150,12 +184,12 @@ export default function TransparencyReportsPage() {
               id="title"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900"
+              className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
             />
           </div>
 
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-warmgray-700 mb-1">
+            <label htmlFor="content" className="block text-sm font-medium text-sand-700 mb-1">
               Content (Markdown)
             </label>
             <textarea
@@ -163,7 +197,7 @@ export default function TransparencyReportsPage() {
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               rows={20}
-              className="w-full rounded-lg border border-warmgray-200 px-3 py-2 text-sm text-warmgray-900 font-mono resize-y"
+              className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900 font-mono resize-y"
             />
           </div>
 
@@ -171,13 +205,13 @@ export default function TransparencyReportsPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50"
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
             <button
               onClick={() => setEditingId(null)}
-              className="rounded-lg border border-warmgray-200 px-4 py-2 text-sm font-medium text-warmgray-600 hover:bg-warmgray-50 transition-colors"
+              className="rounded-lg border border-sand-200 px-4 py-2 text-sm font-medium text-sand-600 hover:bg-sand-50 transition-colors"
             >
               Cancel
             </button>
@@ -191,16 +225,16 @@ export default function TransparencyReportsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-warmgray-900">
+          <h1 className="text-2xl font-bold text-sand-900">
             Transparency Reports
           </h1>
-          <p className="mt-1 text-sm text-warmgray-500">
+          <p className="mt-1 text-sm text-sand-500">
             {reports.length} report{reports.length !== 1 ? "s" : ""}
           </p>
         </div>
         <button
           onClick={() => setShowGenerate(!showGenerate)}
-          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+          className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
         >
           Generate Report
         </button>
@@ -214,17 +248,17 @@ export default function TransparencyReportsPage() {
 
       {/* Generate Form */}
       {showGenerate && (
-        <div className="mb-6 rounded-lg border border-warmgray-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-warmgray-900 mb-3">
+        <div className="mb-6 rounded-lg border border-sand-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-sand-900 mb-3">
             Generate New Report
           </h2>
           <div className="flex items-end gap-4">
             <div>
-              <label className="block text-xs text-warmgray-500 mb-1">Quarter</label>
+              <label className="block text-xs text-sand-500 mb-1">Quarter</label>
               <select
                 value={genQuarter}
                 onChange={(e) => setGenQuarter(Number(e.target.value))}
-                className="rounded-lg border border-warmgray-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-sand-200 px-3 py-2 text-sm"
               >
                 <option value={1}>Q1 (Jan-Mar)</option>
                 <option value={2}>Q2 (Apr-Jun)</option>
@@ -233,62 +267,62 @@ export default function TransparencyReportsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-warmgray-500 mb-1">Year</label>
+              <label className="block text-xs text-sand-500 mb-1">Year</label>
               <input
                 type="number"
                 value={genYear}
                 onChange={(e) => setGenYear(Number(e.target.value))}
                 min={2020}
                 max={2030}
-                className="rounded-lg border border-warmgray-200 px-3 py-2 text-sm w-24"
+                className="rounded-lg border border-sand-200 px-3 py-2 text-sm w-24"
               />
             </div>
             <button
               onClick={handleGenerate}
               disabled={generating}
-              className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 transition-colors disabled:opacity-50"
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               {generating ? "Generating..." : "Generate"}
             </button>
           </div>
-          <p className="mt-2 text-xs text-warmgray-400">
+          <p className="mt-2 text-xs text-sand-400">
             This will auto-generate a report from class log data for the selected quarter.
           </p>
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-warmgray-200 bg-white p-12 text-center">
-          <p className="text-warmgray-500">Loading...</p>
+        <div className="rounded-lg border border-sand-200 bg-white p-12 text-center">
+          <p className="text-sand-500">Loading...</p>
         </div>
       ) : reports.length === 0 ? (
-        <div className="rounded-lg border border-warmgray-200 bg-white p-12 text-center">
-          <p className="text-warmgray-500">No transparency reports yet.</p>
+        <div className="rounded-lg border border-sand-200 bg-white p-12 text-center">
+          <p className="text-sand-500">No transparency reports yet.</p>
         </div>
       ) : (
         <div className="grid gap-4">
           {reports.map((report) => (
             <div
               key={report.id}
-              className="rounded-lg border border-warmgray-200 bg-white p-5"
+              className="rounded-lg border border-sand-200 bg-white p-5"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-semibold text-warmgray-900 truncate">
+                    <h2 className="text-lg font-semibold text-sand-900 truncate">
                       {report.title}
                     </h2>
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         report.published
                           ? "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20"
-                          : "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20"
+                          : "bg-sage-50 text-sage-700 ring-1 ring-inset ring-sage-600/20"
                       }`}
                     >
                       {report.published ? "Published" : "Draft"}
                     </span>
                   </div>
-                  <p className="text-sm text-warmgray-500 mt-1">
+                  <p className="text-sm text-sand-500 mt-1">
                     Q{report.quarter} {report.year}
                   </p>
                 </div>
@@ -296,45 +330,61 @@ export default function TransparencyReportsPage() {
 
               <div className="mt-3 grid grid-cols-4 gap-4">
                 <div>
-                  <p className="text-xs text-warmgray-400">Classes</p>
-                  <p className="text-sm font-medium text-warmgray-900">{report.totalClasses}</p>
+                  <p className="text-xs text-sand-400">Classes</p>
+                  <p className="text-sm font-medium text-sand-900">{report.totalClasses}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-warmgray-400">Students</p>
-                  <p className="text-sm font-medium text-warmgray-900">{report.totalStudents}</p>
+                  <p className="text-xs text-sand-400">Students</p>
+                  <p className="text-sm font-medium text-sand-900">{report.totalStudents}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-warmgray-400">Teachers</p>
-                  <p className="text-sm font-medium text-warmgray-900">{report.totalTeachers}</p>
+                  <p className="text-xs text-sand-400">Teachers</p>
+                  <p className="text-sm font-medium text-sand-900">{report.totalTeachers}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-warmgray-400">Orphanages</p>
-                  <p className="text-sm font-medium text-warmgray-900">{report.orphanageCount}</p>
+                  <p className="text-xs text-sand-400">Orphanages</p>
+                  <p className="text-sm font-medium text-sand-900">{report.orphanageCount}</p>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-warmgray-100 flex items-center gap-4">
+              <div className="mt-4 pt-3 border-t border-sand-100 flex items-center gap-4">
                 {!report.published && (
                   <>
                     <button
                       onClick={() => handleEdit(report)}
-                      className="text-sm font-medium text-teal-600 hover:text-teal-700"
+                      className="text-sm font-medium text-green-600 hover:text-green-700"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handlePublish(report.id)}
-                      className="text-sm font-medium text-amber-600 hover:text-amber-700"
+                      className="text-sm font-medium text-sage-600 hover:text-sage-700"
                     >
                       Publish
                     </button>
                   </>
                 )}
-                {report.published && report.publishedAt && (
-                  <p className="text-xs text-warmgray-400">
-                    Published {new Date(report.publishedAt).toLocaleDateString()}
-                  </p>
+                {report.published && (
+                  <>
+                    {report.publishedAt && (
+                      <p className="text-xs text-sand-400">
+                        Published {new Date(report.publishedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => handleUnpublish(report.id)}
+                      className="text-sm font-medium text-sage-600 hover:text-sage-700"
+                    >
+                      Unpublish
+                    </button>
+                  </>
                 )}
+                <button
+                  onClick={() => handleDelete(report.id)}
+                  className="text-sm font-medium text-red-500 hover:text-red-600 ml-auto"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}

@@ -21,22 +21,16 @@ export default async function NewClassLogPage() {
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
     .where(
-      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher', 'teacher_manager', 'admin']::text[]`
+      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
     )
     .orderBy(asc(users.name));
-
-  // Teachers are locked to themselves
-  const isTeacherOnly =
-    user.roles.includes("teacher") &&
-    !user.roles.includes("admin") &&
-    !user.roles.includes("teacher_manager");
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-warmgray-900">Log a Class</h1>
-        <p className="mt-1 text-sm text-warmgray-500">
-          Record a class session you taught.
+        <h1 className="text-2xl font-bold text-sand-900">Log a Class</h1>
+        <p className="mt-1 text-sm text-sand-500">
+          Record a class session.
         </p>
       </div>
 
@@ -45,7 +39,6 @@ export default async function NewClassLogPage() {
           orphanages={orphanageOptions}
           teachers={teacherOptions}
           currentUserId={user.id}
-          isTeacherLocked={isTeacherOnly}
         />
       </div>
     </div>

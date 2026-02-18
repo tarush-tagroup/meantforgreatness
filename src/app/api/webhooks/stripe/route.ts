@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { db } from "@/db";
-import { donations } from "@/db/schema";
+import { donations, donors } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 import { withLogging } from "@/lib/with-logging";
+import { createMagicLoginToken } from "@/lib/donor-auth";
+import { sendDonorWelcomeEmail } from "@/lib/email/donor-welcome";
 
 export const runtime = "nodejs";
 
@@ -194,21 +196,82 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const isSubscription = session.mode === "subscription";
 
+  const donorEmail =
+    session.customer_details?.email || session.customer_email || "unknown";
+  const donorName = session.customer_details?.name || null;
+  const stripeCustomerId = session.customer as string | null;
+
   await db.insert(donations).values({
     stripeSessionId: session.id,
-    stripeCustomerId: session.customer as string | null,
+    stripeCustomerId,
     stripeSubscriptionId: isSubscription
       ? (session.subscription as string | null)
       : null,
-    donorEmail: session.customer_details?.email || session.customer_email || "unknown",
-    donorName: session.customer_details?.name || null,
+    donorEmail,
+    donorName,
     amount: session.amount_total || 0,
     currency: session.currency || "usd",
-    frequency: isSubscription ? "monthly" : "one_time",
+    frequency: session.metadata?.frequency || (isSubscription ? "monthly" : "one_time"),
     status: "completed",
+    provider: "stripe",
     stripeEventId: null,
     metadata: session.metadata || null,
   });
+
+  // ─── Auto-create donor account + send welcome email ──────────────
+  if (donorEmail && donorEmail !== "unknown") {
+    try {
+      const [existingDonor] = await db
+        .select({ id: donors.id, stripeCustomerId: donors.stripeCustomerId })
+        .from(donors)
+        .where(eq(donors.email, donorEmail))
+        .limit(1);
+
+      let donorId: string;
+
+      if (!existingDonor) {
+        // Create new donor
+        const [newDonor] = await db
+          .insert(donors)
+          .values({ email: donorEmail, name: donorName, stripeCustomerId })
+          .returning({ id: donors.id });
+        donorId = newDonor.id;
+        logger.info("webhook:stripe", "Donor account created", {
+          email: donorEmail,
+          frequency: session.metadata?.frequency || (isSubscription ? "monthly" : "one_time"),
+        });
+      } else {
+        donorId = existingDonor.id;
+        // Update stripeCustomerId if missing
+        if (!existingDonor.stripeCustomerId && stripeCustomerId) {
+          await db
+            .update(donors)
+            .set({ stripeCustomerId })
+            .where(eq(donors.id, existingDonor.id));
+        }
+      }
+
+      // Send welcome email with magic login link
+      const magicToken = createMagicLoginToken(donorId, donorEmail);
+      sendDonorWelcomeEmail({
+        to: donorEmail,
+        donorName: donorName || "",
+        frequency: session.metadata?.frequency || (isSubscription ? "monthly" : "one_time"),
+        magicLoginToken: magicToken,
+      }).catch((err) => {
+        logger.error("webhook:stripe", "Failed to send donor welcome email", {
+          email: donorEmail,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    } catch (err) {
+      // Don't let donor account creation failure break the webhook
+      logger.error("webhook:stripe", "Error creating donor account", {
+        email: donorEmail,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
@@ -234,6 +297,15 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const subId =
     typeof subscriptionId === "string" ? subscriptionId : subscriptionId.id;
 
+  // Determine frequency from subscription metadata (set during checkout)
+  let frequency = "monthly";
+  try {
+    const sub = await getStripe().subscriptions.retrieve(subId);
+    frequency = sub.metadata?.frequency || "monthly";
+  } catch {
+    // Fall back to "monthly" if we can't retrieve the subscription
+  }
+
   await db.insert(donations).values({
     stripeSessionId: null,
     stripeCustomerId: invoice.customer as string | null,
@@ -242,8 +314,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     donorName: invoice.customer_name || null,
     amount: invoice.amount_paid || 0,
     currency: invoice.currency || "usd",
-    frequency: "monthly",
+    frequency,
     status: "completed",
+    provider: "stripe",
     stripeEventId: invoice.id,
     metadata: null,
   });

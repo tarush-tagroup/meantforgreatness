@@ -17,14 +17,13 @@ export default function Hero() {
           Meant for Greatness
         </h1>
         <p className="mx-auto max-w-2xl text-lg sm:text-xl text-white/90 mb-10 leading-relaxed">
-          Transforming the lives of orphan children in Bali, Indonesia through
-          the power of English education. One class at a time, we&apos;re
-          opening doors to brighter futures.
+          Funding English classrooms at orphanages across Bali, Indonesia.
+          One class at a time, we&apos;re opening doors to brighter futures.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/donate"
-            className="rounded-lg bg-amber-500 px-8 py-3.5 text-lg font-semibold text-white hover:bg-amber-600 transition-colors"
+            className="rounded-lg bg-sage-500 px-8 py-3.5 text-lg font-semibold text-white hover:bg-sage-600 transition-colors"
           >
             Donate Now
           </Link>

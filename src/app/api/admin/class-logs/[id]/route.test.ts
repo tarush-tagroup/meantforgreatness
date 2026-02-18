@@ -184,7 +184,7 @@ describe("PUT /api/admin/class-logs/[id]", () => {
     email: "teacher@example.com",
     name: "Teacher",
     image: "",
-    roles: ["teacher"],
+    roles: ["teacher_manager"],
   };
 
   const mockLog = {
@@ -329,7 +329,7 @@ describe("DELETE /api/admin/class-logs/[id]", () => {
     email: "teacher@example.com",
     name: "Teacher",
     image: "",
-    roles: ["teacher"],
+    roles: ["teacher_manager"],
   };
 
   const mockLog = {

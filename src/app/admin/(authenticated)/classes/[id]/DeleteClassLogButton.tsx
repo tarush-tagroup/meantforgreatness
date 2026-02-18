@@ -46,7 +46,7 @@ export default function DeleteClassLogButton({
         </button>
         <button
           onClick={() => setConfirming(false)}
-          className="rounded-lg border border-warmgray-200 px-3 py-1.5 text-sm text-warmgray-600 hover:bg-warmgray-50"
+          className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50"
         >
           Cancel
         </button>

@@ -48,8 +48,8 @@ export default async function EditEventPage({
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-warmgray-900">Edit Event</h1>
-        <p className="mt-1 text-sm text-warmgray-500">{event.title}</p>
+        <h1 className="text-2xl font-bold text-sand-900">Edit Event</h1>
+        <p className="mt-1 text-sm text-sand-500">{event.title}</p>
       </div>
       <div className="max-w-2xl">
         <EventForm

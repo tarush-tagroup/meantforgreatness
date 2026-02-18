@@ -10,12 +10,20 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// Mock next/image to render a plain img
+vi.mock("next/image", () => ({
+  default: ({ src, alt, ...props }: { src: string; alt: string; [key: string]: unknown }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} {...props} />
+  ),
+}));
+
 describe("Header", () => {
   const user = userEvent.setup();
 
-  it("renders the brand name", () => {
+  it("renders the brand logo", () => {
     render(<Header />);
-    expect(screen.getByText("Meant for Greatness")).toBeInTheDocument();
+    expect(screen.getByAltText("meantforgreatness")).toBeInTheDocument();
   });
 
   it("renders navigation links", () => {
@@ -40,9 +48,9 @@ describe("Header", () => {
     }
   });
 
-  it("brand name links to home", () => {
+  it("brand logo links to home", () => {
     render(<Header />);
-    const brand = screen.getByText("Meant for Greatness");
+    const brand = screen.getByAltText("meantforgreatness");
     expect(brand.closest("a")).toHaveAttribute("href", "/");
   });
 

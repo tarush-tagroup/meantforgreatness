@@ -83,7 +83,7 @@ describe("rate-limit", () => {
   });
 
   it("has correct upload rate limit config", () => {
-    expect(RATE_LIMITS.upload.maxRequests).toBe(20);
+    expect(RATE_LIMITS.upload.maxRequests).toBe(100);
     expect(RATE_LIMITS.upload.windowMs).toBe(3600000); // 1 hour
   });
 

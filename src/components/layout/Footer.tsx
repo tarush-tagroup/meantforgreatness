@@ -1,14 +1,19 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Footer() {
   return (
-    <footer className="bg-warmgray-800 text-warmgray-300">
+    <footer className="bg-green-800 text-green-100">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-lg font-bold text-white mb-3">
-              Meant for Greatness
-            </h3>
+            <Image
+              src="/logo-white.svg"
+              alt="meantforgreatness"
+              width={180}
+              height={22}
+              className="h-5 w-auto mb-3"
+            />
             <p className="text-sm leading-relaxed">
               Transforming lives through English education for orphan children in
               Bali, Indonesia. Every child deserves a shot at a better future.
@@ -39,6 +44,14 @@ export default function Footer() {
                   Donate
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/donor"
+                  className="hover:text-white transition-colors"
+                >
+                  Manage Donations
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -52,7 +65,12 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-warmgray-700 pt-6 text-center text-sm text-warmgray-400" suppressHydrationWarning>
+        <div className="mt-10 border-t border-green-700 pt-6 text-center text-sm text-green-200" suppressHydrationWarning>
+          <p className="mb-2 text-green-300">
+            White Light Ventures, Inc is a registered 501(c)(3) nonprofit
+            organization. All donations are tax-deductible to the extent
+            allowed by law.
+          </p>
           &copy; {new Date().getFullYear()} Meant for Greatness. All rights
           reserved.
         </div>

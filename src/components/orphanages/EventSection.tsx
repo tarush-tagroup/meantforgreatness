@@ -14,8 +14,8 @@ export default async function EventSection() {
 
   if (!latestEvent) {
     return (
-      <div className="rounded-xl bg-white border border-warmgray-200 shadow-sm overflow-hidden">
-        <div className="p-6 sm:p-8 text-center text-warmgray-500">
+      <div className="rounded-xl bg-white border border-sand-200 shadow-sm overflow-hidden">
+        <div className="p-6 sm:p-8 text-center text-sand-500">
           <p>No events to display yet. Check back soon!</p>
         </div>
       </div>
@@ -47,12 +47,12 @@ export default async function EventSection() {
   }
 
   return (
-    <div className="rounded-xl bg-white border border-warmgray-200 shadow-sm overflow-hidden">
+    <div className="rounded-xl bg-white border border-sand-200 shadow-sm overflow-hidden">
       <div className="p-6 sm:p-8">
-        <h3 className="text-2xl font-bold text-warmgray-900 mb-2">
+        <h3 className="text-2xl font-bold text-sand-900 mb-2">
           {latestEvent.title}
         </h3>
-        <p className="text-warmgray-600 leading-relaxed mb-6">
+        <p className="text-sand-600 leading-relaxed mb-6">
           {latestEvent.description}
         </p>
         {allPhotos.length > 0 && (

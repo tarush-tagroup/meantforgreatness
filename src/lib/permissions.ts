@@ -19,23 +19,19 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "transparency:view",
     "transparency:generate",
     "transparency:publish",
+    "kids:view",
+    "kids:edit",
     "media:upload",
+    "media:view",
     "logs:view",
     "costs:view",
   ],
-  teacher: [
-    "orphanages:view",
-    "class_logs:view_all",
-    "class_logs:create",
-    "class_logs:edit_own",
-    "class_logs:delete_own",
-    "events:view",
-    "events:manage",
-    "media:upload",
-  ],
   teacher_manager: [
+    "users:view",
     "orphanages:view",
     "orphanages:edit",
+    "kids:view",
+    "kids:edit",
     "class_logs:view_all",
     "class_logs:create",
     "class_logs:edit_own",
@@ -46,9 +42,15 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "events:manage",
     "transparency:view",
     "transparency:generate",
-    "media:upload",
   ],
-  donor_manager: ["donations:view"],
+  donor_manager: [
+    "donations:view",
+    "users:view",
+    "orphanages:view",
+    "kids:view",
+    "class_logs:view_all",
+    "events:view",
+  ],
 };
 
 /**
@@ -81,7 +83,7 @@ export function getPermissions(userRoles: Role[]): Permission[] {
  * Validate that a string is a valid role.
  */
 export function isValidRole(role: string): role is Role {
-  return ["admin", "teacher", "teacher_manager", "donor_manager"].includes(
+  return ["admin", "teacher_manager", "donor_manager"].includes(
     role
   );
 }

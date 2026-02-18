@@ -31,7 +31,7 @@ async function postHandler(req: NextRequest) {
     }
 
     // Validate frequency
-    if (frequency !== "one_time" && frequency !== "monthly") {
+    if (frequency !== "one_time" && frequency !== "monthly" && frequency !== "yearly") {
       return NextResponse.json(
         { error: "Invalid donation frequency." },
         { status: 400 }
@@ -41,14 +41,17 @@ async function postHandler(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.meantforgreatness.org";
     const amountInCents = Math.round(amount * 100);
 
-    if (frequency === "monthly") {
+    if (frequency === "monthly" || frequency === "yearly") {
       // Create a recurring subscription checkout
+      const interval = frequency === "yearly" ? "year" : "month";
+      const label = frequency === "yearly" ? "Yearly" : "Monthly";
+
       const price = await getStripe().prices.create({
         unit_amount: amountInCents,
         currency: "usd",
-        recurring: { interval: "month" },
+        recurring: { interval },
         product_data: {
-          name: "Meant for Greatness — Monthly Donation",
+          name: `Meant for Greatness — ${label} Donation`,
         },
       });
 
@@ -58,9 +61,11 @@ async function postHandler(req: NextRequest) {
         line_items: [{ price: price.id, quantity: 1 }],
         success_url: `${baseUrl}/donate/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/donate`,
+        metadata: { frequency },
+        subscription_data: { metadata: { frequency } },
       });
 
-      logger.info("stripe:checkout", "Stripe session created", { id: session.id, url: session.url, status: session.status });
+      logger.info("stripe:checkout", "Stripe session created", { id: session.id, url: session.url, status: session.status, frequency });
 
       if (!session.url) {
         return NextResponse.json(
@@ -90,9 +95,10 @@ async function postHandler(req: NextRequest) {
         ],
         success_url: `${baseUrl}/donate/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/donate`,
+        metadata: { frequency: "one_time" },
       });
 
-      logger.info("stripe:checkout", "Stripe session created", { id: session.id, url: session.url, status: session.status });
+      logger.info("stripe:checkout", "Stripe session created", { id: session.id, url: session.url, status: session.status, frequency: "one_time" });
 
       if (!session.url) {
         return NextResponse.json(

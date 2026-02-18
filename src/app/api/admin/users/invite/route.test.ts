@@ -81,7 +81,7 @@ describe("POST /api/admin/users/invite", () => {
       new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 }),
     ]);
 
-    const req = makeRequest({ email: "test@example.com", roles: ["teacher"] });
+    const req = makeRequest({ email: "test@example.com", roles: ["teacher_manager"] });
     const res = await POST(req);
     expect(res.status).toBe(401);
   });
@@ -92,13 +92,13 @@ describe("POST /api/admin/users/invite", () => {
       new Response(JSON.stringify({ error: "Forbidden" }), { status: 403 }),
     ]);
 
-    const req = makeRequest({ email: "test@example.com", roles: ["teacher"] });
+    const req = makeRequest({ email: "test@example.com", roles: ["teacher_manager"] });
     const res = await POST(req);
     expect(res.status).toBe(403);
   });
 
   it("returns 400 for missing email", async () => {
-    const req = makeRequest({ roles: ["teacher"] });
+    const req = makeRequest({ roles: ["teacher_manager"] });
     const res = await POST(req);
     expect(res.status).toBe(400);
     const data = await res.json();
@@ -106,7 +106,7 @@ describe("POST /api/admin/users/invite", () => {
   });
 
   it("returns 400 for invalid email", async () => {
-    const req = makeRequest({ email: "notanemail", roles: ["teacher"] });
+    const req = makeRequest({ email: "notanemail", roles: ["teacher_manager"] });
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
@@ -141,7 +141,7 @@ describe("POST /api/admin/users/invite", () => {
 
     const req = makeRequest({
       email: "existing@example.com",
-      roles: ["teacher"],
+      roles: ["teacher_manager"],
     });
     const res = await POST(req);
     expect(res.status).toBe(409);
@@ -154,7 +154,7 @@ describe("POST /api/admin/users/invite", () => {
 
     const req = makeRequest({
       email: "pending@example.com",
-      roles: ["teacher"],
+      roles: ["teacher_manager"],
     });
     const res = await POST(req);
     expect(res.status).toBe(409);
@@ -165,7 +165,7 @@ describe("POST /api/admin/users/invite", () => {
   it("creates user and sends invite email on success", async () => {
     const req = makeRequest({
       email: "newteacher@example.com",
-      roles: ["teacher", "teacher_manager"],
+      roles: ["teacher_manager"],
     });
     const res = await POST(req);
     expect(res.status).toBe(201);
@@ -181,7 +181,7 @@ describe("POST /api/admin/users/invite", () => {
     expect(mockSendInviteEmail).toHaveBeenCalledWith({
       to: "newteacher@example.com",
       invitedByName: "Admin",
-      roles: ["teacher", "teacher_manager"],
+      roles: ["teacher_manager"],
     });
   });
 
@@ -190,7 +190,7 @@ describe("POST /api/admin/users/invite", () => {
 
     const req = makeRequest({
       email: "test@example.com",
-      roles: ["teacher"],
+      roles: ["teacher_manager"],
     });
     const res = await POST(req);
     expect(res.status).toBe(201);

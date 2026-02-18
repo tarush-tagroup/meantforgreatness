@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
 import { Analytics } from "@vercel/analytics/react";
 import ErrorReporter from "@/components/ErrorReporter";
 import PageViewTracker from "@/components/PageViewTracker";
@@ -27,12 +25,20 @@ export const metadata: Metadata = {
     "English education",
     "donate",
   ],
+  metadataBase: new URL("https://www.meantforgreatness.org"),
   openGraph: {
     title: "Meant for Greatness",
     description:
       "Transforming lives through English education for orphan kids in Bali, Indonesia.",
     type: "website",
     locale: "en_US",
+    siteName: "Meant for Greatness",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Meant for Greatness",
+    description:
+      "Transforming lives through English education for orphan kids in Bali, Indonesia.",
   },
 };
 
@@ -44,9 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} antialiased`}>
-        <Header />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+        {children}
         <Analytics />
         <ErrorReporter />
         <PageViewTracker />

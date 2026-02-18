@@ -1,4 +1,4 @@
-export type Role = "admin" | "teacher" | "teacher_manager" | "donor_manager";
+export type Role = "admin" | "teacher_manager" | "donor_manager";
 
 export type Permission =
   | "users:view"
@@ -19,6 +19,9 @@ export type Permission =
   | "transparency:generate"
   | "transparency:publish"
   | "media:upload"
+  | "media:view"
+  | "kids:view"
+  | "kids:edit"
   | "logs:view"
   | "costs:view";
 

@@ -171,14 +171,14 @@ export default function ClassGroupManager({
       )}
 
       {groups.length === 0 && !adding && (
-        <p className="text-sm text-warmgray-400">No class groups yet.</p>
+        <p className="text-sm text-sand-400">No class groups yet.</p>
       )}
 
       {groups.map((group) =>
         editingId === group.id ? (
           <div
             key={group.id}
-            className="rounded-lg border border-teal-200 bg-teal-50/50 p-4 space-y-3"
+            className="rounded-lg border border-green-200 bg-green-50/50 p-4 space-y-3"
           >
             <div className="grid grid-cols-3 gap-3">
               <input
@@ -187,7 +187,7 @@ export default function ClassGroupManager({
                   setEditForm({ ...editForm, name: e.target.value })
                 }
                 placeholder="Name"
-                className="rounded-lg border border-warmgray-300 px-3 py-1.5 text-sm"
+                className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
               />
               <input
                 type="number"
@@ -200,7 +200,7 @@ export default function ClassGroupManager({
                   })
                 }
                 placeholder="Students"
-                className="rounded-lg border border-warmgray-300 px-3 py-1.5 text-sm"
+                className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
               />
               <input
                 value={editForm.ageRange}
@@ -208,20 +208,20 @@ export default function ClassGroupManager({
                   setEditForm({ ...editForm, ageRange: e.target.value })
                 }
                 placeholder="Age range"
-                className="rounded-lg border border-warmgray-300 px-3 py-1.5 text-sm"
+                className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
               />
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => handleUpdate(group.id)}
                 disabled={saving}
-                className="rounded bg-teal-600 px-3 py-1 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+                className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
               >
                 {saving ? "..." : "Save"}
               </button>
               <button
                 onClick={() => setEditingId(null)}
-                className="rounded px-3 py-1 text-xs font-medium text-warmgray-500 hover:text-warmgray-700"
+                className="rounded px-3 py-1 text-xs font-medium text-sand-500 hover:text-sand-700"
               >
                 Cancel
               </button>
@@ -230,13 +230,13 @@ export default function ClassGroupManager({
         ) : (
           <div
             key={group.id}
-            className="flex items-center justify-between rounded-lg border border-warmgray-200 bg-warmgray-50 p-4"
+            className="flex items-center justify-between rounded-lg border border-sand-200 bg-sand-50 p-4"
           >
             <div>
-              <p className="text-sm font-medium text-warmgray-800">
+              <p className="text-sm font-medium text-sand-800">
                 {group.name}
               </p>
-              <p className="text-xs text-warmgray-500">
+              <p className="text-xs text-sand-500">
                 {group.studentCount} students
                 {group.ageRange ? ` · Ages ${group.ageRange}` : ""}
               </p>
@@ -244,7 +244,7 @@ export default function ClassGroupManager({
             <div className="flex gap-2">
               <button
                 onClick={() => startEdit(group)}
-                className="text-xs text-warmgray-400 hover:text-warmgray-600"
+                className="text-xs text-sand-400 hover:text-sand-600"
               >
                 edit
               </button>
@@ -260,7 +260,7 @@ export default function ClassGroupManager({
       )}
 
       {adding ? (
-        <div className="rounded-lg border border-teal-200 bg-teal-50/50 p-4 space-y-3">
+        <div className="rounded-lg border border-green-200 bg-green-50/50 p-4 space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <input
               value={newGroup.name}
@@ -268,7 +268,7 @@ export default function ClassGroupManager({
                 setNewGroup({ ...newGroup, name: e.target.value })
               }
               placeholder="Group name"
-              className="rounded-lg border border-warmgray-300 px-3 py-1.5 text-sm"
+              className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
             />
             <input
               type="number"
@@ -281,7 +281,7 @@ export default function ClassGroupManager({
                 })
               }
               placeholder="Students"
-              className="rounded-lg border border-warmgray-300 px-3 py-1.5 text-sm"
+              className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
             />
             <input
               value={newGroup.ageRange}
@@ -289,20 +289,20 @@ export default function ClassGroupManager({
                 setNewGroup({ ...newGroup, ageRange: e.target.value })
               }
               placeholder="Age range (e.g. 8–12)"
-              className="rounded-lg border border-warmgray-300 px-3 py-1.5 text-sm"
+              className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
             />
           </div>
           <div className="flex gap-2">
             <button
               onClick={handleAdd}
               disabled={saving}
-              className="rounded bg-teal-600 px-3 py-1 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+              className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
             >
               {saving ? "..." : "Add"}
             </button>
             <button
               onClick={() => setAdding(false)}
-              className="rounded px-3 py-1 text-xs font-medium text-warmgray-500 hover:text-warmgray-700"
+              className="rounded px-3 py-1 text-xs font-medium text-sand-500 hover:text-sand-700"
             >
               Cancel
             </button>
@@ -311,7 +311,7 @@ export default function ClassGroupManager({
       ) : (
         <button
           onClick={() => setAdding(true)}
-          className="w-full rounded-lg border-2 border-dashed border-warmgray-200 py-3 text-sm font-medium text-warmgray-400 hover:border-warmgray-300 hover:text-warmgray-500 transition-colors"
+          className="w-full rounded-lg border-2 border-dashed border-sand-200 py-3 text-sm font-medium text-sand-400 hover:border-sand-300 hover:text-sand-500 transition-colors"
         >
           + Add Class Group
         </button>

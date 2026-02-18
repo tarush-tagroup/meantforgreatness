@@ -8,7 +8,7 @@ export async function GET() {
   const [, authError] = await withAuth("class_logs:view_all");
   if (authError) return authError;
 
-  // Get all active users who have teacher-like roles (teacher, teacher_manager, admin)
+  // Get all active users who have teacher-like roles (teacher_manager, admin)
   const teachers = await db
     .select({
       id: users.id,
@@ -17,7 +17,7 @@ export async function GET() {
     })
     .from(users)
     .where(
-      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher', 'teacher_manager', 'admin']::text[]`
+      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
     )
     .orderBy(asc(users.name));
 

@@ -20,10 +20,10 @@ export default async function OrphanagesPage() {
     <div className="py-12 sm:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-warmgray-900 mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-sand-900 mb-4">
             Our Orphanages
           </h1>
-          <p className="mx-auto max-w-2xl text-lg text-warmgray-600 leading-relaxed">
+          <p className="mx-auto max-w-2xl text-lg text-sand-600 leading-relaxed">
             We currently run English classes across {orphanages.length} orphanages in Bali,
             reaching over {totalStudents} children with consistent, quality education.
           </p>
@@ -36,19 +36,19 @@ export default async function OrphanagesPage() {
         </div>
 
         <div className="mt-16 mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold text-warmgray-900 mb-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-sand-900 mb-8 text-center">
             Events
           </h2>
           <EventSection />
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-warmgray-600 mb-4">
+          <p className="text-sand-600 mb-4">
             Want to support these children?
           </p>
           <Link
             href="/donate"
-            className="inline-block rounded-lg bg-amber-500 px-8 py-3.5 text-lg font-semibold text-white hover:bg-amber-600 transition-colors"
+            className="inline-block rounded-lg bg-sage-500 px-8 py-3.5 text-lg font-semibold text-white hover:bg-sage-600 transition-colors"
           >
             Donate Now
           </Link>

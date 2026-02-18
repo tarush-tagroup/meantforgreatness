@@ -51,7 +51,7 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
   }
 
   return (
-    <div className="mb-6 rounded-lg border border-warmgray-200 bg-white p-4">
+    <div className="mb-6 rounded-lg border border-sand-200 bg-white p-4">
       <div className="flex flex-wrap items-center gap-4">
         {/* Last ingest status */}
         <div className="flex-1 min-w-0">
@@ -59,20 +59,20 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
             <span
               className={`inline-block h-2.5 w-2.5 rounded-full ${
                 !lastRun
-                  ? "bg-warmgray-300"
+                  ? "bg-sand-300"
                   : lastRun.status === "success"
-                    ? "bg-teal-500"
+                    ? "bg-green-500"
                     : lastRun.status === "running"
-                      ? "bg-amber-400 animate-pulse"
+                      ? "bg-sage-400 animate-pulse"
                       : "bg-red-500"
               }`}
             />
-            <span className="text-sm font-medium text-warmgray-900">
+            <span className="text-sm font-medium text-sand-900">
               Vercel Log Ingest
             </span>
           </div>
           {lastRun ? (
-            <div className="text-xs text-warmgray-500 space-y-0.5 pl-[18px]">
+            <div className="text-xs text-sand-500 space-y-0.5 pl-[18px]">
               <p>
                 Last run:{" "}
                 {new Date(lastRun.startedAt).toLocaleString("en-US", {
@@ -86,10 +86,10 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
                 <span
                   className={
                     lastRun.status === "success"
-                      ? "text-teal-600"
+                      ? "text-green-600"
                       : lastRun.status === "error"
                         ? "text-red-600"
-                        : "text-amber-600"
+                        : "text-sage-600"
                   }
                 >
                   {lastRun.status}
@@ -102,7 +102,7 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-warmgray-400 pl-[18px]">
+            <p className="text-xs text-sand-400 pl-[18px]">
               No ingest runs recorded yet
             </p>
           )}
@@ -112,7 +112,7 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
         <button
           onClick={triggerIngest}
           disabled={ingestLoading}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-warmgray-200 bg-white px-3 py-2 text-sm font-medium text-warmgray-700 hover:bg-warmgray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-sand-200 bg-white px-3 py-2 text-sm font-medium text-sand-700 hover:bg-sand-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {ingestLoading ? (
             <>
@@ -134,7 +134,7 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
           className={`mt-3 rounded-md px-3 py-2 text-sm ${
             feedback.includes("failed") || feedback.includes("Failed")
               ? "bg-red-50 text-red-700"
-              : "bg-teal-50 text-teal-700"
+              : "bg-green-50 text-green-700"
           }`}
         >
           {feedback}
@@ -144,23 +144,23 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
       {/* Job History */}
       {recentJobs.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-warmgray-700 mb-2">
+          <h3 className="text-sm font-medium text-sand-700 mb-2">
             Job History
           </h3>
-          <div className="rounded-md border border-warmgray-200 overflow-hidden">
+          <div className="rounded-md border border-sand-200 overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="bg-warmgray-50">
+              <thead className="bg-sand-50">
                 <tr>
-                  <th className="text-left px-3 py-2 font-medium text-warmgray-600 w-36">Time</th>
-                  <th className="text-left px-3 py-2 font-medium text-warmgray-600 w-40">Job</th>
-                  <th className="text-left px-3 py-2 font-medium text-warmgray-600 w-20">Status</th>
-                  <th className="text-left px-3 py-2 font-medium text-warmgray-600">Message</th>
+                  <th className="text-left px-3 py-2 font-medium text-sand-600 w-36">Time</th>
+                  <th className="text-left px-3 py-2 font-medium text-sand-600 w-40">Job</th>
+                  <th className="text-left px-3 py-2 font-medium text-sand-600 w-20">Status</th>
+                  <th className="text-left px-3 py-2 font-medium text-sand-600">Message</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-warmgray-100 bg-white">
+              <tbody className="divide-y divide-sand-100 bg-white">
                 {recentJobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-warmgray-50/50">
-                    <td className="px-3 py-2 text-warmgray-500 font-mono whitespace-nowrap">
+                  <tr key={job.id} className="hover:bg-sand-50/50">
+                    <td className="px-3 py-2 text-sand-500 font-mono whitespace-nowrap">
                       {new Date(job.startedAt).toLocaleString("en-US", {
                         month: "short",
                         day: "numeric",
@@ -169,23 +169,23 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
                         hour12: true,
                       })}
                     </td>
-                    <td className="px-3 py-2 text-warmgray-700 font-mono">
+                    <td className="px-3 py-2 text-sand-700 font-mono">
                       {job.jobName}
                     </td>
                     <td className="px-3 py-2">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                           job.status === "success"
-                            ? "bg-teal-100 text-teal-700"
+                            ? "bg-green-100 text-green-700"
                             : job.status === "error"
                               ? "bg-red-100 text-red-700"
-                              : "bg-amber-100 text-amber-700"
+                              : "bg-sage-100 text-sage-700"
                         }`}
                       >
                         {job.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-warmgray-900 max-w-md truncate" title={job.message || ""}>
+                    <td className="px-3 py-2 text-sand-900 max-w-md truncate" title={job.message || ""}>
                       {job.message || "\u2014"}
                     </td>
                   </tr>
@@ -202,7 +202,7 @@ export default function LogActions({ lastRun, recentJobs }: LogActionsProps) {
 function Spinner() {
   return (
     <svg
-      className="h-4 w-4 animate-spin text-warmgray-400"
+      className="h-4 w-4 animate-spin text-sand-400"
       fill="none"
       viewBox="0 0 24 24"
     >

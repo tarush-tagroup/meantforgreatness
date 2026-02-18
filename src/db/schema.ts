@@ -214,6 +214,7 @@ export const donations = pgTable(
     currency: varchar("currency", { length: 10 }).notNull().default("usd"),
     frequency: varchar("frequency", { length: 20 }).notNull(),
     status: varchar("status", { length: 20 }).notNull().default("pending"),
+    provider: varchar("provider", { length: 20 }).notNull().default("stripe"),
     stripeEventId: varchar("stripe_event_id", { length: 255 }),
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -225,6 +226,60 @@ export const donations = pgTable(
     index("donations_created_idx").on(table.createdAt),
   ]
 );
+
+// ─── Site Settings ──────────────────────────────────────────────────────────
+export const siteSettings = pgTable("site_settings", {
+  key: varchar("key", { length: 100 }).primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ─── Donors (public donor accounts — separate from admin users) ─────────────
+export const donors = pgTable(
+  "donors",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }),
+    stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    lastLoginAt: timestamp("last_login_at"),
+  },
+  (table) => [
+    index("donors_email_idx").on(table.email),
+    index("donors_stripe_customer_idx").on(table.stripeCustomerId),
+  ]
+);
+
+// ─── Donor OTPs (one-time passcodes for passwordless login) ─────────────────
+export const donorOtps = pgTable("donor_otps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  donorId: uuid("donor_id")
+    .notNull()
+    .references(() => donors.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ─── Kids ────────────────────────────────────────────────────────────────────
+export const kids = pgTable("kids", {
+  id: varchar("id", { length: 50 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  age: integer("age").notNull(),
+  hobby: varchar("hobby", { length: 500 }),
+  location: varchar("location", { length: 500 }),
+  about: text("about"),
+  favoriteWord: text("favorite_word"),
+  imageUrl: text("image_url"),
+  orphanageId: varchar("orphanage_id", { length: 50 }).references(
+    () => orphanages.id,
+    { onDelete: "set null" }
+  ),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
 
 // ─── Anthropic Usage ────────────────────────────────────────────────────────
 export const anthropicUsage = pgTable(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { anthropicUsage } from "@/db/schema";
+import { timingSafeEqual } from "@/lib/timing-safe";
 
 /**
  * Model pricing in cents per 1M tokens.
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
   const logApiSecret = process.env.LOG_API_SECRET;
 
-  if (!bearerToken || !logApiSecret || bearerToken !== logApiSecret) {
+  if (!bearerToken || !logApiSecret || !timingSafeEqual(bearerToken, logApiSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
