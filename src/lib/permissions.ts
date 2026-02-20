@@ -42,6 +42,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "events:manage",
     "transparency:view",
     "transparency:generate",
+    "media:upload",
+    "media:view",
   ],
   donor_manager: [
     "orphanages:view",
