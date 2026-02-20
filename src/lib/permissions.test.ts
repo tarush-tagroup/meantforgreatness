@@ -31,6 +31,7 @@ describe("permissions", () => {
         "kids:view",
         "kids:edit",
         "media:upload",
+        "media:view",
         "logs:view",
         "costs:view",
       ];
@@ -75,6 +76,11 @@ describe("permissions", () => {
 
     it("teacher_manager can edit kids", () => {
       expect(hasPermission(["teacher_manager"], "kids:edit")).toBe(true);
+    });
+
+    it("teacher_manager can upload and view media", () => {
+      expect(hasPermission(["teacher_manager"], "media:upload")).toBe(true);
+      expect(hasPermission(["teacher_manager"], "media:view")).toBe(true);
     });
 
     it("teacher_manager cannot view donations", () => {

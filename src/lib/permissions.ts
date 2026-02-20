@@ -40,6 +40,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "class_logs:delete_all",
     "events:view",
     "events:manage",
+    "media:upload",
+    "media:view",
     "transparency:view",
     "transparency:generate",
   ],
