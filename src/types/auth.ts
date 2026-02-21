@@ -23,7 +23,9 @@ export type Permission =
   | "kids:view"
   | "kids:edit"
   | "logs:view"
-  | "costs:view";
+  | "costs:view"
+  | "banking:view"
+  | "invoices:view";
 
 export interface SessionUser {
   id: string;

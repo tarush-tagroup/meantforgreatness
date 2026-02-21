@@ -301,6 +301,89 @@ export const anthropicUsage = pgTable(
   ]
 );
 
+// ─── Bank Accounts ──────────────────────────────────────────────────────────
+export const bankAccounts = pgTable("bank_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  provider: varchar("provider", { length: 20 }).notNull(), // "mercury" | "wise"
+  externalId: varchar("external_id", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  currency: varchar("currency", { length: 10 }).notNull().default("usd"),
+  balanceCents: integer("balance_cents").notNull().default(0),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ─── Bank Transactions ──────────────────────────────────────────────────────
+export const bankTransactions = pgTable(
+  "bank_transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bankAccountId: uuid("bank_account_id")
+      .notNull()
+      .references(() => bankAccounts.id, { onDelete: "cascade" }),
+    externalId: varchar("external_id", { length: 255 }).notNull().unique(),
+    date: date("date").notNull(),
+    description: text("description"),
+    amountCents: integer("amount_cents").notNull(),
+    currency: varchar("currency", { length: 10 }).notNull().default("usd"),
+    category: varchar("category", { length: 100 }),
+    status: varchar("status", { length: 20 }).notNull().default("posted"),
+    counterparty: varchar("counterparty", { length: 255 }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("bank_txn_account_idx").on(table.bankAccountId),
+    index("bank_txn_date_idx").on(table.date),
+  ]
+);
+
+// ─── Invoices ───────────────────────────────────────────────────────────────
+export const invoices = pgTable(
+  "invoices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
+    periodStart: date("period_start").notNull(),
+    periodEnd: date("period_end").notNull(),
+    fromEntity: varchar("from_entity", { length: 255 }).notNull().default("Transforme"),
+    toEntity: varchar("to_entity", { length: 255 }).notNull().default("WhiteLightVentures"),
+    totalClasses: integer("total_classes").notNull().default(0),
+    totalAmountIdr: integer("total_amount_idr").notNull().default(0),
+    ratePerClassIdr: integer("rate_per_class_idr").notNull().default(300000),
+    status: varchar("status", { length: 20 }).notNull().default("generated"),
+    generatedAt: timestamp("generated_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("invoices_period_idx").on(table.periodStart),
+  ]
+);
+
+// ─── Invoice Line Items ─────────────────────────────────────────────────────
+export const invoiceLineItems = pgTable(
+  "invoice_line_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    orphanageId: varchar("orphanage_id", { length: 50 })
+      .notNull()
+      .references(() => orphanages.id),
+    orphanageName: varchar("orphanage_name", { length: 255 }).notNull(),
+    classCount: integer("class_count").notNull().default(0),
+    ratePerClassIdr: integer("rate_per_class_idr").notNull().default(300000),
+    subtotalIdr: integer("subtotal_idr").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("line_items_invoice_idx").on(table.invoiceId),
+  ]
+);
+
 // ─── Cron Runs ──────────────────────────────────────────────────────────────
 export const cronRuns = pgTable(
   "cron_runs",

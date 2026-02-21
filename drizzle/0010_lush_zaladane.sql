@@ -1,0 +1,1 @@
+ALTER TABLE "bank_accounts" ADD CONSTRAINT "bank_accounts_external_id_unique" UNIQUE("external_id");

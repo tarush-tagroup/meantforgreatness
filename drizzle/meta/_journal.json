@@ -64,6 +64,20 @@
       "when": 1771236620798,
       "tag": "0008_fair_shadow_king",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771664469838,
+      "tag": "0009_burly_proudstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771665067999,
+      "tag": "0010_lush_zaladane",
+      "breakpoints": true
     }
   ]
 }
