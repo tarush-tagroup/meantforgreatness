@@ -34,6 +34,8 @@ describe("permissions", () => {
         "media:view",
         "logs:view",
         "costs:view",
+        "banking:view",
+        "invoices:view",
       ];
 
       for (const permission of allPermissions) {
@@ -83,8 +85,10 @@ describe("permissions", () => {
       expect(hasPermission(["teacher_manager"], "media:view")).toBe(true);
     });
 
-    it("teacher_manager cannot view donations", () => {
+    it("teacher_manager cannot view donations or banking", () => {
       expect(hasPermission(["teacher_manager"], "donations:view")).toBe(false);
+      expect(hasPermission(["teacher_manager"], "banking:view")).toBe(false);
+      expect(hasPermission(["teacher_manager"], "invoices:view")).toBe(false);
     });
 
     it("teacher_manager can view but not invite users", () => {

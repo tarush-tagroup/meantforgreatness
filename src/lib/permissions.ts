@@ -25,6 +25,8 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "media:view",
     "logs:view",
     "costs:view",
+    "banking:view",
+    "invoices:view",
   ],
   teacher_manager: [
     "users:view",
