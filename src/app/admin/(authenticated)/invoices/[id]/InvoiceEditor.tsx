@@ -52,17 +52,20 @@ export default function InvoiceEditor({
   lineItems: initialLineItems,
   miscItems: initialMiscItems,
   allOrphanages,
+  loggedCounts: initialLoggedCounts,
 }: {
   invoice: Invoice;
   lineItems: LineItem[];
   miscItems: MiscItem[];
   allOrphanages: Orphanage[];
+  loggedCounts: Record<string, number>;
 }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initialInvoice);
   const [lineItems, setLineItems] = useState(initialLineItems);
   const [miscItems, setMiscItems] = useState(initialMiscItems);
   const [orphanages] = useState(allOrphanages);
+  const [loggedCounts, setLoggedCounts] = useState(initialLoggedCounts);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -312,6 +315,7 @@ export default function InvoiceEditor({
       setInvoice(data.invoice);
       setLineItems(data.lineItems);
       setMiscItems(data.miscItems);
+      if (data.loggedCounts) setLoggedCounts(data.loggedCounts);
     }
   }
 
@@ -457,7 +461,8 @@ export default function InvoiceEditor({
               <tr className="bg-sand-50 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                 <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">Orphanage</th>
-                <th className="px-4 py-2 text-right">Classes</th>
+                <th className="px-4 py-2 text-right">Logged</th>
+                <th className="px-4 py-2 text-right">Billed</th>
                 <th className="px-4 py-2 text-right">Rate (IDR)</th>
                 <th className="px-4 py-2 text-right">Subtotal (IDR)</th>
               </tr>
@@ -473,6 +478,11 @@ export default function InvoiceEditor({
                 const currentSubtotal =
                   currentCount * item.ratePerClassIdr;
 
+                const loggedCount =
+                  loggedCounts[item.orphanageId] || 0;
+                const mismatch =
+                  loggedCount !== currentCount && currentCount > 0;
+
                 return (
                   <tr
                     key={item.id}
@@ -487,11 +497,24 @@ export default function InvoiceEditor({
                     </td>
                     <td className="px-4 py-2 font-medium text-sand-900">
                       {item.orphanageName}
-                      {item.isNew && currentCount === 0 && (
-                        <span className="ml-2 text-xs text-sand-400">
-                          (no classes logged)
-                        </span>
-                      )}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <span
+                        className={`inline-block min-w-[2rem] rounded px-1.5 py-0.5 text-center text-sm ${
+                          loggedCount === 0
+                            ? "text-sand-400"
+                            : mismatch
+                              ? "bg-amber-50 font-medium text-amber-700"
+                              : "text-sand-700"
+                        }`}
+                        title={
+                          mismatch
+                            ? `Logged ${loggedCount} but billing ${currentCount}`
+                            : undefined
+                        }
+                      >
+                        {loggedCount}
+                      </span>
                     </td>
                     <td className="px-4 py-2 text-right">
                       <input
@@ -505,7 +528,11 @@ export default function InvoiceEditor({
                             [editKey]: val,
                           }));
                         }}
-                        className="w-20 rounded border border-sand-200 px-2 py-1 text-right text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        className={`w-20 rounded border px-2 py-1 text-right text-sm focus:outline-none focus:ring-1 ${
+                          mismatch
+                            ? "border-amber-300 text-amber-700 focus:border-amber-500 focus:ring-amber-500"
+                            : "border-sand-200 text-sand-700 focus:border-green-500 focus:ring-green-500"
+                        }`}
                       />
                     </td>
                     <td className="px-4 py-2 text-right text-sand-600">
@@ -525,6 +552,12 @@ export default function InvoiceEditor({
                   className="px-4 py-3 text-sm font-bold text-sand-900"
                 >
                   Classes Subtotal
+                </td>
+                <td className="px-4 py-3 text-right font-bold text-sand-600">
+                  {Object.values(loggedCounts).reduce(
+                    (s, c) => s + c,
+                    0
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-sand-900">
                   {mergedLineItems.reduce((s, li) => {
