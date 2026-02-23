@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
 import { invoices } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import GenerateInvoiceButton from "./GenerateInvoiceButton";
 
@@ -34,13 +34,15 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
     db
       .select({ count: sql<number>`count(*)` })
       .from(invoices),
+    // Only count final invoices in stats
     db
       .select({
         totalInvoices: sql<number>`count(*)::int`,
         totalClasses: sql<number>`coalesce(sum(${invoices.totalClasses}), 0)::int`,
         totalAmountIdr: sql<number>`coalesce(sum(${invoices.totalAmountIdr}), 0)::bigint`,
       })
-      .from(invoices),
+      .from(invoices)
+      .where(eq(invoices.status, "final")),
   ]);
 
   const total = Number(countResult[0]?.count || 0);
@@ -64,11 +66,11 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
         <GenerateInvoiceButton />
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards — final invoices only */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="rounded-lg border border-sand-200 bg-white p-4">
           <p className="text-xs font-medium text-sand-500 uppercase tracking-wider">
-            Total Invoices
+            Final Invoices
           </p>
           <p className="mt-1 text-xl font-bold text-sand-900">
             {Number(s?.totalInvoices || 0)}
@@ -103,8 +105,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
 
         {rows.length === 0 ? (
           <div className="p-8 text-center text-sm text-sand-400">
-            No invoices generated yet. Click &quot;Generate Invoice&quot; to create one
-            for the previous month.
+            No invoices generated yet. Click &quot;Generate Invoice&quot; to create one.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -140,11 +141,9 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                     <td className="px-4 py-2">
                       <span
                         className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          inv.status === "paid"
+                          inv.status === "final"
                             ? "bg-green-100 text-green-700"
-                            : inv.status === "sent"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-sand-100 text-sand-600"
+                            : "bg-amber-100 text-amber-700"
                         }`}
                       >
                         {inv.status}
@@ -162,7 +161,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                           href={`/api/admin/invoices/${inv.id}/pdf`}
                           className="text-xs font-medium text-green-700 hover:text-green-900"
                         >
-                          PDF ↓
+                          PDF &darr;
                         </a>
                       </div>
                     </td>

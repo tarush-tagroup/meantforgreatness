@@ -17,7 +17,8 @@ const generateSchema = z.object({
 /**
  * POST /api/admin/invoices/generate
  *
- * Manual invoice generation. Defaults to previous month if no month specified.
+ * Manual invoice generation. Accepts a month (YYYY-MM) including the current month.
+ * Defaults to previous month if no month specified.
  */
 async function postHandler(req: NextRequest) {
   const [, authError] = await withAuth("invoices:view");
@@ -113,9 +114,12 @@ async function postHandler(req: NextRequest) {
       invoiceNumber,
       periodStart,
       periodEnd,
+      fromEntity: "TransforMe Academy",
+      toEntity: "White Light Ventures, Inc",
       totalClasses,
       totalAmountIdr,
       ratePerClassIdr: RATE,
+      status: "draft",
     })
     .returning();
 
@@ -132,7 +136,7 @@ async function postHandler(req: NextRequest) {
     );
   }
 
-  logger.info("invoice", `Manually generated ${invoiceNumber}`, {
+  logger.info("invoice", `Generated ${invoiceNumber} (draft)`, {
     totalClasses,
     totalAmountIdr,
   });

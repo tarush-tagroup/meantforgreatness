@@ -10,7 +10,7 @@ import { logger } from "@/lib/logger";
  *
  * Monthly cron job (1st of each month at 8 AM UTC) that auto-generates
  * a combined invoice for all classes from the previous month.
- * Rate: 300,000 IDR per class, from Transforme to WhiteLightVentures.
+ * Rate: 300,000 IDR per class, from TransforMe Academy to White Light Ventures, Inc.
  */
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -97,16 +97,19 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Create invoice
+    // Create invoice (as draft — must be manually marked final)
     const [invoice] = await db
       .insert(invoices)
       .values({
         invoiceNumber,
         periodStart,
         periodEnd,
+        fromEntity: "TransforMe Academy",
+        toEntity: "White Light Ventures, Inc",
         totalClasses,
         totalAmountIdr,
         ratePerClassIdr: RATE,
+        status: "draft",
       })
       .returning();
 

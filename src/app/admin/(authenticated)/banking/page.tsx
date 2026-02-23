@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
 import { bankAccounts, bankTransactions, invoices, siteSettings } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import Link from "next/link";
 import BankSyncButton from "./BankSyncButton";
 
@@ -75,11 +75,13 @@ export default async function BankingPage({ searchParams }: PageProps) {
       db
         .select({ count: sql<number>`count(*)` })
         .from(bankTransactions),
+      // Only count final invoices for runway calculations
       db
         .select({
           totalAmountIdr: invoices.totalAmountIdr,
         })
         .from(invoices)
+        .where(eq(invoices.status, "final"))
         .orderBy(desc(invoices.periodStart))
         .limit(3),
     ]);
