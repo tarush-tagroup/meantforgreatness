@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface LineItem {
   id: string;
@@ -231,12 +232,12 @@ export default function InvoiceEditor({
     <div>
       {/* Back + Header */}
       <div className="mb-6">
-        <a
+        <Link
           href="/admin/invoices"
           className="text-xs font-medium text-sage-600 hover:text-sage-800"
         >
           &larr; Back to Invoices
-        </a>
+        </Link>
         <div className="mt-3 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-sand-900">
