@@ -47,7 +47,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
 
   // For displayed invoices, get logged class counts from DB per period
   // Find the overall min/max date range, then query class_logs grouped by month
-  let loggedCountsByPeriod: Record<string, number> = {};
+  const loggedCountsByPeriod: Record<string, number> = {};
   if (rows.length > 0) {
     const minStart = rows.reduce(
       (min, r) => (r.periodStart < min ? r.periodStart : min),
