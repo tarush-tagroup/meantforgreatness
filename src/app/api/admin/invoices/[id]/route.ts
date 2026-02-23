@@ -6,8 +6,9 @@ import {
   invoiceLineItems,
   invoiceMiscItems,
   orphanages,
+  classLogs,
 } from "@/db/schema";
-import { eq, asc, sql } from "drizzle-orm";
+import { eq, asc, and, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
@@ -32,24 +33,50 @@ export async function GET(
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  const [lineItems, miscItems, allOrphanages] = await Promise.all([
-    db
-      .select()
-      .from(invoiceLineItems)
-      .where(eq(invoiceLineItems.invoiceId, id))
-      .orderBy(asc(invoiceLineItems.orphanageName)),
-    db
-      .select()
-      .from(invoiceMiscItems)
-      .where(eq(invoiceMiscItems.invoiceId, id))
-      .orderBy(asc(invoiceMiscItems.sortOrder)),
-    db
-      .select({ id: orphanages.id, name: orphanages.name })
-      .from(orphanages)
-      .orderBy(asc(orphanages.name)),
-  ]);
+  const [lineItems, miscItems, allOrphanages, loggedClassCounts] =
+    await Promise.all([
+      db
+        .select()
+        .from(invoiceLineItems)
+        .where(eq(invoiceLineItems.invoiceId, id))
+        .orderBy(asc(invoiceLineItems.orphanageName)),
+      db
+        .select()
+        .from(invoiceMiscItems)
+        .where(eq(invoiceMiscItems.invoiceId, id))
+        .orderBy(asc(invoiceMiscItems.sortOrder)),
+      db
+        .select({ id: orphanages.id, name: orphanages.name })
+        .from(orphanages)
+        .orderBy(asc(orphanages.name)),
+      db
+        .select({
+          orphanageId: classLogs.orphanageId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(classLogs)
+        .where(
+          and(
+            gte(classLogs.classDate, invoice.periodStart),
+            lte(classLogs.classDate, invoice.periodEnd)
+          )
+        )
+        .groupBy(classLogs.orphanageId),
+    ]);
 
-  return NextResponse.json({ invoice, lineItems, miscItems, allOrphanages });
+  // Convert to Record<orphanageId, count>
+  const loggedCounts: Record<string, number> = {};
+  for (const row of loggedClassCounts) {
+    loggedCounts[row.orphanageId] = row.count;
+  }
+
+  return NextResponse.json({
+    invoice,
+    lineItems,
+    miscItems,
+    allOrphanages,
+    loggedCounts,
+  });
 }
 
 const patchSchema = z.object({

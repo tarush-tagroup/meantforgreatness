@@ -7,8 +7,9 @@ import {
   invoiceLineItems,
   invoiceMiscItems,
   orphanages,
+  classLogs,
 } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, and, gte, lte, sql } from "drizzle-orm";
 import InvoiceEditor from "./InvoiceEditor";
 
 export const dynamic = "force-dynamic";
@@ -32,22 +33,43 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
   if (!invoice) notFound();
 
-  const [lineItems, miscItems, allOrphanages] = await Promise.all([
-    db
-      .select()
-      .from(invoiceLineItems)
-      .where(eq(invoiceLineItems.invoiceId, id))
-      .orderBy(asc(invoiceLineItems.orphanageName)),
-    db
-      .select()
-      .from(invoiceMiscItems)
-      .where(eq(invoiceMiscItems.invoiceId, id))
-      .orderBy(asc(invoiceMiscItems.sortOrder)),
-    db
-      .select({ id: orphanages.id, name: orphanages.name })
-      .from(orphanages)
-      .orderBy(asc(orphanages.name)),
-  ]);
+  const [lineItems, miscItems, allOrphanages, loggedClassCounts] =
+    await Promise.all([
+      db
+        .select()
+        .from(invoiceLineItems)
+        .where(eq(invoiceLineItems.invoiceId, id))
+        .orderBy(asc(invoiceLineItems.orphanageName)),
+      db
+        .select()
+        .from(invoiceMiscItems)
+        .where(eq(invoiceMiscItems.invoiceId, id))
+        .orderBy(asc(invoiceMiscItems.sortOrder)),
+      db
+        .select({ id: orphanages.id, name: orphanages.name })
+        .from(orphanages)
+        .orderBy(asc(orphanages.name)),
+      // Count classes actually logged in the DB for this invoice's period
+      db
+        .select({
+          orphanageId: classLogs.orphanageId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(classLogs)
+        .where(
+          and(
+            gte(classLogs.classDate, invoice.periodStart),
+            lte(classLogs.classDate, invoice.periodEnd)
+          )
+        )
+        .groupBy(classLogs.orphanageId),
+    ]);
+
+  // Convert to a simple Record<orphanageId, count>
+  const loggedCounts: Record<string, number> = {};
+  for (const row of loggedClassCounts) {
+    loggedCounts[row.orphanageId] = row.count;
+  }
 
   return (
     <InvoiceEditor
@@ -55,6 +77,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
       lineItems={JSON.parse(JSON.stringify(lineItems))}
       miscItems={JSON.parse(JSON.stringify(miscItems))}
       allOrphanages={allOrphanages}
+      loggedCounts={loggedCounts}
     />
   );
 }
