@@ -2,7 +2,12 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { redirect, notFound } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
-import { invoices, invoiceLineItems, invoiceMiscItems } from "@/db/schema";
+import {
+  invoices,
+  invoiceLineItems,
+  invoiceMiscItems,
+  orphanages,
+} from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import InvoiceEditor from "./InvoiceEditor";
 
@@ -27,7 +32,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
   if (!invoice) notFound();
 
-  const [lineItems, miscItems] = await Promise.all([
+  const [lineItems, miscItems, allOrphanages] = await Promise.all([
     db
       .select()
       .from(invoiceLineItems)
@@ -38,6 +43,10 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
       .from(invoiceMiscItems)
       .where(eq(invoiceMiscItems.invoiceId, id))
       .orderBy(asc(invoiceMiscItems.sortOrder)),
+    db
+      .select({ id: orphanages.id, name: orphanages.name })
+      .from(orphanages)
+      .orderBy(asc(orphanages.name)),
   ]);
 
   return (
@@ -45,6 +54,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
       invoice={JSON.parse(JSON.stringify(invoice))}
       lineItems={JSON.parse(JSON.stringify(lineItems))}
       miscItems={JSON.parse(JSON.stringify(miscItems))}
+      allOrphanages={allOrphanages}
     />
   );
 }
