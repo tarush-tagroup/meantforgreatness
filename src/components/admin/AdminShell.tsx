@@ -31,7 +31,11 @@ const operationsItems: NavItem[] = [
 const fundraisingItems: NavItem[] = [
   { label: "Donations", href: "/admin/donations", permission: "donations:view" },
   { label: "Donor Platforms", href: "/admin/platforms", permission: "users:view" },
-  { label: "Banking", href: "/admin/banking", permission: "banking:view" },
+];
+
+/* Finance */
+const financeItems: NavItem[] = [
+  { label: "Accounts", href: "/admin/banking", permission: "banking:view" },
   { label: "Invoices", href: "/admin/invoices", permission: "invoices:view" },
 ];
 
@@ -136,6 +140,9 @@ export default function AdminShell({ user, children }: AdminShellProps) {
 
           {/* Fundraising */}
           {renderSection(fundraisingItems)}
+
+          {/* Finance */}
+          {renderSection(financeItems)}
 
           {/* Developer */}
           {renderSection(developerItems)}
