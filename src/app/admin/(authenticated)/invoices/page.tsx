@@ -67,48 +67,92 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       </div>
 
       {/* Stats Cards — final invoices only */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-lg border border-sand-200 bg-white p-4">
-          <p className="text-xs font-medium text-sand-500 uppercase tracking-wider">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
             Final Invoices
           </p>
-          <p className="mt-1 text-xl font-bold text-sand-900">
+          <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
             {Number(s?.totalInvoices || 0)}
           </p>
         </div>
-        <div className="rounded-lg border border-sand-200 bg-white p-4">
-          <p className="text-xs font-medium text-sand-500 uppercase tracking-wider">
-            Total Classes Invoiced
+        <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
+            Classes Invoiced
           </p>
-          <p className="mt-1 text-xl font-bold text-sand-900">
+          <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
             {Number(s?.totalClasses || 0).toLocaleString()}
           </p>
         </div>
-        <div className="rounded-lg border border-sand-200 bg-white p-4">
-          <p className="text-xs font-medium text-sand-500 uppercase tracking-wider">
+        <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
             Total Amount
           </p>
-          <p className="mt-1 text-xl font-bold text-sand-900">
+          <p className="mt-1 text-base sm:text-xl font-bold text-sand-900 truncate">
             {formatIdr(Number(s?.totalAmountIdr || 0))}
           </p>
         </div>
       </div>
 
-      {/* Invoices Table */}
-      <div className="rounded-lg border border-sand-200 bg-white overflow-hidden">
-        <div className="px-4 py-3 border-b border-sand-100">
-          <h2 className="text-sm font-semibold text-sand-900">
-            All Invoices{" "}
-            <span className="text-sand-400 font-normal">({total})</span>
-          </h2>
+      {rows.length === 0 ? (
+        <div className="rounded-lg border border-sand-200 bg-white p-8 text-center text-sm text-sand-400">
+          No invoices generated yet. Click &quot;Generate Invoice&quot; to create one.
         </div>
-
-        {rows.length === 0 ? (
-          <div className="p-8 text-center text-sm text-sand-400">
-            No invoices generated yet. Click &quot;Generate Invoice&quot; to create one.
+      ) : (
+        <>
+          {/* Mobile card layout */}
+          <div className="space-y-3 md:hidden">
+            {rows.map((inv) => (
+              <Link
+                key={inv.id}
+                href={`/admin/invoices/${inv.id}`}
+                className="block rounded-lg border border-sand-200 bg-white p-3 hover:bg-sand-50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-sand-900">
+                        {inv.invoiceNumber}
+                      </span>
+                      <span
+                        className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                          inv.status === "final"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {inv.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-sand-500 mt-0.5">
+                      {new Date(inv.periodStart + "T00:00:00").toLocaleDateString(
+                        "en-US",
+                        { month: "long", year: "numeric" }
+                      )}{" "}
+                      &middot; {inv.totalClasses} classes
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-bold text-sand-900">
+                      {formatIdr(inv.totalAmountIdr)}
+                    </span>
+                    <svg className="w-4 h-4 text-sand-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
+
+          {/* Desktop table layout */}
+          <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-sand-100">
+              <h2 className="text-sm font-semibold text-sand-900">
+                All Invoices{" "}
+                <span className="text-sand-400 font-normal">({total})</span>
+              </h2>
+            </div>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-sand-50 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
@@ -170,35 +214,35 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
               </tbody>
             </table>
           </div>
-        )}
+        </>
+      )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-sand-100">
-            <p className="text-xs text-sand-500">
-              Page {page} of {totalPages}
-            </p>
-            <div className="flex gap-2">
-              {page > 1 && (
-                <Link
-                  href={`/admin/invoices?page=${page - 1}`}
-                  className="rounded-lg border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600 hover:bg-sand-50"
-                >
-                  Previous
-                </Link>
-              )}
-              {page < totalPages && (
-                <Link
-                  href={`/admin/invoices?page=${page + 1}`}
-                  className="rounded-lg border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600 hover:bg-sand-50"
-                >
-                  Next
-                </Link>
-              )}
-            </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-sand-500">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <Link
+                href={`/admin/invoices?page=${page - 1}`}
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-xs font-medium text-sand-600 hover:bg-sand-50"
+              >
+                Previous
+              </Link>
+            )}
+            {page < totalPages && (
+              <Link
+                href={`/admin/invoices?page=${page + 1}`}
+                className="rounded-lg border border-sand-200 px-3 py-1.5 text-xs font-medium text-sand-600 hover:bg-sand-50"
+              >
+                Next
+              </Link>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

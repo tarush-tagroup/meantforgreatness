@@ -133,16 +133,16 @@ export default async function BankingPage({ searchParams }: PageProps) {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-sand-900">Banking</h1>
+          <h1 className="text-2xl font-bold text-sand-900">Accounts</h1>
           <p className="mt-1 text-sm text-sand-500">
             Bank balances, transactions, and runway estimate.
           </p>
         </div>
         <div className="flex items-center gap-3">
           {lastSynced && lastSynced.getTime() > 0 && (
-            <span className="text-xs text-sand-400">
+            <span className="text-xs text-sand-400 hidden sm:inline">
               Last synced:{" "}
               {lastSynced.toLocaleDateString("en-US", {
                 month: "short",
@@ -166,28 +166,28 @@ export default async function BankingPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
             {accounts.map((acct) => (
               <div
                 key={acct.id}
-                className="rounded-lg border border-sand-200 bg-white p-4"
+                className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4"
               >
-                <p className="text-xs font-medium text-sand-500 uppercase tracking-wider">
+                <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
                   {acct.provider === "mercury" ? "Mercury" : "Wise"} ({acct.currency.toUpperCase()})
                 </p>
-                <p className="mt-1 text-xl font-bold text-sand-900">
+                <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
                   {formatCurrency(acct.balanceCents, acct.currency)}
                 </p>
-                <p className="text-xs text-sand-400 mt-1">{acct.name}</p>
+                <p className="text-[10px] sm:text-xs text-sand-400 mt-1 truncate">{acct.name}</p>
               </div>
             ))}
 
             {/* Combined */}
-            <div className="rounded-lg border-2 border-green-200 bg-green-50 p-4">
-              <p className="text-xs font-medium text-green-700 uppercase tracking-wider">
+            <div className="rounded-lg border-2 border-green-200 bg-green-50 p-3 sm:p-4">
+              <p className="text-[10px] sm:text-xs font-medium text-green-700 uppercase tracking-wider">
                 Combined (USD)
               </p>
-              <p className="mt-1 text-xl font-bold text-green-900">
+              <p className="mt-1 text-base sm:text-xl font-bold text-green-900">
                 {formatCurrency(combinedUsdCents, "usd")}
               </p>
             </div>
@@ -195,12 +195,12 @@ export default async function BankingPage({ searchParams }: PageProps) {
 
           {/* Exchange Rate */}
           {usdIdrRate && (
-            <div className="rounded-lg border border-sand-200 bg-white p-4 mb-6 inline-block">
-              <span className="text-sm text-sand-600">
+            <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4 mb-6 inline-block">
+              <span className="text-xs sm:text-sm text-sand-600">
                 1 USD = <span className="font-semibold text-sand-900">{Math.round(usdIdrRate).toLocaleString("id-ID")}</span> IDR
               </span>
               {exchangeRateUpdatedAt && (
-                <span className="text-xs text-sand-400 ml-3">
+                <span className="text-[10px] sm:text-xs text-sand-400 ml-2 sm:ml-3">
                   Updated:{" "}
                   {new Date(exchangeRateUpdatedAt).toLocaleDateString("en-US", {
                     month: "short",
@@ -215,29 +215,29 @@ export default async function BankingPage({ searchParams }: PageProps) {
 
           {/* Runway */}
           {(runwayLastMonth !== null || runwayThreeMonth !== null) && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
               {runwayLastMonth !== null && (
-                <div className="rounded-lg border border-sage-200 bg-sage-50 p-4">
-                  <p className="text-xs font-medium text-sage-600 uppercase tracking-wider">
+                <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 sm:p-4">
+                  <p className="text-[10px] sm:text-xs font-medium text-sage-600 uppercase tracking-wider">
                     Runway (last month&apos;s burn)
                   </p>
-                  <p className="mt-1 text-2xl font-bold text-sage-900">
+                  <p className="mt-1 text-xl sm:text-2xl font-bold text-sage-900">
                     {runwayLastMonth} months
                   </p>
-                  <p className="text-xs text-sage-500 mt-1">
+                  <p className="text-[10px] sm:text-xs text-sage-500 mt-1">
                     Based on IDR {lastMonthIdr?.toLocaleString("id-ID")}/month
                   </p>
                 </div>
               )}
               {runwayThreeMonth !== null && (
-                <div className="rounded-lg border border-sage-200 bg-sage-50 p-4">
-                  <p className="text-xs font-medium text-sage-600 uppercase tracking-wider">
+                <div className="rounded-lg border border-sage-200 bg-sage-50 p-3 sm:p-4">
+                  <p className="text-[10px] sm:text-xs font-medium text-sage-600 uppercase tracking-wider">
                     Runway (3-month avg)
                   </p>
-                  <p className="mt-1 text-2xl font-bold text-sage-900">
+                  <p className="mt-1 text-xl sm:text-2xl font-bold text-sage-900">
                     {runwayThreeMonth} months
                   </p>
-                  <p className="text-xs text-sage-500 mt-1">
+                  <p className="text-[10px] sm:text-xs text-sage-500 mt-1">
                     Based on IDR {avgIdr?.toLocaleString("id-ID")}/month avg
                   </p>
                 </div>
@@ -247,9 +247,9 @@ export default async function BankingPage({ searchParams }: PageProps) {
         </>
       )}
 
-      {/* Transactions Table */}
-      <div className="rounded-lg border border-sand-200 bg-white overflow-hidden mt-6">
-        <div className="px-4 py-3 border-b border-sand-100">
+      {/* Transactions */}
+      <div className="mt-6">
+        <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-sand-900">
             Transactions{" "}
             <span className="text-sand-400 font-normal">({total})</span>
@@ -257,50 +257,48 @@ export default async function BankingPage({ searchParams }: PageProps) {
         </div>
 
         {txns.length === 0 ? (
-          <div className="p-8 text-center text-sm text-sand-400">
+          <div className="rounded-lg border border-sand-200 bg-white p-8 text-center text-sm text-sand-400">
             No transactions yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-sand-50 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Bank</th>
-                  <th className="px-4 py-2">Description</th>
-                  <th className="px-4 py-2">Counterparty</th>
-                  <th className="px-4 py-2 text-right">Amount</th>
-                  <th className="px-4 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sand-100">
-                {txns.map((txn) => (
-                  <tr key={txn.id} className="hover:bg-sand-50">
-                    <td className="px-4 py-2 whitespace-nowrap text-sand-600">
-                      {new Date(txn.date + "T00:00:00").toLocaleDateString(
-                        "en-US",
-                        { month: "short", day: "numeric", year: "numeric" }
+          <>
+            {/* Mobile card layout */}
+            <div className="space-y-3 md:hidden">
+              {txns.map((txn) => (
+                <div
+                  key={txn.id}
+                  className="rounded-lg border border-sand-200 bg-white p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                            txn.provider === "mercury"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {txn.provider === "mercury" ? "Mercury" : "Wise"}
+                        </span>
+                        <span className="text-xs text-sand-500">
+                          {new Date(txn.date + "T00:00:00").toLocaleDateString(
+                            "en-US",
+                            { month: "short", day: "numeric" }
+                          )}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-sand-900 mt-1 truncate">
+                        {txn.counterparty || txn.description || "—"}
+                      </p>
+                      {txn.counterparty && txn.description && (
+                        <p className="text-xs text-sand-500 truncate">
+                          {txn.description}
+                        </p>
                       )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-                          txn.provider === "mercury"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {txn.provider === "mercury" ? "Mercury" : "Wise"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-sand-700 max-w-[200px] truncate">
-                      {txn.description || "—"}
-                    </td>
-                    <td className="px-4 py-2 text-sand-600 max-w-[150px] truncate">
-                      {txn.counterparty || "—"}
-                    </td>
-                    <td
-                      className={`px-4 py-2 text-right font-medium whitespace-nowrap ${
+                    </div>
+                    <span
+                      className={`shrink-0 text-sm font-semibold whitespace-nowrap ${
                         txn.amountCents >= 0
                           ? "text-green-700"
                           : "text-red-600"
@@ -308,20 +306,75 @@ export default async function BankingPage({ searchParams }: PageProps) {
                     >
                       {txn.amountCents >= 0 ? "+" : ""}
                       {formatCurrency(txn.amountCents, txn.currency)}
-                    </td>
-                    <td className="px-4 py-2 text-sand-500 text-xs">
-                      {txn.status}
-                    </td>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table layout */}
+            <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-sand-50 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2">Bank</th>
+                    <th className="px-4 py-2">Description</th>
+                    <th className="px-4 py-2">Counterparty</th>
+                    <th className="px-4 py-2 text-right">Amount</th>
+                    <th className="px-4 py-2">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-sand-100">
+                  {txns.map((txn) => (
+                    <tr key={txn.id} className="hover:bg-sand-50">
+                      <td className="px-4 py-2 whitespace-nowrap text-sand-600">
+                        {new Date(txn.date + "T00:00:00").toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric", year: "numeric" }
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                            txn.provider === "mercury"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
+                        >
+                          {txn.provider === "mercury" ? "Mercury" : "Wise"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sand-700 max-w-[200px] truncate">
+                        {txn.description || "—"}
+                      </td>
+                      <td className="px-4 py-2 text-sand-600 max-w-[150px] truncate">
+                        {txn.counterparty || "—"}
+                      </td>
+                      <td
+                        className={`px-4 py-2 text-right font-medium whitespace-nowrap ${
+                          txn.amountCents >= 0
+                            ? "text-green-700"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {txn.amountCents >= 0 ? "+" : ""}
+                        {formatCurrency(txn.amountCents, txn.currency)}
+                      </td>
+                      <td className="px-4 py-2 text-sand-500 text-xs">
+                        {txn.status}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-sand-100">
+          <div className="mt-4 flex items-center justify-between">
             <p className="text-xs text-sand-500">
               Page {page} of {totalPages}
             </p>
@@ -329,7 +382,7 @@ export default async function BankingPage({ searchParams }: PageProps) {
               {page > 1 && (
                 <Link
                   href={`/admin/banking?page=${page - 1}`}
-                  className="rounded-lg border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600 hover:bg-sand-50"
+                  className="rounded-lg border border-sand-200 px-3 py-1.5 text-xs font-medium text-sand-600 hover:bg-sand-50"
                 >
                   Previous
                 </Link>
@@ -337,7 +390,7 @@ export default async function BankingPage({ searchParams }: PageProps) {
               {page < totalPages && (
                 <Link
                   href={`/admin/banking?page=${page + 1}`}
-                  className="rounded-lg border border-sand-200 px-3 py-1 text-xs font-medium text-sand-600 hover:bg-sand-50"
+                  className="rounded-lg border border-sand-200 px-3 py-1.5 text-xs font-medium text-sand-600 hover:bg-sand-50"
                 >
                   Next
                 </Link>

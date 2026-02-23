@@ -37,11 +37,15 @@ const operationsItems: NavItem[] = [
   { label: "Transparency Reports", href: "/admin/transparency", permission: "transparency:view" },
 ];
 
-/* Fundraising — admin only */
+/* Fundraising */
 const fundraisingItems: NavItem[] = [
   { label: "Donations", href: "/admin/donations", permission: "donations:view" },
   { label: "Donor Platforms", href: "/admin/platforms", permission: "donations:view" },
-  { label: "Banking", href: "/admin/banking", permission: "banking:view" },
+];
+
+/* Finance — banking & invoicing */
+const financeItems: NavItem[] = [
+  { label: "Accounts", href: "/admin/banking", permission: "banking:view" },
   { label: "Invoices", href: "/admin/invoices", permission: "invoices:view" },
 ];
 
@@ -129,6 +133,7 @@ export default function Sidebar({ user, onClose }: SidebarProps) {
 
         {renderSection("Operations", operationsItems)}
         {renderSection("Fundraising", fundraisingItems)}
+        {renderSection("Finance", financeItems)}
         {renderSection("Developer", developerItems)}
         {renderSection("Settings", settingsItems)}
       </nav>
