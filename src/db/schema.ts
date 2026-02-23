@@ -347,18 +347,20 @@ export const invoices = pgTable(
     invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
     periodStart: date("period_start").notNull(),
     periodEnd: date("period_end").notNull(),
-    fromEntity: varchar("from_entity", { length: 255 }).notNull().default("Transforme"),
-    toEntity: varchar("to_entity", { length: 255 }).notNull().default("WhiteLightVentures"),
+    fromEntity: varchar("from_entity", { length: 255 }).notNull().default("TransforMe Academy"),
+    toEntity: varchar("to_entity", { length: 255 }).notNull().default("White Light Ventures, Inc"),
     totalClasses: integer("total_classes").notNull().default(0),
     totalAmountIdr: integer("total_amount_idr").notNull().default(0),
+    miscTotalIdr: integer("misc_total_idr").notNull().default(0),
     ratePerClassIdr: integer("rate_per_class_idr").notNull().default(300000),
-    status: varchar("status", { length: 20 }).notNull().default("generated"),
+    status: varchar("status", { length: 20 }).notNull().default("draft"), // "draft" | "final"
     generatedAt: timestamp("generated_at").notNull().defaultNow(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("invoices_period_idx").on(table.periodStart),
+    index("invoices_status_idx").on(table.status),
   ]
 );
 
@@ -381,6 +383,26 @@ export const invoiceLineItems = pgTable(
   },
   (table) => [
     index("line_items_invoice_idx").on(table.invoiceId),
+  ]
+);
+
+// ─── Invoice Misc Items ────────────────────────────────────────────────────
+export const invoiceMiscItems = pgTable(
+  "invoice_misc_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    description: varchar("description", { length: 500 }).notNull(),
+    quantity: integer("quantity").notNull().default(1),
+    rateIdr: integer("rate_idr").notNull().default(0),
+    subtotalIdr: integer("subtotal_idr").notNull().default(0),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("misc_items_invoice_idx").on(table.invoiceId),
   ]
 );
 

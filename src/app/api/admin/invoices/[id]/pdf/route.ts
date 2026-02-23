@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { db } from "@/db";
-import { invoices, invoiceLineItems } from "@/db/schema";
+import { invoices, invoiceLineItems, invoiceMiscItems } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { generateInvoicePdf } from "@/lib/invoice-pdf";
 
@@ -26,13 +26,20 @@ export async function GET(
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  const lineItems = await db
-    .select()
-    .from(invoiceLineItems)
-    .where(eq(invoiceLineItems.invoiceId, id))
-    .orderBy(asc(invoiceLineItems.orphanageName));
+  const [lineItems, miscItems] = await Promise.all([
+    db
+      .select()
+      .from(invoiceLineItems)
+      .where(eq(invoiceLineItems.invoiceId, id))
+      .orderBy(asc(invoiceLineItems.orphanageName)),
+    db
+      .select()
+      .from(invoiceMiscItems)
+      .where(eq(invoiceMiscItems.invoiceId, id))
+      .orderBy(asc(invoiceMiscItems.sortOrder)),
+  ]);
 
-  const pdfBuffer = generateInvoicePdf(invoice, lineItems);
+  const pdfBuffer = generateInvoicePdf(invoice, lineItems, miscItems);
 
   return new NextResponse(new Uint8Array(pdfBuffer), {
     headers: {
