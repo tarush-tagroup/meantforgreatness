@@ -1,0 +1,1 @@
+ALTER TABLE "invoice_misc_items" ADD COLUMN "receipt_url" text;

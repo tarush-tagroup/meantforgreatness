@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { invoices, invoiceMiscItems, invoiceLineItems } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { put } from "@vercel/blob";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -17,6 +18,7 @@ const addMiscSchema = z.object({
  * POST /api/admin/invoices/[id]/misc-items
  *
  * Add a misc line item to an invoice.
+ * Accepts multipart/form-data with optional receipt file, or JSON body.
  */
 export async function POST(
   req: NextRequest,
@@ -37,16 +39,53 @@ export async function POST(
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  const body = await req.json();
-  const parsed = addMiscSchema.safeParse(body);
-  if (!parsed.success) {
+  let description: string;
+  let quantity: number;
+  let rateIdr: number;
+  let receiptUrl: string | null = null;
+
+  const contentType = req.headers.get("content-type") || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    // Handle form data with optional receipt file
+    const formData = await req.formData();
+    description = formData.get("description") as string;
+    quantity = parseInt(formData.get("quantity") as string) || 1;
+    rateIdr = parseInt(formData.get("rateIdr") as string) || 0;
+
+    const receiptFile = formData.get("receipt") as File | null;
+    if (receiptFile && receiptFile.size > 0) {
+      // Upload receipt to Vercel Blob
+      const ext = receiptFile.name.split(".").pop() || "jpg";
+      const filename = `receipts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const blob = await put(filename, receiptFile, {
+        access: "public",
+        contentType: receiptFile.type,
+      });
+      receiptUrl = blob.url;
+    }
+  } else {
+    // Handle JSON body
+    const body = await req.json();
+    const parsed = addMiscSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues?.[0]?.message || "Invalid input" },
+        { status: 400 }
+      );
+    }
+    description = parsed.data.description;
+    quantity = parsed.data.quantity;
+    rateIdr = parsed.data.rateIdr;
+  }
+
+  if (!description?.trim() || rateIdr < 0) {
     return NextResponse.json(
-      { error: parsed.error.issues?.[0]?.message || "Invalid input" },
+      { error: "Description and rate are required" },
       { status: 400 }
     );
   }
 
-  const { description, quantity, rateIdr } = parsed.data;
   const subtotalIdr = quantity * rateIdr;
 
   // Get current max sortOrder
@@ -59,10 +98,11 @@ export async function POST(
     .insert(invoiceMiscItems)
     .values({
       invoiceId: id,
-      description,
+      description: description.trim(),
       quantity,
       rateIdr,
       subtotalIdr,
+      receiptUrl,
       sortOrder: (maxSort?.max || 0) + 1,
     })
     .returning();
@@ -71,6 +111,59 @@ export async function POST(
   await recalculateInvoiceTotals(id);
 
   return NextResponse.json({ item }, { status: 201 });
+}
+
+/**
+ * PATCH /api/admin/invoices/[id]/misc-items
+ *
+ * Upload or replace receipt for an existing misc item.
+ */
+export async function PATCH(
+  req: NextRequest,
+  context: RouteContext
+) {
+  const [, authError] = await withAuth("invoices:view");
+  if (authError) return authError;
+
+  const { id } = await context.params;
+
+  const formData = await req.formData();
+  const itemId = formData.get("itemId") as string;
+  const receiptFile = formData.get("receipt") as File | null;
+
+  if (!itemId) {
+    return NextResponse.json({ error: "itemId required" }, { status: 400 });
+  }
+
+  // Verify invoice exists
+  const [invoice] = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, id))
+    .limit(1);
+
+  if (!invoice) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  }
+
+  let receiptUrl: string | null = null;
+
+  if (receiptFile && receiptFile.size > 0) {
+    const ext = receiptFile.name.split(".").pop() || "jpg";
+    const filename = `receipts/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const blob = await put(filename, receiptFile, {
+      access: "public",
+      contentType: receiptFile.type,
+    });
+    receiptUrl = blob.url;
+  }
+
+  await db
+    .update(invoiceMiscItems)
+    .set({ receiptUrl })
+    .where(eq(invoiceMiscItems.id, itemId));
+
+  return NextResponse.json({ success: true, receiptUrl });
 }
 
 /**

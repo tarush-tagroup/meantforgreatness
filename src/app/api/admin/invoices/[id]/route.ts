@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { db } from "@/db";
-import { invoices, invoiceLineItems, invoiceMiscItems } from "@/db/schema";
+import {
+  invoices,
+  invoiceLineItems,
+  invoiceMiscItems,
+  orphanages,
+} from "@/db/schema";
 import { eq, asc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
@@ -27,7 +32,7 @@ export async function GET(
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  const [lineItems, miscItems] = await Promise.all([
+  const [lineItems, miscItems, allOrphanages] = await Promise.all([
     db
       .select()
       .from(invoiceLineItems)
@@ -38,9 +43,13 @@ export async function GET(
       .from(invoiceMiscItems)
       .where(eq(invoiceMiscItems.invoiceId, id))
       .orderBy(asc(invoiceMiscItems.sortOrder)),
+    db
+      .select({ id: orphanages.id, name: orphanages.name })
+      .from(orphanages)
+      .orderBy(asc(orphanages.name)),
   ]);
 
-  return NextResponse.json({ invoice, lineItems, miscItems });
+  return NextResponse.json({ invoice, lineItems, miscItems, allOrphanages });
 }
 
 const patchSchema = z.object({
@@ -48,7 +57,9 @@ const patchSchema = z.object({
   lineItems: z
     .array(
       z.object({
-        id: z.string().uuid(),
+        id: z.string().uuid().optional(),
+        orphanageId: z.string().optional(),
+        orphanageName: z.string().optional(),
         classCount: z.number().int().min(0),
       })
     )
@@ -90,17 +101,31 @@ export async function PATCH(
 
   const { status, lineItems: lineItemUpdates } = parsed.data;
 
-  // Update line item class counts
+  // Update line item class counts (update existing or create new)
   if (lineItemUpdates && lineItemUpdates.length > 0) {
     for (const item of lineItemUpdates) {
       const subtotal = item.classCount * invoice.ratePerClassIdr;
-      await db
-        .update(invoiceLineItems)
-        .set({
+
+      if (item.id) {
+        // Update existing line item
+        await db
+          .update(invoiceLineItems)
+          .set({
+            classCount: item.classCount,
+            subtotalIdr: subtotal,
+          })
+          .where(eq(invoiceLineItems.id, item.id));
+      } else if (item.orphanageId && item.orphanageName) {
+        // Create new line item for orphanage not yet on invoice
+        await db.insert(invoiceLineItems).values({
+          invoiceId: id,
+          orphanageId: item.orphanageId,
+          orphanageName: item.orphanageName,
           classCount: item.classCount,
+          ratePerClassIdr: invoice.ratePerClassIdr,
           subtotalIdr: subtotal,
-        })
-        .where(eq(invoiceLineItems.id, item.id));
+        });
+      }
     }
 
     // Recalculate invoice totals from line items

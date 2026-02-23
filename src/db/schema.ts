@@ -398,6 +398,7 @@ export const invoiceMiscItems = pgTable(
     quantity: integer("quantity").notNull().default(1),
     rateIdr: integer("rate_idr").notNull().default(0),
     subtotalIdr: integer("subtotal_idr").notNull().default(0),
+    receiptUrl: text("receipt_url"),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
