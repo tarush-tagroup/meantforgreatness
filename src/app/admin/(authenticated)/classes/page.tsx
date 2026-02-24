@@ -35,6 +35,45 @@ function isTimeVerified(aiTimeMatch: string | null): boolean | null {
   return aiTimeMatch === "match";
 }
 
+/**
+ * Format a raw class time string into a clean start time.
+ * "09.00-10.00 am" → "9:00 AM"
+ * "20.00-21.00 pm" → "8:00 PM"
+ * "3.00 pm - 6.00 pm" → "3:00 PM"
+ * "17.00-18.00" → "5:00 PM"
+ * "06:00 PM" → "6:00 PM"
+ */
+function formatStartTime(classTime: string | null): string | null {
+  if (!classTime) return null;
+  const normalized = classTime.replace(/\./g, ":");
+  const rangeParts = normalized.split(/\s*-\s*/);
+  const startStr = rangeParts[0].trim();
+
+  // Check for am/pm on the start or end part
+  const startAmPm = startStr.match(/\s*(am|pm)\s*$/i);
+  const endPart = rangeParts[1]?.trim();
+  const endAmPm = endPart?.match(/\s*(am|pm)\s*$/i);
+  const suffix = startAmPm?.[1]?.toLowerCase() || endAmPm?.[1]?.toLowerCase() || null;
+  const clean = startAmPm ? startStr.replace(/\s*(am|pm)\s*$/i, "").trim() : startStr;
+
+  const match = clean.match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return classTime; // fallback to raw
+  let hour = parseInt(match[1]);
+  const min = match[2] || "00";
+
+  if (suffix) {
+    if (hour <= 12) {
+      if (suffix === "pm" && hour !== 12) hour += 12;
+      if (suffix === "am" && hour === 12) hour = 0;
+    }
+  }
+
+  // Convert to 12h format
+  const period = hour >= 12 ? "PM" : "AM";
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12}:${min} ${period}`;
+}
+
 function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean; label?: string; tooltip?: string }) {
   const checkIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>;
   const warnIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
@@ -225,10 +264,12 @@ export default async function AdminClassesPage({
                         <span className="text-sm font-semibold text-sand-900">
                           {log.orphanageName || log.orphanageId}
                         </span>
-                        <span className="text-xs text-sand-500">{log.classDate}</span>
+                        <span className="text-xs text-sand-500">
+                          {log.classDate}{log.classTime ? ` · ${formatStartTime(log.classTime)}` : ""}
+                        </span>
                       </div>
                       <p className="text-xs text-sand-600 mt-0.5">
-                        {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students{log.classTime ? ` · ${log.classTime}` : ""}
+                        {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students
                       </p>
                       {/* Verification badges */}
                       <div className="flex flex-wrap gap-1 mt-1.5">
@@ -282,7 +323,7 @@ export default async function AdminClassesPage({
                     Photo
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Date
+                    Date / Time
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Orphanage
@@ -292,9 +333,6 @@ export default async function AdminClassesPage({
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Students
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Time
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Notes
@@ -332,13 +370,23 @@ export default async function AdminClassesPage({
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-sand-900 whitespace-nowrap">
-                        <span>{log.classDate}</span>
-                        {dateVerified !== null && (
-                          <span className="ml-1.5">
-                            <VerifiedBadge verified={dateVerified} label="Date" tooltip={log.aiDateNotes || undefined} />
-                          </span>
-                        )}
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          <div>
+                            <span className="text-sand-900">{log.classDate}</span>
+                            {log.classTime && (
+                              <span className="block text-xs text-sand-500">{formatStartTime(log.classTime)}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            {dateVerified !== null && (
+                              <VerifiedBadge verified={dateVerified} label="Date" tooltip={log.aiDateNotes || undefined} />
+                            )}
+                            {timeVerified !== null && (
+                              <VerifiedBadge verified={timeVerified} label="Time" tooltip={log.aiTimeNotes || undefined} />
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-sand-700">
                         <span>{log.orphanageName || log.orphanageId}</span>
@@ -368,14 +416,6 @@ export default async function AdminClassesPage({
                             title={`AI detected ${log.aiKidsCount} student${log.aiKidsCount !== 1 ? "s" : ""} in photos`}
                           >
                             ({log.aiKidsCount})
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-sand-500 whitespace-nowrap">
-                        <span>{log.classTime || "\u2014"}</span>
-                        {timeVerified !== null && (
-                          <span className="ml-1.5">
-                            <VerifiedBadge verified={timeVerified} label="Time" tooltip={log.aiTimeNotes || undefined} />
                           </span>
                         )}
                       </td>
