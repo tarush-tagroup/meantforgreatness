@@ -1,4 +1,6 @@
 import sharp from "sharp";
+import exifReader from "exif-reader";
+import { logger } from "@/lib/logger";
 
 const MAX_WIDTH = 1200;
 const QUALITY = 80;
@@ -16,9 +18,6 @@ export interface ExifMetadata {
 /**
  * Extract GPS coordinates from image EXIF data before optimization strips it.
  * Returns null if no GPS data is found.
- *
- * Uses sharp metadata to check for EXIF, then parses the raw EXIF buffer
- * looking for GPS rational values or XMP GPS data.
  */
 export async function extractExifGps(
   buffer: Buffer
@@ -28,7 +27,7 @@ export async function extractExifGps(
     const exif = metadata.exif;
     if (!exif) return null;
 
-    return parseGpsFromExifBuffer(exif);
+    return parseGpsFromExif(exif);
   } catch {
     return null;
   }
@@ -44,29 +43,88 @@ export async function extractExifMetadata(
   try {
     const metadata = await sharp(buffer).metadata();
     const exif = metadata.exif;
-    if (!exif) return { gps: null, dateTaken: null };
+    if (!exif) {
+      logger.info("exif", "No EXIF buffer found in image");
+      return { gps: null, dateTaken: null };
+    }
 
-    return {
-      gps: parseGpsFromExifBuffer(exif),
-      dateTaken: parseDateFromExifBuffer(exif),
-    };
-  } catch {
+    const gps = parseGpsFromExif(exif);
+    const dateTaken = parseDateFromExif(exif);
+
+    logger.info("exif", "EXIF extraction result", {
+      hasGps: gps !== null,
+      hasDate: dateTaken !== null,
+      gpsLat: gps?.latitude,
+      gpsLon: gps?.longitude,
+      dateTaken,
+    });
+
+    return { gps, dateTaken };
+  } catch (err) {
+    logger.error("exif", "EXIF extraction failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return { gps: null, dateTaken: null };
   }
 }
 
 /**
- * Parse GPS coordinates from raw EXIF buffer.
- * Searches for GPS data in XMP metadata strings embedded in the EXIF.
+ * Parse GPS coordinates from EXIF buffer using exif-reader.
+ *
+ * Standard EXIF GPS stores coordinates as rational number arrays:
+ *   GPSLatitude: [degrees, minutes, seconds]
+ *   GPSLatitudeRef: "N" or "S"
+ *   GPSLongitude: [degrees, minutes, seconds]
+ *   GPSLongitudeRef: "E" or "W"
+ *
+ * Falls back to regex for XMP-embedded decimal coordinates.
  */
-function parseGpsFromExifBuffer(exifBuffer: Buffer): GpsCoordinates | null {
+function parseGpsFromExif(exifBuffer: Buffer): GpsCoordinates | null {
+  // Method 1: Use exif-reader to properly parse the IFD structure
+  try {
+    const parsed = exifReader(exifBuffer);
+    const gps = parsed?.GPSInfo;
+
+    if (gps) {
+      const latArr = gps.GPSLatitude;
+      const lonArr = gps.GPSLongitude;
+      const latRef = gps.GPSLatitudeRef;
+      const lonRef = gps.GPSLongitudeRef;
+
+      if (latArr && lonArr) {
+        let lat: number;
+        let lon: number;
+
+        if (Array.isArray(latArr) && latArr.length >= 3) {
+          // Rational format: [degrees, minutes, seconds]
+          lat = latArr[0] + latArr[1] / 60 + latArr[2] / 3600;
+          lon = lonArr[0] + lonArr[1] / 60 + lonArr[2] / 3600;
+        } else if (typeof latArr === "number") {
+          lat = latArr;
+          lon = typeof lonArr === "number" ? lonArr : 0;
+        } else {
+          lat = 0;
+          lon = 0;
+        }
+
+        // Apply hemisphere reference
+        if (latRef === "S" || latRef === "s") lat = -lat;
+        if (lonRef === "W" || lonRef === "w") lon = -lon;
+
+        if (lat !== 0 && lon !== 0 && !isNaN(lat) && !isNaN(lon)) {
+          return { latitude: lat, longitude: lon };
+        }
+      }
+    }
+  } catch {
+    // exif-reader failed, try regex fallback
+  }
+
+  // Method 2: Fallback — regex on raw buffer for XMP decimal GPS
   try {
     const text = exifBuffer.toString("latin1");
-
-    // Check if GPS data exists at all
     if (!text.includes("GPS")) return null;
 
-    // Try to find decimal GPS coordinates in XMP metadata
     const latMatch = text.match(/GPSLatitude[>"=\s]*(-?\d+(?:\.\d+)?)/);
     const lonMatch = text.match(/GPSLongitude[>"=\s]*(-?\d+(?:\.\d+)?)/);
 
@@ -77,49 +135,68 @@ function parseGpsFromExifBuffer(exifBuffer: Buffer): GpsCoordinates | null {
         return { latitude: lat, longitude: lon };
       }
     }
-
-    return null;
   } catch {
-    return null;
+    // ignore
   }
+
+  return null;
 }
 
 /**
- * Parse date/time from raw EXIF buffer.
- * EXIF stores dates as "YYYY:MM:DD HH:MM:SS" in DateTimeOriginal or CreateDate tags.
- * Also checks XMP metadata for ISO date strings.
+ * Parse date/time from EXIF buffer using exif-reader, with regex fallback.
+ *
+ * exif-reader returns Date objects for DateTimeOriginal, CreateDate, etc.
+ * Falls back to regex for raw EXIF date strings and XMP date formats.
  */
-function parseDateFromExifBuffer(exifBuffer: Buffer): string | null {
+function parseDateFromExif(exifBuffer: Buffer): string | null {
+  // Method 1: Use exif-reader for proper IFD parsing
+  try {
+    const parsed = exifReader(exifBuffer);
+    const exifData = parsed?.Photo;
+
+    // DateTimeOriginal is the most reliable (when photo was actually taken)
+    const dto = exifData?.DateTimeOriginal || exifData?.CreateDate;
+
+    if (dto instanceof Date && !isNaN(dto.getTime())) {
+      const y = dto.getFullYear();
+      if (y >= 2000 && y <= 2099) {
+        // Format as local ISO string (no timezone — matches EXIF convention)
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${y}-${pad(dto.getMonth() + 1)}-${pad(dto.getDate())}T${pad(dto.getHours())}:${pad(dto.getMinutes())}:${pad(dto.getSeconds())}`;
+      }
+    }
+  } catch {
+    // exif-reader failed, try regex fallback
+  }
+
+  // Method 2: Regex on raw EXIF buffer
   try {
     const text = exifBuffer.toString("latin1");
 
-    // EXIF standard format: "2025:03:12 10:30:00" in DateTimeOriginal tag
-    // The tag appears in binary EXIF as a string after the tag marker
+    // EXIF standard format: "2025:03:12 10:30:00"
     const exifDateMatch = text.match(
       /(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/
     );
     if (exifDateMatch) {
       const [, year, month, day, hour, min, sec] = exifDateMatch;
-      const isoDate = `${year}-${month}-${day}T${hour}:${min}:${sec}`;
-      // Sanity check: year should be reasonable (2000-2099)
       const y = parseInt(year);
       if (y >= 2000 && y <= 2099) {
-        return isoDate;
+        return `${year}-${month}-${day}T${hour}:${min}:${sec}`;
       }
     }
 
-    // XMP format: "2025-03-12T10:30:00" in DateCreated or CreateDate
+    // XMP format: "2025-03-12T10:30:00"
     const xmpDateMatch = text.match(
       /(?:DateCreated|CreateDate|DateTimeOriginal)[>"=\s]*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/
     );
     if (xmpDateMatch) {
       return xmpDateMatch[1];
     }
-
-    return null;
   } catch {
-    return null;
+    // ignore
   }
+
+  return null;
 }
 
 /**

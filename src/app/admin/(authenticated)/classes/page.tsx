@@ -226,11 +226,9 @@ export default async function AdminClassesPage({
           <div className="space-y-3 md:hidden">
             {rows.map((log) => {
               const hasAi = !!log.aiAnalyzedAt;
-              const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
               const dateVerified = isDateVerified(log.aiDateMatch);
               const timeVerified = isTimeVerified(log.aiTimeMatch);
               const hasGps = log.aiConfidenceNotes?.includes("GPS (");
-              const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
 
               return (
                 <Link
@@ -273,10 +271,10 @@ export default async function AdminClassesPage({
                       </p>
                       {/* Verification badges */}
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {orphanageVerified !== null && (
+                        {hasGps && (
                           <VerifiedBadge
-                            verified={orphanageVerified}
-                            label={locationMethod || "AI"}
+                            verified={isOrphanageVerified(log.aiOrphanageMatch) ?? false}
+                            label="GPS"
                             tooltip={log.aiConfidenceNotes || undefined}
                           />
                         )}
@@ -343,11 +341,9 @@ export default async function AdminClassesPage({
               <tbody className="divide-y divide-sand-100">
                 {rows.map((log) => {
                   const hasAi = !!log.aiAnalyzedAt;
-                  const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
                   const dateVerified = isDateVerified(log.aiDateMatch);
                   const timeVerified = isTimeVerified(log.aiTimeMatch);
                   const hasGps = log.aiConfidenceNotes?.includes("GPS (");
-                  const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
 
                   return (
                     <tr key={log.id} className="hover:bg-sand-50">
@@ -390,11 +386,11 @@ export default async function AdminClassesPage({
                       </td>
                       <td className="px-4 py-3 text-sm text-sand-700">
                         <span>{log.orphanageName || log.orphanageId}</span>
-                        {orphanageVerified !== null && (
+                        {hasGps && (
                           <span className="ml-1.5">
                             <VerifiedBadge
-                              verified={orphanageVerified}
-                              label={locationMethod || "AI"}
+                              verified={isOrphanageVerified(log.aiOrphanageMatch) ?? false}
+                              label="GPS"
                               tooltip={log.aiConfidenceNotes || undefined}
                             />
                           </span>
@@ -470,11 +466,7 @@ export default async function AdminClassesPage({
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-sand-400">
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={true} label="GPS" />
-          <span>= GPS verified</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <VerifiedBadge verified={true} label="Vision" />
-          <span>= AI vision verified</span>
+          <span>= GPS location verified</span>
         </span>
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={true} label="Date" />

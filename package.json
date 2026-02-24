@@ -23,6 +23,7 @@
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^2.2.0",
     "drizzle-orm": "^0.45.1",
+    "exif-reader": "^2.0.3",
     "jspdf": "^4.2.0",
     "next": "16.1.6",
     "next-auth": "^5.0.0-beta.30",
