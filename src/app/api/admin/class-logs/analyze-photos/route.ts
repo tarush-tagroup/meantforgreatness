@@ -159,6 +159,8 @@ async function postHandler(req: NextRequest) {
         exifDateTaken: exifDateTaken || null,
         aiDateMatch: dateValidation.dateMatch,
         aiDateNotes: dateValidation.dateNotes,
+        aiTimeMatch: dateValidation.timeMatch,
+        aiTimeNotes: dateValidation.timeNotes,
       })
       .where(eq(classLogs.id, classLogId));
 
