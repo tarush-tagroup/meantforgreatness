@@ -23,21 +23,25 @@ export interface ClassLogPhotoAnalysis {
 export interface DateValidationResult {
   dateMatch: "match" | "mismatch" | "no_exif";
   dateNotes: string;
+  timeMatch: "match" | "mismatch" | "no_time" | "no_exif";
+  timeNotes: string;
 }
 
 /**
  * Validate the EXIF date from a photo against the user-entered class date/time.
- * Returns a match status and human-readable explanation.
+ * Returns separate match statuses for date and time.
  */
 export function validatePhotoDate(
   exifDateTaken: string | null,
   classDate: string, // YYYY-MM-DD
-  classTime: string | null // e.g. "10:00 AM" or "14:00"
+  classTime: string | null // e.g. "09.00-10.00 am", "06:00 PM", "17.00-18.00"
 ): DateValidationResult {
   if (!exifDateTaken) {
     return {
       dateMatch: "no_exif",
-      dateNotes: "No date metadata found in photo. Cannot verify when the photo was taken.",
+      dateNotes: "No date metadata found in photo.",
+      timeMatch: "no_exif",
+      timeNotes: "No time metadata found in photo.",
     };
   }
 
@@ -47,17 +51,25 @@ export function validatePhotoDate(
     return {
       dateMatch: "no_exif",
       dateNotes: `Could not parse photo date: ${exifDateTaken}`,
+      timeMatch: "no_exif",
+      timeNotes: `Could not parse photo time: ${exifDateTaken}`,
     };
   }
 
-  // Extract just the date part from EXIF
   const exifDateStr = exifDateTaken.substring(0, 10); // "2025-03-12"
+  const exifHour = exifDate.getHours();
+  const exifMin = exifDate.getMinutes();
+  const exifTimeStr = `${exifHour}:${String(exifMin).padStart(2, "0")}`;
 
-  // Compare dates
+  // ── Date validation ──
+  let dateMatch: "match" | "mismatch" = "match";
+  let dateNotes: string;
+
   const dateMatches = exifDateStr === classDate;
 
-  if (!dateMatches) {
-    // Check if it's within 1 day (could be timezone difference)
+  if (dateMatches) {
+    dateNotes = `Photo date ${exifDateStr} matches class date.`;
+  } else {
     const exifD = new Date(exifDateStr);
     const classD = new Date(classDate);
     const diffDays = Math.abs(
@@ -65,62 +77,144 @@ export function validatePhotoDate(
     );
 
     if (diffDays <= 1) {
-      return {
-        dateMatch: "match",
-        dateNotes: `Photo taken ${exifDateStr}, class logged ${classDate} (within 1 day — possible timezone difference).`,
-      };
+      dateMatch = "match";
+      dateNotes = `Photo taken ${exifDateStr}, class ${classDate} (within 1 day — timezone difference).`;
+    } else {
+      dateMatch = "mismatch";
+      dateNotes = `Photo taken on ${exifDateStr}, class was ${classDate} (${Math.round(diffDays)} days apart).`;
     }
-
-    return {
-      dateMatch: "mismatch",
-      dateNotes: `Photo was taken on ${exifDateStr} but class was logged for ${classDate} (${Math.round(diffDays)} days apart).`,
-    };
   }
 
-  // Date matches — also check time if available
-  if (classTime) {
-    const exifHour = exifDate.getHours();
-    const classHour = parseTimeToHour(classTime);
+  // ── Time validation ──
+  let timeMatch: "match" | "mismatch" | "no_time" = "no_time";
+  let timeNotes = "No class time entered.";
 
-    if (classHour !== null) {
-      const hourDiff = Math.abs(exifHour - classHour);
-      if (hourDiff <= 2) {
-        return {
-          dateMatch: "match",
-          dateNotes: `Photo taken ${exifDateTaken.replace("T", " ")}, class at ${classTime} on ${classDate}. Date and time match.`,
-        };
+  if (classTime) {
+    const range = parseTimeRange(classTime);
+
+    if (!range) {
+      timeMatch = "no_time";
+      timeNotes = `Could not parse class time: "${classTime}".`;
+    } else {
+      const exifMinutes = exifHour * 60 + exifMin;
+      const rangeStartMin = range.startHour * 60;
+      const rangeEndMin = range.endHour * 60;
+      const tolerance = 90; // ±90 minutes
+
+      if (
+        exifMinutes >= rangeStartMin - tolerance &&
+        exifMinutes <= rangeEndMin + tolerance
+      ) {
+        timeMatch = "match";
+        timeNotes = `Photo at ${exifTimeStr}, class ${classTime}. Within range.`;
       } else {
-        return {
-          dateMatch: "mismatch",
-          dateNotes: `Photo date matches (${exifDateStr}) but time differs: photo at ${exifDate.getHours()}:${String(exifDate.getMinutes()).padStart(2, "0")}, class at ${classTime} (${hourDiff}h apart).`,
-        };
+        timeMatch = "mismatch";
+        const diffMin = exifMinutes < rangeStartMin - tolerance
+          ? rangeStartMin - exifMinutes
+          : exifMinutes - rangeEndMin;
+        const diffH = Math.floor(diffMin / 60);
+        const diffM = diffMin % 60;
+        const diffStr = diffH > 0
+          ? `${diffH}h${diffM > 0 ? ` ${diffM}m` : ""}`
+          : `${diffM}m`;
+        timeNotes = `Photo at ${exifTimeStr}, class ${classTime} (${diffStr} outside range).`;
       }
     }
   }
 
-  return {
-    dateMatch: "match",
-    dateNotes: `Photo date ${exifDateStr} matches class date ${classDate}.`,
-  };
+  return { dateMatch, dateNotes, timeMatch, timeNotes };
 }
 
 /**
- * Parse a time string to an hour (0-23).
+ * Parse a class time string into a start/end hour range.
+ * Handles many real-world formats:
+ *   "09.00-10.00 am"  → { startHour: 9, endHour: 10 }
+ *   "20.00-21.00 pm"  → { startHour: 20, endHour: 21 }
+ *   "3.00 pm - 6.00 pm" → { startHour: 15, endHour: 18 }
+ *   "06:00 PM"         → { startHour: 18, endHour: 18 }
+ *   "17.00-18.00"      → { startHour: 17, endHour: 18 }
+ *   "14:00"            → { startHour: 14, endHour: 14 }
  */
-function parseTimeToHour(time: string): number | null {
-  // "10:00 AM", "2:30 PM"
-  const amPm = time.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
-  if (amPm) {
-    let hour = parseInt(amPm[1]);
-    const isPm = amPm[3].toLowerCase() === "pm";
-    if (isPm && hour !== 12) hour += 12;
-    if (!isPm && hour === 12) hour = 0;
-    return hour;
+function parseTimeRange(
+  time: string
+): { startHour: number; endHour: number } | null {
+  // Normalize: replace dots with colons for consistent parsing
+  const normalized = time.replace(/\./g, ":");
+
+  // Check if there's a range separator (hyphen with optional spaces)
+  const rangeParts = normalized.split(/\s*-\s*/);
+
+  if (rangeParts.length === 2) {
+    // Range format: "09:00-10:00 am" or "3:00 pm - 6:00 pm" or "17:00-18:00"
+    const startStr = rangeParts[0].trim();
+    let endStr = rangeParts[1].trim();
+
+    // Detect trailing am/pm on the end part
+    const trailingAmPm = endStr.match(/\s*(am|pm)\s*$/i);
+    const suffix = trailingAmPm ? trailingAmPm[1].toLowerCase() : null;
+    if (trailingAmPm) {
+      endStr = endStr.replace(/\s*(am|pm)\s*$/i, "").trim();
+    }
+
+    // Also check if start part has its own am/pm
+    const startAmPm = startStr.match(/\s*(am|pm)\s*$/i);
+    const startSuffix = startAmPm ? startAmPm[1].toLowerCase() : null;
+    const cleanStart = startAmPm
+      ? startStr.replace(/\s*(am|pm)\s*$/i, "").trim()
+      : startStr;
+
+    const startHour = parseSingleTime(cleanStart, startSuffix || suffix);
+    const endHour = parseSingleTime(endStr, suffix);
+
+    if (startHour !== null && endHour !== null) {
+      return { startHour, endHour };
+    }
+    // If only one parsed, try the other as-is
+    if (startHour !== null) return { startHour, endHour: startHour };
+    if (endHour !== null) return { startHour: endHour, endHour };
+    return null;
   }
-  // "14:00"
-  const h24 = time.match(/(\d{1,2}):(\d{2})/);
-  if (h24) return parseInt(h24[1]);
+
+  // Single time: "06:00 PM", "14:00", "10:00 am"
+  const singleStr = normalized.trim();
+  const singleAmPm = singleStr.match(/\s*(am|pm)\s*$/i);
+  const singleSuffix = singleAmPm ? singleAmPm[1].toLowerCase() : null;
+  const cleanSingle = singleAmPm
+    ? singleStr.replace(/\s*(am|pm)\s*$/i, "").trim()
+    : singleStr;
+
+  const hour = parseSingleTime(cleanSingle, singleSuffix);
+  if (hour !== null) return { startHour: hour, endHour: hour };
+
   return null;
+}
+
+/**
+ * Parse a single time value (no am/pm suffix — that's passed separately).
+ * "09:00" → 9, "3:30" → 3, "17:00" → 17
+ * With suffix "pm": "3:00" → 15, "12:00" → 12
+ * With suffix "am": "12:00" → 0, "9:00" → 9
+ */
+function parseSingleTime(
+  timeStr: string,
+  amPm: string | null
+): number | null {
+  const match = timeStr.match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if (!match) return null;
+
+  let hour = parseInt(match[1]);
+  if (isNaN(hour) || hour < 0 || hour > 23) return null;
+
+  if (amPm) {
+    // 12-hour conversion — but only if hour ≤ 12
+    if (hour <= 12) {
+      if (amPm === "pm" && hour !== 12) hour += 12;
+      if (amPm === "am" && hour === 12) hour = 0;
+    }
+    // If hour > 12, it's already 24h format; ignore am/pm (e.g. "20.00-21.00 pm")
+  }
+
+  return hour;
 }
 
 /** Token usage from a single API call */

@@ -109,6 +109,8 @@ export const classLogs = pgTable(
     exifDateTaken: varchar("exif_date_taken", { length: 30 }), // ISO 8601 from EXIF, e.g. "2025-03-12T10:30:00"
     aiDateMatch: varchar("ai_date_match", { length: 20 }), // "match" | "mismatch" | "no_exif"
     aiDateNotes: text("ai_date_notes"), // human-readable explanation of date validation
+    aiTimeMatch: varchar("ai_time_match", { length: 20 }), // "match" | "mismatch" | "no_time" | "no_exif"
+    aiTimeNotes: text("ai_time_notes"), // human-readable explanation of time validation
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

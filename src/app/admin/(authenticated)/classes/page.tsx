@@ -21,26 +21,40 @@ function isOrphanageVerified(aiMatch: string | null): boolean | null {
 
 /**
  * Check date verification status from EXIF metadata comparison.
- * Returns null if no date verification data, true if "match", false if "mismatch".
  */
 function isDateVerified(aiDateMatch: string | null): boolean | null {
   if (!aiDateMatch || aiDateMatch === "no_exif") return null;
   return aiDateMatch === "match";
 }
 
+/**
+ * Check time verification status from EXIF metadata comparison.
+ */
+function isTimeVerified(aiTimeMatch: string | null): boolean | null {
+  if (!aiTimeMatch || aiTimeMatch === "no_exif" || aiTimeMatch === "no_time") return null;
+  return aiTimeMatch === "match";
+}
+
 function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean; label?: string; tooltip?: string }) {
-  if (verified) {
-    return (
-      <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-green-700 bg-green-50 px-1 py-0.5 rounded" title={tooltip || `Verified by ${label}`}>
-        <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>
+  const checkIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>;
+  const warnIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
+
+  return (
+    <span className="relative group/badge inline-flex">
+      <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded cursor-default ${
+        verified
+          ? "text-green-700 bg-green-50"
+          : "text-amber-700 bg-amber-50"
+      }`}>
+        {verified ? checkIcon : warnIcon}
         {label}
       </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-sage-700 bg-sage-50 px-1 py-0.5 rounded" title={tooltip || `Could not be verified by ${label}`}>
-      <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-      {label}
+      {tooltip && (
+        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[220px] rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-center shadow-lg">
+          {tooltip}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-sand-800" />
+        </span>
+      )}
     </span>
   );
 }
@@ -93,6 +107,8 @@ export default async function AdminClassesPage({
       aiAnalyzedAt: classLogs.aiAnalyzedAt,
       aiDateMatch: classLogs.aiDateMatch,
       aiDateNotes: classLogs.aiDateNotes,
+      aiTimeMatch: classLogs.aiTimeMatch,
+      aiTimeNotes: classLogs.aiTimeNotes,
       aiConfidenceNotes: classLogs.aiConfidenceNotes,
       createdAt: classLogs.createdAt,
     })
@@ -173,6 +189,7 @@ export default async function AdminClassesPage({
               const hasAi = !!log.aiAnalyzedAt;
               const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
               const dateVerified = isDateVerified(log.aiDateMatch);
+              const timeVerified = isTimeVerified(log.aiTimeMatch);
               const hasGps = log.aiConfidenceNotes?.includes("GPS (");
               const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
 
@@ -223,7 +240,10 @@ export default async function AdminClassesPage({
                           />
                         )}
                         {dateVerified !== null && (
-                          <VerifiedBadge verified={dateVerified} label="EXIF" tooltip={log.aiDateNotes || undefined} />
+                          <VerifiedBadge verified={dateVerified} label="Date" tooltip={log.aiDateNotes || undefined} />
+                        )}
+                        {timeVerified !== null && (
+                          <VerifiedBadge verified={timeVerified} label="Time" tooltip={log.aiTimeNotes || undefined} />
                         )}
                         {hasAi && log.aiKidsCount != null && (
                           <span
@@ -287,6 +307,7 @@ export default async function AdminClassesPage({
                   const hasAi = !!log.aiAnalyzedAt;
                   const orphanageVerified = isOrphanageVerified(log.aiOrphanageMatch);
                   const dateVerified = isDateVerified(log.aiDateMatch);
+                  const timeVerified = isTimeVerified(log.aiTimeMatch);
                   const hasGps = log.aiConfidenceNotes?.includes("GPS (");
                   const locationMethod = hasGps ? "GPS" : hasAi ? "Vision" : null;
 
@@ -315,7 +336,7 @@ export default async function AdminClassesPage({
                         <span>{log.classDate}</span>
                         {dateVerified !== null && (
                           <span className="ml-1.5">
-                            <VerifiedBadge verified={dateVerified} label="EXIF" tooltip={log.aiDateNotes || undefined} />
+                            <VerifiedBadge verified={dateVerified} label="Date" tooltip={log.aiDateNotes || undefined} />
                           </span>
                         )}
                       </td>
@@ -352,6 +373,11 @@ export default async function AdminClassesPage({
                       </td>
                       <td className="px-4 py-3 text-sm text-sand-500 whitespace-nowrap">
                         <span>{log.classTime || "\u2014"}</span>
+                        {timeVerified !== null && (
+                          <span className="ml-1.5">
+                            <VerifiedBadge verified={timeVerified} label="Time" tooltip={log.aiTimeNotes || undefined} />
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-sand-500 max-w-xs truncate">
                         {log.notes || "\u2014"}
@@ -411,11 +437,15 @@ export default async function AdminClassesPage({
           <span>= AI vision verified</span>
         </span>
         <span className="flex items-center gap-1">
-          <VerifiedBadge verified={true} label="EXIF" />
+          <VerifiedBadge verified={true} label="Date" />
           <span>= Photo date matches</span>
         </span>
         <span className="flex items-center gap-1">
-          <VerifiedBadge verified={false} label="AI" />
+          <VerifiedBadge verified={true} label="Time" />
+          <span>= Photo time matches</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <VerifiedBadge verified={false} label="" />
           <span>= Could not verify</span>
         </span>
       </div>
