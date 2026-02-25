@@ -89,7 +89,7 @@ function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean;
         {label}
       </span>
       {tooltip && (
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[220px] rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-center shadow-lg">
+        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[320px] rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-center shadow-lg">
           {tooltip}
           <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-sand-800" />
         </span>
