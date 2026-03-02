@@ -25,17 +25,20 @@ export default function ClassLogFilters({
     (key: string, value: string) => {
       const params = new URLSearchParams();
       const filters = { ...currentFilters, [key]: value || undefined };
+      // Exclude page so filters always reset to page 1
       for (const [k, v] of Object.entries(filters)) {
-        if (v) params.set(k, v);
+        if (v && k !== "page") params.set(k, v);
       }
-      // Reset to page 1 when filters change
-      router.push(`/admin/classes?${params.toString()}`);
+      const url = `/admin/classes?${params.toString()}`;
+      router.push(url);
+      router.refresh();
     },
     [currentFilters, router]
   );
 
   const clearFilters = useCallback(() => {
     router.push("/admin/classes");
+    router.refresh();
   }, [router]);
 
   const hasFilters =
