@@ -7,6 +7,7 @@ import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import Link from "next/link";
 import Image from "next/image";
 import ClassLogFilters from "./ClassLogFilters";
+import { parseTimeRange } from "@/lib/ai-photo-analysis";
 
 export const dynamic = "force-dynamic";
 
@@ -75,44 +76,94 @@ function formatStartTime(classTime: string | null): string | null {
 }
 
 /**
- * Compute overall AI verification score from available metrics.
- * Missing data = neutral (not counted). Wrong data = fail.
+ * Compute traffic light verification level.
+ * RED = "Audit required", YELLOW = "Check", GREEN = "Verified".
+ * Missing data = neutral. Shows the most severe flag found.
  */
-function computeVerificationScore(log: {
+function computeVerificationLevel(log: {
   aiDateMatch: string | null;
   aiTimeMatch: string | null;
   aiGpsDistance: number | null;
-  aiOrphanageMatch: string | null;
   aiKidsCount: number | null;
   studentCount: number | null;
-}): { verified: number; total: number } | null {
-  let verified = 0;
-  let total = 0;
+  exifDateTaken: string | null;
+  classTime: string | null;
+}): { level: "green" | "yellow" | "red"; label: string; reasons: string[] } | null {
+  let level: "green" | "yellow" | "red" = "green";
+  const reasons: string[] = [];
+  let hasAnyMetric = false;
 
-  // Metric 1: Date & Time (combined)
+  // Helper to escalate severity
+  const escalate = (to: "yellow" | "red", reason: string) => {
+    reasons.push(reason);
+    if (to === "red") level = "red";
+    else if (to === "yellow" && level !== "red") level = "yellow";
+  };
+
+  // ── Date: mismatch = RED ──
   const dateAvailable = log.aiDateMatch != null && log.aiDateMatch !== "no_exif";
-  const timeAvailable = log.aiTimeMatch != null && log.aiTimeMatch !== "no_exif" && log.aiTimeMatch !== "no_time";
-  if (dateAvailable || timeAvailable) {
-    total += 1;
-    const datePasses = !dateAvailable || log.aiDateMatch === "match";
-    const timePasses = !timeAvailable || log.aiTimeMatch === "match";
-    if (datePasses && timePasses) verified += 1;
+  if (dateAvailable) {
+    hasAnyMetric = true;
+    if (log.aiDateMatch === "mismatch") {
+      escalate("red", "Date mismatch");
+    }
   }
 
-  // Metric 2: GPS
+  // ── Time: compute actual diff for granular thresholds ──
+  if (log.exifDateTaken && log.classTime) {
+    const exifDate = new Date(log.exifDateTaken);
+    if (!isNaN(exifDate.getTime())) {
+      const range = parseTimeRange(log.classTime);
+      if (range) {
+        hasAnyMetric = true;
+        const exifMinutes = exifDate.getHours() * 60 + exifDate.getMinutes();
+        const rangeStartMin = range.startHour * 60;
+        const rangeEndMin = range.endHour * 60;
+
+        // Compute gap from the class window (0 if inside)
+        let gapMin = 0;
+        if (exifMinutes < rangeStartMin) gapMin = rangeStartMin - exifMinutes;
+        else if (exifMinutes > rangeEndMin) gapMin = exifMinutes - rangeEndMin;
+
+        if (gapMin > 240) {
+          escalate("red", "Time >4h off");
+        } else if (gapMin > 120) {
+          escalate("yellow", "Time 2–4h off");
+        }
+      }
+    }
+  } else if (log.aiTimeMatch != null && log.aiTimeMatch !== "no_exif" && log.aiTimeMatch !== "no_time") {
+    // Fallback: no raw data but we have the match result
+    hasAnyMetric = true;
+    // We can't compute exact diff, so use match/mismatch as rough signal
+    // mismatch means >90min off, treat as yellow
+    if (log.aiTimeMatch === "mismatch") {
+      escalate("yellow", "Time outside class range");
+    }
+  }
+
+  // ── GPS: >500m = RED ──
   if (log.aiGpsDistance != null) {
-    total += 1;
-    if (log.aiOrphanageMatch === "high" || log.aiOrphanageMatch === "likely") verified += 1;
+    hasAnyMetric = true;
+    if (log.aiGpsDistance > 500) {
+      escalate("red", `GPS ${log.aiGpsDistance}m away`);
+    }
   }
 
-  // Metric 3: Child count
-  if (log.aiKidsCount != null && log.studentCount != null) {
-    total += 1;
-    if (Math.abs(log.aiKidsCount - log.studentCount) <= 3) verified += 1;
+  // ── Kids count: >50% or >5 diff = YELLOW ──
+  if (log.aiKidsCount != null && log.studentCount != null && log.studentCount > 0) {
+    hasAnyMetric = true;
+    const diff = Math.abs(log.aiKidsCount - log.studentCount);
+    const pctDiff = diff / log.studentCount;
+    if (diff > 5 || pctDiff > 0.5) {
+      escalate("yellow", `Kid count off (${log.studentCount} reported, ${log.aiKidsCount} detected)`);
+    }
   }
 
-  if (total === 0) return null;
-  return { verified, total };
+  if (!hasAnyMetric) return null;
+
+  const labels = { green: "Verified", yellow: "Check", red: "Audit required" };
+  return { level, label: labels[level], reasons };
 }
 
 function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean; label?: string; tooltip?: string }) {
@@ -131,6 +182,29 @@ function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean;
       </span>
       {tooltip && (
         <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-sm rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-left break-words shadow-lg">
+          {tooltip}
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-sand-800" />
+        </span>
+      )}
+    </span>
+  );
+}
+
+const levelStyles = {
+  green: "text-green-700 bg-green-50",
+  yellow: "text-amber-700 bg-amber-50",
+  red: "text-red-700 bg-red-50",
+} as const;
+
+function VerificationPill({ level, label, reasons }: { level: "green" | "yellow" | "red"; label: string; reasons: string[] }) {
+  const tooltip = reasons.length > 0 ? reasons.join(" · ") : undefined;
+  return (
+    <span className="relative group/pill inline-flex">
+      <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-default ${levelStyles[level]}`}>
+        {label}
+      </span>
+      {tooltip && (
+        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-sm rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/pill:opacity-100 z-50 text-left break-words shadow-lg">
           {tooltip}
           <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-sand-800" />
         </span>
@@ -191,6 +265,7 @@ export default async function AdminClassesPage({
       aiTimeNotes: classLogs.aiTimeNotes,
       aiConfidenceNotes: classLogs.aiConfidenceNotes,
       aiGpsDistance: classLogs.aiGpsDistance,
+      exifDateTaken: classLogs.exifDateTaken,
       createdAt: classLogs.createdAt,
     })
     .from(classLogs)
@@ -271,7 +346,7 @@ export default async function AdminClassesPage({
               const dateVerified = isDateVerified(log.aiDateMatch);
               const timeVerified = isTimeVerified(log.aiTimeMatch);
               const hasGps = log.aiGpsDistance != null;
-              const score = computeVerificationScore(log);
+              const vLevel = computeVerificationLevel(log);
 
               return (
                 <Link
@@ -314,16 +389,8 @@ export default async function AdminClassesPage({
                       </p>
                       {/* Verification badges */}
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {score && (
-                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                            score.verified === score.total
-                              ? "text-green-700 bg-green-50"
-                              : score.verified > 0
-                              ? "text-amber-700 bg-amber-50"
-                              : "text-red-700 bg-red-50"
-                          }`}>
-                            {score.verified}/{score.total}
-                          </span>
+                        {vLevel && (
+                          <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
                         )}
                         {hasGps && (
                           <VerifiedBadge
@@ -387,7 +454,7 @@ export default async function AdminClassesPage({
                     Students
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Score
+                    Verified
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Notes
@@ -401,7 +468,7 @@ export default async function AdminClassesPage({
                   const dateVerified = isDateVerified(log.aiDateMatch);
                   const timeVerified = isTimeVerified(log.aiTimeMatch);
                   const hasGps = log.aiGpsDistance != null;
-                  const score = computeVerificationScore(log);
+                  const vLevel = computeVerificationLevel(log);
 
                   return (
                     <tr key={log.id} className="hover:bg-sand-50">
@@ -474,16 +541,8 @@ export default async function AdminClassesPage({
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {score ? (
-                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                            score.verified === score.total
-                              ? "text-green-700 bg-green-50"
-                              : score.verified > 0
-                              ? "text-amber-700 bg-amber-50"
-                              : "text-red-700 bg-red-50"
-                          }`}>
-                            {score.verified}/{score.total}
-                          </span>
+                        {vLevel ? (
+                          <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
                         ) : (
                           <span className="text-sand-400">{"\u2014"}</span>
                         )}
@@ -538,24 +597,29 @@ export default async function AdminClassesPage({
       {/* Legend for AI badges */}
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-sand-400">
         <span className="flex items-center gap-1">
-          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-green-700 bg-green-50">2/3</span>
-          <span>= Verification score</span>
+          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-green-700 bg-green-50">Verified</span>
+          <span>= All checks passed</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">Check</span>
+          <span>= Minor issue</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-red-700 bg-red-50">Audit required</span>
+          <span>= Needs review</span>
         </span>
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={true} label="GPS" />
-          <span>= GPS location verified</span>
+          <span>= GPS match</span>
         </span>
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={true} label="Date" />
-          <span>= Photo date matches</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <VerifiedBadge verified={true} label="Time" />
-          <span>= Photo time matches</span>
+          / <VerifiedBadge verified={true} label="Time" />
+          <span>= EXIF match</span>
         </span>
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={false} label="" />
-          <span>= Could not verify</span>
+          <span>= Not verified</span>
         </span>
       </div>
     </div>
