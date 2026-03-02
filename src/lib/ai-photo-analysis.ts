@@ -65,24 +65,16 @@ export function validatePhotoDate(
   let dateMatch: "match" | "mismatch" = "match";
   let dateNotes: string;
 
-  const dateMatches = exifDateStr === classDate;
-
-  if (dateMatches) {
+  if (exifDateStr === classDate) {
     dateNotes = `Photo date ${exifDateStr} matches class date.`;
   } else {
+    dateMatch = "mismatch";
     const exifD = new Date(exifDateStr);
     const classD = new Date(classDate);
-    const diffDays = Math.abs(
-      (exifD.getTime() - classD.getTime()) / (1000 * 60 * 60 * 24)
+    const diffDays = Math.round(
+      Math.abs((exifD.getTime() - classD.getTime()) / (1000 * 60 * 60 * 24))
     );
-
-    if (diffDays <= 1) {
-      dateMatch = "match";
-      dateNotes = `Photo taken ${exifDateStr}, class ${classDate} (within 1 day — timezone difference).`;
-    } else {
-      dateMatch = "mismatch";
-      dateNotes = `Photo taken on ${exifDateStr}, class was ${classDate} (${Math.round(diffDays)} days apart).`;
-    }
+    dateNotes = `Photo taken on ${exifDateStr}, class was ${classDate} (${diffDays} day${diffDays !== 1 ? "s" : ""} apart).`;
   }
 
   // ── Time validation ──

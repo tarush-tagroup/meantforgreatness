@@ -74,6 +74,47 @@ function formatStartTime(classTime: string | null): string | null {
   return `${h12}:${min} ${period}`;
 }
 
+/**
+ * Compute overall AI verification score from available metrics.
+ * Missing data = neutral (not counted). Wrong data = fail.
+ */
+function computeVerificationScore(log: {
+  aiDateMatch: string | null;
+  aiTimeMatch: string | null;
+  aiGpsDistance: number | null;
+  aiOrphanageMatch: string | null;
+  aiKidsCount: number | null;
+  studentCount: number | null;
+}): { verified: number; total: number } | null {
+  let verified = 0;
+  let total = 0;
+
+  // Metric 1: Date & Time (combined)
+  const dateAvailable = log.aiDateMatch != null && log.aiDateMatch !== "no_exif";
+  const timeAvailable = log.aiTimeMatch != null && log.aiTimeMatch !== "no_exif" && log.aiTimeMatch !== "no_time";
+  if (dateAvailable || timeAvailable) {
+    total += 1;
+    const datePasses = !dateAvailable || log.aiDateMatch === "match";
+    const timePasses = !timeAvailable || log.aiTimeMatch === "match";
+    if (datePasses && timePasses) verified += 1;
+  }
+
+  // Metric 2: GPS
+  if (log.aiGpsDistance != null) {
+    total += 1;
+    if (log.aiOrphanageMatch === "high" || log.aiOrphanageMatch === "likely") verified += 1;
+  }
+
+  // Metric 3: Child count
+  if (log.aiKidsCount != null && log.studentCount != null) {
+    total += 1;
+    if (Math.abs(log.aiKidsCount - log.studentCount) <= 3) verified += 1;
+  }
+
+  if (total === 0) return null;
+  return { verified, total };
+}
+
 function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean; label?: string; tooltip?: string }) {
   const checkIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>;
   const warnIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
@@ -89,7 +130,7 @@ function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean;
         {label}
       </span>
       {tooltip && (
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-[320px] rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-center shadow-lg">
+        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-sm rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-left break-words shadow-lg">
           {tooltip}
           <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-sand-800" />
         </span>
@@ -149,6 +190,7 @@ export default async function AdminClassesPage({
       aiTimeMatch: classLogs.aiTimeMatch,
       aiTimeNotes: classLogs.aiTimeNotes,
       aiConfidenceNotes: classLogs.aiConfidenceNotes,
+      aiGpsDistance: classLogs.aiGpsDistance,
       createdAt: classLogs.createdAt,
     })
     .from(classLogs)
@@ -228,7 +270,8 @@ export default async function AdminClassesPage({
               const hasAi = !!log.aiAnalyzedAt;
               const dateVerified = isDateVerified(log.aiDateMatch);
               const timeVerified = isTimeVerified(log.aiTimeMatch);
-              const hasGps = log.aiConfidenceNotes?.includes("GPS (");
+              const hasGps = log.aiGpsDistance != null;
+              const score = computeVerificationScore(log);
 
               return (
                 <Link
@@ -271,11 +314,22 @@ export default async function AdminClassesPage({
                       </p>
                       {/* Verification badges */}
                       <div className="flex flex-wrap gap-1 mt-1.5">
+                        {score && (
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                            score.verified === score.total
+                              ? "text-green-700 bg-green-50"
+                              : score.verified > 0
+                              ? "text-amber-700 bg-amber-50"
+                              : "text-red-700 bg-red-50"
+                          }`}>
+                            {score.verified}/{score.total}
+                          </span>
+                        )}
                         {hasGps && (
                           <VerifiedBadge
                             verified={isOrphanageVerified(log.aiOrphanageMatch) ?? false}
                             label="GPS"
-                            tooltip={log.aiConfidenceNotes || undefined}
+                            tooltip={`${log.aiGpsDistance}m from orphanage`}
                           />
                         )}
                         {dateVerified !== null && (
@@ -333,6 +387,9 @@ export default async function AdminClassesPage({
                     Students
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                     Notes
                   </th>
                   <th className="px-4 py-3"></th>
@@ -343,7 +400,8 @@ export default async function AdminClassesPage({
                   const hasAi = !!log.aiAnalyzedAt;
                   const dateVerified = isDateVerified(log.aiDateMatch);
                   const timeVerified = isTimeVerified(log.aiTimeMatch);
-                  const hasGps = log.aiConfidenceNotes?.includes("GPS (");
+                  const hasGps = log.aiGpsDistance != null;
+                  const score = computeVerificationScore(log);
 
                   return (
                     <tr key={log.id} className="hover:bg-sand-50">
@@ -391,7 +449,7 @@ export default async function AdminClassesPage({
                             <VerifiedBadge
                               verified={isOrphanageVerified(log.aiOrphanageMatch) ?? false}
                               label="GPS"
-                              tooltip={log.aiConfidenceNotes || undefined}
+                              tooltip={`${log.aiGpsDistance}m from orphanage`}
                             />
                           </span>
                         )}
@@ -413,6 +471,21 @@ export default async function AdminClassesPage({
                           >
                             ({log.aiKidsCount})
                           </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm whitespace-nowrap">
+                        {score ? (
+                          <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                            score.verified === score.total
+                              ? "text-green-700 bg-green-50"
+                              : score.verified > 0
+                              ? "text-amber-700 bg-amber-50"
+                              : "text-red-700 bg-red-50"
+                          }`}>
+                            {score.verified}/{score.total}
+                          </span>
+                        ) : (
+                          <span className="text-sand-400">{"\u2014"}</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm text-sand-500 max-w-xs truncate">
@@ -464,6 +537,10 @@ export default async function AdminClassesPage({
 
       {/* Legend for AI badges */}
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-sand-400">
+        <span className="flex items-center gap-1">
+          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-green-700 bg-green-50">2/3</span>
+          <span>= Verification score</span>
+        </span>
         <span className="flex items-center gap-1">
           <VerifiedBadge verified={true} label="GPS" />
           <span>= GPS location verified</span>
