@@ -127,7 +127,7 @@ export function validatePhotoDate(
  *   "17.00-18.00"      → { startHour: 17, endHour: 18 }
  *   "14:00"            → { startHour: 14, endHour: 14 }
  */
-function parseTimeRange(
+export function parseTimeRange(
   time: string
 ): { startHour: number; endHour: number } | null {
   // Normalize: replace dots with colons for consistent parsing
