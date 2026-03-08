@@ -1,20 +1,30 @@
 "use client";
 
-import posthog from "posthog-js";
+import posthog, { PostHog } from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
-import { useEffect, Suspense } from "react";
+import { useEffect, useRef, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-if (
-  typeof window !== "undefined" &&
-  process.env.NEXT_PUBLIC_POSTHOG_KEY
-) {
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+/** Cache PostHog instances by API key so we never double-init */
+const instances = new Map<string, PostHog>();
+
+function getOrCreateInstance(apiKey: string, apiHost: string): PostHog {
+  if (instances.has(apiKey)) return instances.get(apiKey)!;
+
+  // First key uses the default singleton; subsequent keys get a named instance
+  const isFirst = instances.size === 0;
+  const ph = isFirst ? posthog : new PostHog();
+
+  ph.init(apiKey, {
+    api_host: apiHost,
     person_profiles: "identified_only",
-    capture_pageview: false, // we handle this manually below
+    capture_pageview: false,
     capture_pageleave: true,
+    ...(isFirst ? {} : { name: apiKey }),
   });
+
+  instances.set(apiKey, ph);
+  return ph;
 }
 
 function PostHogPageView() {
@@ -34,17 +44,41 @@ function PostHogPageView() {
   return null;
 }
 
+/**
+ * Wrap a subtree with PostHog analytics.
+ *
+ * - Public site + donor portal: uses NEXT_PUBLIC_POSTHOG_KEY (default)
+ * - Admin portal: uses NEXT_PUBLIC_POSTHOG_ADMIN_KEY
+ *
+ * Pass `apiKey` and optionally `apiHost` to override the defaults.
+ */
 export default function PostHogProvider({
   children,
+  apiKey,
+  apiHost,
 }: {
   children: React.ReactNode;
+  apiKey?: string;
+  apiHost?: string;
 }) {
-  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  const key = apiKey || process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const host =
+    apiHost ||
+    process.env.NEXT_PUBLIC_POSTHOG_HOST ||
+    "https://us.i.posthog.com";
+
+  const clientRef = useRef<PostHog | null>(null);
+
+  if (typeof window !== "undefined" && key && !clientRef.current) {
+    clientRef.current = getOrCreateInstance(key, host);
+  }
+
+  if (!key || !clientRef.current) {
     return <>{children}</>;
   }
 
   return (
-    <PHProvider client={posthog}>
+    <PHProvider client={clientRef.current}>
       <Suspense fallback={null}>
         <PostHogPageView />
       </Suspense>

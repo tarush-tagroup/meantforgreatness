@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
-import PostHogProvider from "@/components/PostHogProvider";
 import ErrorReporter from "@/components/ErrorReporter";
 import PageViewTracker from "@/components/PageViewTracker";
 import "./globals.css";
@@ -51,9 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} antialiased`}>
-        <PostHogProvider>
-          {children}
-        </PostHogProvider>
+        {children}
         <Analytics />
         <ErrorReporter />
         <PageViewTracker />
