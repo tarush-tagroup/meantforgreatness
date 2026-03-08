@@ -30,13 +30,24 @@ The centralized logs capture: Stripe checkout/webhooks, contact form/email (Rese
 - **Permissions:** Role-based (admin, teacher_manager, donor_manager) at `src/lib/permissions.ts`
 - **Monitor:** GitHub Actions runs every 6h, checks Vercel + centralized logs, auto-fixes with Claude
 
+## Deployment — CRITICAL
+
+**NEVER deploy directly with `npx vercel --prod`.** The only way to deploy is:
+
+1. Create a feature branch and commit your changes
+2. Push the branch and open a PR (`gh pr create`)
+3. Wait for all CI checks to pass
+4. Merge the PR into `main`
+5. Vercel auto-deploys from `main` — verify the deployment succeeds in the Vercel dashboard
+
+This ensures code review, CI validation, and a clean git history. Direct deploys bypass checks and can break production.
+
 ## Common Commands
 
 ```bash
-npm run build          # Build
+npm run build          # Build (local verification before pushing)
 npx vitest run         # Tests
 npx drizzle-kit generate && npx drizzle-kit migrate  # DB migrations
-npx vercel --prod      # Deploy to production
 ```
 
 ## Environment Variables
