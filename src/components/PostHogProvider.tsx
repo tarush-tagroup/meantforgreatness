@@ -2,7 +2,7 @@
 
 import posthog, { PostHog } from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
-import { useEffect, useRef, Suspense } from "react";
+import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 /** Cache PostHog instances by API key so we never double-init */
@@ -67,18 +67,14 @@ export default function PostHogProvider({
     process.env.NEXT_PUBLIC_POSTHOG_HOST ||
     "https://us.i.posthog.com";
 
-  const clientRef = useRef<PostHog | null>(null);
-
-  if (typeof window !== "undefined" && key && !clientRef.current) {
-    clientRef.current = getOrCreateInstance(key, host);
-  }
-
-  if (!key || !clientRef.current) {
+  if (typeof window === "undefined" || !key) {
     return <>{children}</>;
   }
 
+  const client = getOrCreateInstance(key, host);
+
   return (
-    <PHProvider client={clientRef.current}>
+    <PHProvider client={client}>
       <Suspense fallback={null}>
         <PostHogPageView />
       </Suspense>
