@@ -73,7 +73,6 @@ async function seed() {
       longitude: 115.1777757,
       studentCount: 48,
       classesPerWeek: 15,
-      hoursPerWeek: 15,
       runningSince: "September 2024",
       description:
         "Our largest program with 48 students across 5 class levels. Seeds of Hope runs 15 classes per week, Monday through Friday, covering everything from beginner Kids groups to Upper Intermediate level. This orphanage has been part of our program since the very beginning.",
@@ -110,7 +109,6 @@ async function seed() {
       longitude: 115.1598903,
       studentCount: 25,
       classesPerWeek: 4,
-      curriculum: "English for Everyone – Level 2",
       description:
         'Sekar Pengharapan serves 25 students in three focused class groups. Using the structured "English for Everyone – Level 2" curriculum, students progress through grammar, vocabulary, and conversation skills across four classes per week.',
       classGroupsData: [

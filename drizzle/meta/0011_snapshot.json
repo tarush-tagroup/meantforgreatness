@@ -1,6 +1,6 @@
 {
-  "id": "300b2497-f6e8-40f0-a3c6-34191ca39083",
-  "prevId": "ccfc0058-f7b2-429f-94a3-26e58380e34e",
+  "id": "cce1094a-d624-4fff-a9f3-38ed56866f76",
+  "prevId": "b4fe8d1a-4954-4c21-91b5-2903deaaef12",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -601,6 +601,18 @@
         },
         "ai_date_notes": {
           "name": "ai_date_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_time_match": {
+          "name": "ai_time_match",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_time_notes": {
+          "name": "ai_time_notes",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1409,6 +1421,12 @@
           "notNull": true,
           "default": 0
         },
+        "receipt_url": {
+          "name": "receipt_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "sort_order": {
           "name": "sort_order",
           "type": "integer",
@@ -1667,6 +1685,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "class_group_id": {
+          "name": "class_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1690,6 +1714,19 @@
           "tableTo": "orphanages",
           "columnsFrom": [
             "orphanage_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "kids_class_group_id_class_groups_id_fk": {
+          "name": "kids_class_group_id_class_groups_id_fk",
+          "tableFrom": "kids",
+          "tableTo": "class_groups",
+          "columnsFrom": [
+            "class_group_id"
           ],
           "columnsTo": [
             "id"
@@ -1846,12 +1883,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "curriculum": {
-          "name": "curriculum",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "running_since": {
           "name": "running_since",
           "type": "varchar(50)",
@@ -1877,12 +1908,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "hours_per_week": {
-          "name": "hours_per_week",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "latitude": {
           "name": "latitude",

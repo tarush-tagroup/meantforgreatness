@@ -61,9 +61,7 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     studentCount: row.studentCount,
     classGroups: groupsByOrphanage.get(row.id) || [],
     classesPerWeek: row.classesPerWeek,
-    hoursPerWeek: row.hoursPerWeek || undefined,
     description: row.description,
-    curriculum: row.curriculum || undefined,
     runningSince: row.runningSince || undefined,
     imageUrl: row.imageUrl || undefined,
   }));
@@ -130,9 +128,7 @@ export async function getOrphanageById(
       };
     }),
     classesPerWeek: row.classesPerWeek,
-    hoursPerWeek: row.hoursPerWeek || undefined,
     description: row.description,
-    curriculum: row.curriculum || undefined,
     runningSince: row.runningSince || undefined,
     imageUrl: row.imageUrl || undefined,
   };

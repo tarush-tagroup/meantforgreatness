@@ -10,11 +10,9 @@ export default function OrphanageCreateForm() {
     address: "",
     location: "",
     description: "",
-    curriculum: "",
     runningSince: "",
     studentCount: 0,
     classesPerWeek: 0,
-    hoursPerWeek: 0,
     websiteUrl: "",
   });
   const [imageUrl, setImageUrl] = useState("");
@@ -78,9 +76,7 @@ export default function OrphanageCreateForm() {
           ...form,
           indonesianName: form.indonesianName || null,
           address: form.address || null,
-          curriculum: form.curriculum || null,
           runningSince: form.runningSince || null,
-          hoursPerWeek: form.hoursPerWeek || null,
           imageUrl: imageUrl || null,
           websiteUrl: form.websiteUrl || null,
         }),
@@ -197,7 +193,7 @@ export default function OrphanageCreateForm() {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-sand-700">
             Student Count *
@@ -226,46 +222,19 @@ export default function OrphanageCreateForm() {
             className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Hours per Week
-          </label>
-          <input
-            name="hoursPerWeek"
-            type="number"
-            min={0}
-            value={form.hoursPerWeek}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Curriculum
-          </label>
-          <input
-            name="curriculum"
-            value={form.curriculum}
-            onChange={handleChange}
-            placeholder="e.g. Basic English, Conversation"
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Running Since
-          </label>
-          <input
-            name="runningSince"
-            value={form.runningSince}
-            onChange={handleChange}
-            placeholder="e.g. September 2024"
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-sand-700">
+          Running Since
+        </label>
+        <input
+          name="runningSince"
+          value={form.runningSince}
+          onChange={handleChange}
+          placeholder="e.g. September 2024"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+        />
       </div>
 
       <div>
