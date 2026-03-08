@@ -3,6 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePostHog } from "posthog-js/react";
 import Sidebar from "./Sidebar";
 import type { Role } from "@/types/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -63,6 +65,17 @@ interface AdminShellProps {
 
 export default function AdminShell({ user, children }: AdminShellProps) {
   const pathname = usePathname();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    if (posthog && user.email) {
+      posthog.identify(user.email, {
+        name: user.name,
+        email: user.email,
+        roles: user.roles,
+      });
+    }
+  }, [posthog, user.email, user.name, user.roles]);
 
   const filterItems = (items: NavItem[]) =>
     items.filter(
