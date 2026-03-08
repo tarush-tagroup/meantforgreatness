@@ -48,6 +48,20 @@ export default function OrphanageSection({
           </p>
         )}
 
+        {orphanage.websiteUrl && (
+          <p className="text-sm text-sand-500 mb-4">
+            <span className="font-medium text-sand-600">Website:</span>{" "}
+            <a
+              href={orphanage.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-green-700 hover:text-green-800 underline"
+            >
+              {new URL(orphanage.websiteUrl).hostname.replace(/^www\./, "")}
+            </a>
+          </p>
+        )}
+
         <p className="text-sand-600 leading-relaxed mb-6">
           {orphanage.description}
         </p>

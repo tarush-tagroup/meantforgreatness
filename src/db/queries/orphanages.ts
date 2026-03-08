@@ -76,6 +76,7 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     description: row.description,
     runningSince: row.runningSince || undefined,
     imageUrl: row.imageUrl || undefined,
+    websiteUrl: row.websiteUrl || undefined,
   }));
 }
 
@@ -148,5 +149,6 @@ export async function getOrphanageById(
     description: row.description,
     runningSince: row.runningSince || undefined,
     imageUrl: row.imageUrl || undefined,
+    websiteUrl: row.websiteUrl || undefined,
   };
 }

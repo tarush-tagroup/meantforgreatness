@@ -15,4 +15,5 @@ export interface Orphanage {
   description: string;
   runningSince?: string;
   imageUrl?: string;
+  websiteUrl?: string;
 }
