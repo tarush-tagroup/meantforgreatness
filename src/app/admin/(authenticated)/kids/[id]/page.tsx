@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { kids, orphanages } from "@/db/schema";
+import { kids, orphanages, classGroups } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import Link from "next/link";
 import KidEditForm from "./KidEditForm";
@@ -35,6 +35,15 @@ export default async function AdminKidEditPage({
     .from(orphanages)
     .orderBy(asc(orphanages.name));
 
+  const classGroupList = await db
+    .select({
+      id: classGroups.id,
+      name: classGroups.name,
+      orphanageId: classGroups.orphanageId,
+    })
+    .from(classGroups)
+    .orderBy(asc(classGroups.sortOrder));
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="flex items-center gap-2 text-sm text-sand-500 mb-4">
@@ -61,7 +70,7 @@ export default async function AdminKidEditPage({
       </div>
 
       <div className="mt-6 rounded-lg border border-sand-200 bg-white p-6">
-        <KidEditForm kid={kid} orphanages={orphanageList} />
+        <KidEditForm kid={kid} orphanages={orphanageList} classGroups={classGroupList} />
       </div>
     </div>
   );

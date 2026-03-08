@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { kids, orphanages } from "@/db/schema";
+import { kids, orphanages, classGroups } from "@/db/schema";
 import { asc, eq, gte, lte, and } from "drizzle-orm";
 import Link from "next/link";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminKidsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orphanageId?: string; ageGroup?: string }>;
+  searchParams: Promise<{ orphanageId?: string; ageGroup?: string; classGroupId?: string }>;
 }) {
   const user = await getSessionUser();
   if (!user || !hasPermission(user.roles, "kids:view")) {
@@ -26,6 +26,9 @@ export default async function AdminKidsPage({
   if (params.orphanageId) {
     conditions.push(eq(kids.orphanageId, params.orphanageId));
   }
+  if (params.classGroupId) {
+    conditions.push(eq(kids.classGroupId, params.classGroupId));
+  }
   if (params.ageGroup === "5-8") {
     conditions.push(gte(kids.age, 5));
     conditions.push(lte(kids.age, 8));
@@ -38,7 +41,7 @@ export default async function AdminKidsPage({
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  // Query with orphanage join
+  // Query with orphanage + class group join
   const rows = await db
     .select({
       id: kids.id,
@@ -51,9 +54,12 @@ export default async function AdminKidsPage({
       imageUrl: kids.imageUrl,
       orphanageId: kids.orphanageId,
       orphanageName: orphanages.name,
+      classGroupId: kids.classGroupId,
+      classGroupName: classGroups.name,
     })
     .from(kids)
     .leftJoin(orphanages, eq(kids.orphanageId, orphanages.id))
+    .leftJoin(classGroups, eq(kids.classGroupId, classGroups.id))
     .where(whereClause)
     .orderBy(asc(kids.name));
 
@@ -63,16 +69,34 @@ export default async function AdminKidsPage({
     .from(orphanages)
     .orderBy(asc(orphanages.name));
 
+  // Get class group options for filter (grouped by orphanage)
+  const classGroupOptions = await db
+    .select({
+      id: classGroups.id,
+      name: classGroups.name,
+      orphanageId: classGroups.orphanageId,
+      orphanageName: orphanages.name,
+    })
+    .from(classGroups)
+    .leftJoin(orphanages, eq(classGroups.orphanageId, orphanages.id))
+    .orderBy(asc(orphanages.name), asc(classGroups.sortOrder));
+
   function filterUrl(overrides: Record<string, string | undefined>) {
     const p = new URLSearchParams();
-    const merged = { orphanageId: params.orphanageId, ageGroup: params.ageGroup, ...overrides };
+    const merged = {
+      orphanageId: params.orphanageId,
+      ageGroup: params.ageGroup,
+      classGroupId: params.classGroupId,
+      ...overrides,
+    };
     if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
     if (merged.ageGroup) p.set("ageGroup", merged.ageGroup);
+    if (merged.classGroupId) p.set("classGroupId", merged.classGroupId);
     const qs = p.toString();
     return `/admin/kids${qs ? `?${qs}` : ""}`;
   }
 
-  const hasFilters = !!(params.orphanageId || params.ageGroup);
+  const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId);
 
   return (
     <div>
@@ -107,6 +131,31 @@ export default async function AdminKidsPage({
                 {o.name}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div>
+          <select
+            id="class-filter"
+            defaultValue={params.classGroupId || ""}
+            className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">All Classes</option>
+            {orphanageOptions.map((o) => {
+              const groupsForOrphanage = classGroupOptions.filter(
+                (g) => g.orphanageId === o.id
+              );
+              if (groupsForOrphanage.length === 0) return null;
+              return (
+                <optgroup key={o.id} label={o.name}>
+                  {groupsForOrphanage.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
           </select>
         </div>
 
@@ -145,8 +194,12 @@ export default async function AdminKidsPage({
         )}
       </div>
 
-      {/* Orphanage filter links (rendered as hidden links for select navigation) */}
-      <FilterSelectScript orphanageOptions={orphanageOptions} currentParams={params} />
+      {/* Filter navigation scripts */}
+      <FilterScript
+        orphanageOptions={orphanageOptions}
+        classGroupOptions={classGroupOptions}
+        currentParams={params}
+      />
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-sand-200 bg-white p-8 text-center">
@@ -194,6 +247,11 @@ export default async function AdminKidsPage({
                       {kid.orphanageName}
                     </span>
                   )}
+                  {kid.classGroupName && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                      {kid.classGroupName}
+                    </span>
+                  )}
                   {kid.location && (
                     <span className="text-xs text-sand-500 truncate">
                       {kid.location}
@@ -236,44 +294,45 @@ export default async function AdminKidsPage({
 }
 
 /**
- * Tiny client script to make the orphanage <select> navigate on change.
- * This avoids needing a full client component for the filter.
+ * Inline script for filter select navigation.
+ * Uses a simple approach: build the base URL and let the script
+ * construct the URL from the current select values on change.
  */
-function FilterSelectScript({
+function FilterScript({
   orphanageOptions,
+  classGroupOptions,
   currentParams,
 }: {
   orphanageOptions: { id: string; name: string }[];
-  currentParams: { orphanageId?: string; ageGroup?: string };
+  classGroupOptions: { id: string; name: string; orphanageId: string; orphanageName: string | null }[];
+  currentParams: { orphanageId?: string; ageGroup?: string; classGroupId?: string };
 }) {
-  const buildUrl = (orphanageId: string) => {
-    const p = new URLSearchParams();
-    if (orphanageId) p.set("orphanageId", orphanageId);
-    if (currentParams.ageGroup) p.set("ageGroup", currentParams.ageGroup);
-    const qs = p.toString();
-    return `/admin/kids${qs ? `?${qs}` : ""}`;
-  };
-
-  // Build a data map for the script
-  const urlMap = JSON.stringify(
-    Object.fromEntries([
-      ["", buildUrl("")],
-      ...orphanageOptions.map((o) => [o.id, buildUrl(o.id)]),
-    ])
-  );
+  // Pass current ageGroup so the script can preserve it
+  const ageGroup = currentParams.ageGroup || "";
 
   return (
     <script
       dangerouslySetInnerHTML={{
         __html: `
           (function() {
-            var sel = document.getElementById('orphanage-filter');
-            if (!sel) return;
-            var urls = ${urlMap};
-            sel.addEventListener('change', function() {
-              var url = urls[this.value];
-              if (url) window.location.href = url;
-            });
+            var ageGroup = ${JSON.stringify(ageGroup)};
+
+            function navigate() {
+              var orphSel = document.getElementById('orphanage-filter');
+              var classSel = document.getElementById('class-filter');
+              var p = new URLSearchParams();
+              if (orphSel && orphSel.value) p.set('orphanageId', orphSel.value);
+              if (classSel && classSel.value) p.set('classGroupId', classSel.value);
+              if (ageGroup) p.set('ageGroup', ageGroup);
+              var qs = p.toString();
+              window.location.href = '/admin/kids' + (qs ? '?' + qs : '');
+            }
+
+            var orphSel = document.getElementById('orphanage-filter');
+            if (orphSel) orphSel.addEventListener('change', navigate);
+
+            var classSel = document.getElementById('class-filter');
+            if (classSel) classSel.addEventListener('change', navigate);
           })();
         `,
       }}

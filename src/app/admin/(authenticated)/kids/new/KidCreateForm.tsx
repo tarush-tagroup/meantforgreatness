@@ -3,11 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-interface Props {
-  orphanages: { id: string; name: string }[];
+interface ClassGroupOption {
+  id: string;
+  name: string;
+  orphanageId: string;
 }
 
-export default function KidCreateForm({ orphanages }: Props) {
+interface Props {
+  orphanages: { id: string; name: string }[];
+  classGroups: ClassGroupOption[];
+}
+
+export default function KidCreateForm({ orphanages, classGroups }: Props) {
   const [form, setForm] = useState({
     name: "",
     age: 0,
@@ -16,6 +23,7 @@ export default function KidCreateForm({ orphanages }: Props) {
     about: "",
     favoriteWord: "",
     orphanageId: "",
+    classGroupId: "",
   });
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -84,6 +92,7 @@ export default function KidCreateForm({ orphanages }: Props) {
           favoriteWord: form.favoriteWord || null,
           imageUrl: imageUrl || null,
           orphanageId: form.orphanageId || null,
+          classGroupId: form.classGroupId || null,
         }),
       });
 
@@ -173,7 +182,13 @@ export default function KidCreateForm({ orphanages }: Props) {
           <select
             name="orphanageId"
             value={form.orphanageId}
-            onChange={handleChange}
+            onChange={(e) => {
+              setForm((prev) => ({
+                ...prev,
+                orphanageId: e.target.value,
+                classGroupId: "",
+              }));
+            }}
             required
             className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           >
@@ -186,6 +201,29 @@ export default function KidCreateForm({ orphanages }: Props) {
           </select>
         </div>
       </div>
+
+      {form.orphanageId && (
+        <div>
+          <label className="block text-sm font-medium text-sand-700">
+            Class
+          </label>
+          <select
+            name="classGroupId"
+            value={form.classGroupId}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">No class assigned</option>
+            {classGroups
+              .filter((g) => g.orphanageId === form.orphanageId)
+              .map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-sand-700">About</label>

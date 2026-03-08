@@ -2,8 +2,8 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { orphanages, classGroups } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { orphanages, classGroups, kids } from "@/db/schema";
+import { eq, asc, sql, min, max } from "drizzle-orm";
 import OrphanageEditForm from "./OrphanageEditForm";
 import ClassGroupManager from "./ClassGroupManager";
 
@@ -35,6 +35,31 @@ export default async function AdminOrphanageEditPage({
     .where(eq(classGroups.orphanageId, id))
     .orderBy(asc(classGroups.sortOrder));
 
+  // Get kid counts and age ranges per class group (auto-calculated)
+  const kidStats = await db
+    .select({
+      classGroupId: kids.classGroupId,
+      count: sql<number>`count(*)::int`,
+      minAge: min(kids.age),
+      maxAge: max(kids.age),
+    })
+    .from(kids)
+    .where(eq(kids.orphanageId, id))
+    .groupBy(kids.classGroupId);
+
+  const statsMap = new Map(
+    kidStats.map((s) => [
+      s.classGroupId,
+      {
+        studentCount: s.count,
+        ageRange:
+          s.minAge === s.maxAge
+            ? `${s.minAge}`
+            : `${s.minAge}-${s.maxAge}`,
+      },
+    ])
+  );
+
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold text-sand-900">
@@ -56,13 +81,16 @@ export default async function AdminOrphanageEditPage({
           </h2>
           <ClassGroupManager
             orphanageId={orphanage.id}
-            initialGroups={groups.map((g) => ({
-              id: g.id,
-              name: g.name,
-              studentCount: g.studentCount,
-              ageRange: g.ageRange || "",
-              sortOrder: g.sortOrder,
-            }))}
+            initialGroups={groups.map((g) => {
+              const stats = statsMap.get(g.id);
+              return {
+                id: g.id,
+                name: g.name,
+                studentCount: stats?.studentCount ?? 0,
+                ageRange: stats?.ageRange ?? "",
+                sortOrder: g.sortOrder,
+              };
+            })}
           />
         </div>
       </div>

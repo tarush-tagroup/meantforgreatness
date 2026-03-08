@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { orphanages } from "@/db/schema";
+import { orphanages, classGroups } from "@/db/schema";
 import { asc } from "drizzle-orm";
 import Link from "next/link";
 import KidCreateForm from "./KidCreateForm";
@@ -17,6 +17,15 @@ export default async function AdminKidCreatePage() {
     .select({ id: orphanages.id, name: orphanages.name })
     .from(orphanages)
     .orderBy(asc(orphanages.name));
+
+  const classGroupList = await db
+    .select({
+      id: classGroups.id,
+      name: classGroups.name,
+      orphanageId: classGroups.orphanageId,
+    })
+    .from(classGroups)
+    .orderBy(asc(classGroups.sortOrder));
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -37,7 +46,7 @@ export default async function AdminKidCreatePage() {
       </p>
 
       <div className="mt-6 rounded-lg border border-sand-200 bg-white p-6">
-        <KidCreateForm orphanages={orphanageList} />
+        <KidCreateForm orphanages={orphanageList} classGroups={classGroupList} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { db } from "@/db";
-import { kids, orphanages } from "@/db/schema";
+import { kids, orphanages, classGroups } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -23,6 +23,7 @@ const createSchema = z.object({
   favoriteWord: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   orphanageId: z.string().min(1, "Orphanage is required").max(50),
+  classGroupId: z.string().uuid().nullable().optional(),
 });
 
 function slugify(name: string): string {
@@ -86,6 +87,21 @@ export async function POST(req: NextRequest) {
     id = `${id.substring(0, 40)}-${Date.now().toString(36)}`;
   }
 
+  // Validate classGroupId belongs to the orphanage if provided
+  if (data.classGroupId) {
+    const [group] = await db
+      .select({ id: classGroups.id })
+      .from(classGroups)
+      .where(eq(classGroups.id, data.classGroupId))
+      .limit(1);
+    if (!group) {
+      return NextResponse.json(
+        { error: "Class group not found" },
+        { status: 400 }
+      );
+    }
+  }
+
   await db.insert(kids).values({
     id,
     name: data.name,
@@ -96,6 +112,7 @@ export async function POST(req: NextRequest) {
     favoriteWord: data.favoriteWord ?? null,
     imageUrl: data.imageUrl ?? null,
     orphanageId: data.orphanageId,
+    classGroupId: data.classGroupId ?? null,
   });
 
   return NextResponse.json({ id, success: true }, { status: 201 });
