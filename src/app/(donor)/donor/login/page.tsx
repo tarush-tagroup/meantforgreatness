@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -30,6 +31,7 @@ export default function DonorLoginPage() {
 function DonorLoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const posthog = usePostHog();
   const expired = searchParams.get("expired") === "true";
 
   const [step, setStep] = useState<"email" | "otp">("email");
@@ -101,6 +103,9 @@ function DonorLoginForm() {
         setTimeout(() => otpRefs.current[0]?.focus(), 100);
         return;
       }
+
+      // Identify donor in PostHog
+      posthog?.identify(email, { email });
 
       // Success — redirect to donor dashboard
       router.push("/donor");
