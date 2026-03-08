@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { db } from "@/db";
-import { kids, orphanages } from "@/db/schema";
+import { kids, orphanages, classGroups } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -14,6 +14,7 @@ const updateSchema = z.object({
   favoriteWord: z.string().nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   orphanageId: z.string().min(1, "Orphanage is required").max(50),
+  classGroupId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(
@@ -92,6 +93,21 @@ export async function PUT(
     }
   }
 
+  // Validate classGroupId if provided
+  if (data.classGroupId) {
+    const [group] = await db
+      .select({ id: classGroups.id })
+      .from(classGroups)
+      .where(eq(classGroups.id, data.classGroupId))
+      .limit(1);
+    if (!group) {
+      return NextResponse.json(
+        { error: "Class group not found" },
+        { status: 400 }
+      );
+    }
+  }
+
   await db
     .update(kids)
     .set({
@@ -103,6 +119,7 @@ export async function PUT(
       favoriteWord: data.favoriteWord ?? null,
       imageUrl: data.imageUrl ?? existing.imageUrl,
       orphanageId: data.orphanageId,
+      classGroupId: data.classGroupId ?? null,
       updatedAt: new Date(),
     })
     .where(eq(kids.id, id));

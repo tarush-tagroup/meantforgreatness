@@ -1,12 +1,11 @@
 import { db } from "@/db";
-import { orphanages, classGroups } from "@/db/schema";
-import { eq, asc } from "drizzle-orm";
+import { orphanages, classGroups, kids } from "@/db/schema";
+import { eq, asc, sql, min, max } from "drizzle-orm";
 import type { Orphanage, ClassGroup } from "@/types/orphanage";
 
 /**
  * Get all orphanages with their class groups.
- * Returns data matching the existing Orphanage interface
- * so the public frontend works without changes.
+ * Student counts and age ranges are auto-calculated from the kids table.
  */
 export async function getAllOrphanages(): Promise<Orphanage[]> {
   const rows = await db.select().from(orphanages).orderBy(asc(orphanages.name));
@@ -16,14 +15,39 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     .from(classGroups)
     .orderBy(asc(classGroups.sortOrder));
 
+  // Get real kid counts and age ranges per class group
+  const kidStats = await db
+    .select({
+      classGroupId: kids.classGroupId,
+      count: sql<number>`count(*)::int`,
+      minAge: min(kids.age),
+      maxAge: max(kids.age),
+    })
+    .from(kids)
+    .groupBy(kids.classGroupId);
+
+  const statsMap = new Map(
+    kidStats.map((s) => [
+      s.classGroupId,
+      {
+        studentCount: s.count,
+        ageRange:
+          s.minAge === s.maxAge
+            ? `${s.minAge}`
+            : `${s.minAge}-${s.maxAge}`,
+      },
+    ])
+  );
+
   // Group class groups by orphanage ID
   const groupsByOrphanage = new Map<string, ClassGroup[]>();
   for (const g of groups) {
     const list = groupsByOrphanage.get(g.orphanageId) || [];
+    const stats = statsMap.get(g.id);
     list.push({
       name: g.name,
-      studentCount: g.studentCount,
-      ageRange: g.ageRange || "",
+      studentCount: stats?.studentCount ?? 0,
+      ageRange: stats?.ageRange ?? "",
     });
     groupsByOrphanage.set(g.orphanageId, list);
   }
@@ -65,6 +89,31 @@ export async function getOrphanageById(
     .where(eq(classGroups.orphanageId, id))
     .orderBy(asc(classGroups.sortOrder));
 
+  // Get real kid counts per class group
+  const kidStats = await db
+    .select({
+      classGroupId: kids.classGroupId,
+      count: sql<number>`count(*)::int`,
+      minAge: min(kids.age),
+      maxAge: max(kids.age),
+    })
+    .from(kids)
+    .where(eq(kids.orphanageId, id))
+    .groupBy(kids.classGroupId);
+
+  const statsMap = new Map(
+    kidStats.map((s) => [
+      s.classGroupId,
+      {
+        studentCount: s.count,
+        ageRange:
+          s.minAge === s.maxAge
+            ? `${s.minAge}`
+            : `${s.minAge}-${s.maxAge}`,
+      },
+    ])
+  );
+
   return {
     id: row.id,
     name: row.name,
@@ -72,11 +121,14 @@ export async function getOrphanageById(
     address: row.address || undefined,
     location: row.location,
     studentCount: row.studentCount,
-    classGroups: groups.map((g) => ({
-      name: g.name,
-      studentCount: g.studentCount,
-      ageRange: g.ageRange || "",
-    })),
+    classGroups: groups.map((g) => {
+      const stats = statsMap.get(g.id);
+      return {
+        name: g.name,
+        studentCount: stats?.studentCount ?? 0,
+        ageRange: stats?.ageRange ?? "",
+      };
+    }),
     classesPerWeek: row.classesPerWeek,
     hoursPerWeek: row.hoursPerWeek || undefined,
     description: row.description,

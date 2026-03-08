@@ -279,6 +279,9 @@ export const kids = pgTable("kids", {
     () => orphanages.id,
     { onDelete: "set null" }
   ),
+  classGroupId: uuid("class_group_id").references(() => classGroups.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

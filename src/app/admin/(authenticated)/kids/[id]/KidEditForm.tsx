@@ -13,14 +13,22 @@ interface KidData {
   favoriteWord: string | null;
   imageUrl: string | null;
   orphanageId: string | null;
+  classGroupId: string | null;
+}
+
+interface ClassGroupOption {
+  id: string;
+  name: string;
+  orphanageId: string;
 }
 
 interface Props {
   kid: KidData;
   orphanages: { id: string; name: string }[];
+  classGroups: ClassGroupOption[];
 }
 
-export default function KidEditForm({ kid, orphanages }: Props) {
+export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
   const [form, setForm] = useState({
     name: kid.name,
     age: kid.age,
@@ -29,6 +37,7 @@ export default function KidEditForm({ kid, orphanages }: Props) {
     about: kid.about || "",
     favoriteWord: kid.favoriteWord || "",
     orphanageId: kid.orphanageId || "",
+    classGroupId: kid.classGroupId || "",
   });
   const [imageUrl, setImageUrl] = useState(kid.imageUrl || "");
   const [uploading, setUploading] = useState(false);
@@ -99,6 +108,7 @@ export default function KidEditForm({ kid, orphanages }: Props) {
           favoriteWord: form.favoriteWord || null,
           imageUrl: imageUrl || null,
           orphanageId: form.orphanageId || null,
+          classGroupId: form.classGroupId || null,
         }),
       });
 
@@ -191,7 +201,13 @@ export default function KidEditForm({ kid, orphanages }: Props) {
           <select
             name="orphanageId"
             value={form.orphanageId}
-            onChange={handleChange}
+            onChange={(e) => {
+              setForm((prev) => ({
+                ...prev,
+                orphanageId: e.target.value,
+                classGroupId: "",
+              }));
+            }}
             required
             className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           >
@@ -204,6 +220,29 @@ export default function KidEditForm({ kid, orphanages }: Props) {
           </select>
         </div>
       </div>
+
+      {form.orphanageId && (
+        <div>
+          <label className="block text-sm font-medium text-sand-700">
+            Class
+          </label>
+          <select
+            name="classGroupId"
+            value={form.classGroupId}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">No class assigned</option>
+            {classGroups
+              .filter((g) => g.orphanageId === form.orphanageId)
+              .map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-sand-700">About</label>

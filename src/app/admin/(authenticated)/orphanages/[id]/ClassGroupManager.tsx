@@ -25,22 +25,14 @@ export default function ClassGroupManager({
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // New group form state
-  const [newGroup, setNewGroup] = useState({
-    name: "",
-    studentCount: 0,
-    ageRange: "",
-  });
+  // New group form state (only name)
+  const [newGroupName, setNewGroupName] = useState("");
 
-  // Edit form state
-  const [editForm, setEditForm] = useState({
-    name: "",
-    studentCount: 0,
-    ageRange: "",
-  });
+  // Edit form state (only name)
+  const [editName, setEditName] = useState("");
 
   async function handleAdd() {
-    if (!newGroup.name) {
+    if (!newGroupName.trim()) {
       setError("Name is required");
       return;
     }
@@ -54,9 +46,8 @@ export default function ClassGroupManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orphanageId,
-          name: newGroup.name,
-          studentCount: newGroup.studentCount,
-          ageRange: newGroup.ageRange || undefined,
+          name: newGroupName.trim(),
+          studentCount: 0,
           sortOrder: groups.length,
         }),
       });
@@ -67,18 +58,7 @@ export default function ClassGroupManager({
         return;
       }
 
-      const data = await res.json();
-      setGroups([
-        ...groups,
-        {
-          id: data.classGroup.id,
-          name: data.classGroup.name,
-          studentCount: data.classGroup.studentCount,
-          ageRange: data.classGroup.ageRange || "",
-          sortOrder: data.classGroup.sortOrder,
-        },
-      ]);
-      setNewGroup({ name: "", studentCount: 0, ageRange: "" });
+      setNewGroupName("");
       setAdding(false);
       router.refresh();
     } catch {
@@ -89,17 +69,22 @@ export default function ClassGroupManager({
   }
 
   async function handleUpdate(id: string) {
+    if (!editName.trim()) {
+      setError("Name is required");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
     try {
+      const group = groups.find((g) => g.id === id);
       const res = await fetch(`/api/admin/class-groups/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: editForm.name,
-          studentCount: editForm.studentCount,
-          ageRange: editForm.ageRange || undefined,
+          name: editName.trim(),
+          studentCount: group?.studentCount ?? 0,
         }),
       });
 
@@ -111,14 +96,7 @@ export default function ClassGroupManager({
 
       setGroups(
         groups.map((g) =>
-          g.id === id
-            ? {
-                ...g,
-                name: editForm.name,
-                studentCount: editForm.studentCount,
-                ageRange: editForm.ageRange,
-              }
-            : g
+          g.id === id ? { ...g, name: editName.trim() } : g
         )
       );
       setEditingId(null);
@@ -131,7 +109,12 @@ export default function ClassGroupManager({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this class group?")) return;
+    const group = groups.find((g) => g.id === id);
+    const msg =
+      group && group.studentCount > 0
+        ? `Delete "${group.name}"? ${group.studentCount} kid(s) in this class will become unassigned.`
+        : `Delete this class group?`;
+    if (!confirm(msg)) return;
 
     setError("");
 
@@ -155,11 +138,7 @@ export default function ClassGroupManager({
 
   function startEdit(group: ClassGroupData) {
     setEditingId(group.id);
-    setEditForm({
-      name: group.name,
-      studentCount: group.studentCount,
-      ageRange: group.ageRange,
-    });
+    setEditName(group.name);
   }
 
   return (
@@ -180,38 +159,23 @@ export default function ClassGroupManager({
             key={group.id}
             className="rounded-lg border border-green-200 bg-green-50/50 p-4 space-y-3"
           >
-            <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-sand-500 mb-1">
+                Class Name
+              </label>
               <input
-                value={editForm.name}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
-                placeholder="Name"
-                className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
-              />
-              <input
-                type="number"
-                min={0}
-                value={editForm.studentCount}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    studentCount: Number(e.target.value),
-                  })
-                }
-                placeholder="Students"
-                className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
-              />
-              <input
-                value={editForm.ageRange}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, ageRange: e.target.value })
-                }
-                placeholder="Age range"
-                className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Class name"
+                className="w-full rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleUpdate(group.id);
+                  if (e.key === "Escape") setEditingId(null);
+                }}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => handleUpdate(group.id)}
                 disabled={saving}
@@ -237,7 +201,7 @@ export default function ClassGroupManager({
                 {group.name}
               </p>
               <p className="text-xs text-sand-500">
-                {group.studentCount} students
+                {group.studentCount} student{group.studentCount !== 1 ? "s" : ""}
                 {group.ageRange ? ` · Ages ${group.ageRange}` : ""}
               </p>
             </div>
@@ -246,7 +210,7 @@ export default function ClassGroupManager({
                 onClick={() => startEdit(group)}
                 className="text-xs text-sand-400 hover:text-sand-600"
               >
-                edit
+                rename
               </button>
               <button
                 onClick={() => handleDelete(group.id)}
@@ -261,35 +225,20 @@ export default function ClassGroupManager({
 
       {adding ? (
         <div className="rounded-lg border border-green-200 bg-green-50/50 p-4 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-sand-500 mb-1">
+              Class Name
+            </label>
             <input
-              value={newGroup.name}
-              onChange={(e) =>
-                setNewGroup({ ...newGroup, name: e.target.value })
-              }
-              placeholder="Group name"
-              className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
-            />
-            <input
-              type="number"
-              min={0}
-              value={newGroup.studentCount}
-              onChange={(e) =>
-                setNewGroup({
-                  ...newGroup,
-                  studentCount: Number(e.target.value),
-                })
-              }
-              placeholder="Students"
-              className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
-            />
-            <input
-              value={newGroup.ageRange}
-              onChange={(e) =>
-                setNewGroup({ ...newGroup, ageRange: e.target.value })
-              }
-              placeholder="Age range (e.g. 8–12)"
-              className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="e.g. Kids I, Junior, Young Adult"
+              className="w-full rounded-lg border border-sand-300 px-3 py-1.5 text-sm"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAdd();
+                if (e.key === "Escape") setAdding(false);
+              }}
             />
           </div>
           <div className="flex gap-2">
