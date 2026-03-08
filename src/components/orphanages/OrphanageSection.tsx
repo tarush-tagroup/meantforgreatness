@@ -55,28 +55,12 @@ export default function OrphanageSection({
           {orphanage.description}
         </p>
 
-        {orphanage.curriculum && (
-          <p className="text-sm text-sand-500 mb-6">
-            <span className="font-medium text-sand-600">Curriculum:</span>{" "}
-            {orphanage.curriculum}
-          </p>
-        )}
-
         {orphanage.runningSince && (
           <p className="text-sm text-sand-500 mb-6">
             <span className="font-medium text-sand-600">
               Running since:
             </span>{" "}
             {orphanage.runningSince}
-          </p>
-        )}
-
-        {orphanage.hoursPerWeek && (
-          <p className="text-sm text-sand-500 mb-6">
-            <span className="font-medium text-sand-600">
-              Total hours per week:
-            </span>{" "}
-            {orphanage.hoursPerWeek}
           </p>
         )}
 

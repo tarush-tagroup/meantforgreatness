@@ -10,12 +10,10 @@ interface OrphanageData {
   address: string | null;
   location: string;
   description: string;
-  curriculum: string | null;
   runningSince: string | null;
   imageUrl: string | null;
   studentCount: number;
   classesPerWeek: number;
-  hoursPerWeek: number | null;
   latitude: number | null;
   longitude: number | null;
   websiteUrl: string | null;
@@ -32,11 +30,9 @@ export default function OrphanageEditForm({
     address: orphanage.address || "",
     location: orphanage.location,
     description: orphanage.description,
-    curriculum: orphanage.curriculum || "",
     runningSince: orphanage.runningSince || "",
     studentCount: orphanage.studentCount,
     classesPerWeek: orphanage.classesPerWeek,
-    hoursPerWeek: orphanage.hoursPerWeek || 0,
     websiteUrl: orphanage.websiteUrl || "",
   });
   const [imageUrl, setImageUrl] = useState(orphanage.imageUrl || "");
@@ -108,9 +104,7 @@ export default function OrphanageEditForm({
           ...form,
           indonesianName: form.indonesianName || null,
           address: form.address || null,
-          curriculum: form.curriculum || null,
           runningSince: form.runningSince || null,
-          hoursPerWeek: form.hoursPerWeek || null,
           imageUrl: imageUrl || null,
           websiteUrl: form.websiteUrl || null,
         }),
@@ -285,7 +279,7 @@ export default function OrphanageEditForm({
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-sand-700">
             Student Count *
@@ -314,45 +308,19 @@ export default function OrphanageEditForm({
             className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Hours per Week
-          </label>
-          <input
-            name="hoursPerWeek"
-            type="number"
-            min={0}
-            value={form.hoursPerWeek}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Curriculum
-          </label>
-          <input
-            name="curriculum"
-            value={form.curriculum}
-            onChange={handleChange}
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Running Since
-          </label>
-          <input
-            name="runningSince"
-            value={form.runningSince}
-            onChange={handleChange}
-            placeholder="e.g. September 2024"
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-sand-700">
+          Running Since
+        </label>
+        <input
+          name="runningSince"
+          value={form.runningSince}
+          onChange={handleChange}
+          placeholder="e.g. September 2024"
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+        />
       </div>
 
       <div>

@@ -78,6 +78,13 @@
       "when": 1772993545532,
       "tag": "0010_ambitious_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1773002508412,
+      "tag": "0011_open_star_brand",
+      "breakpoints": true
     }
   ]
 }
