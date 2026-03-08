@@ -538,21 +538,49 @@ export default function ClassLogForm({
 
               {/* Class Members */}
               {classMembers.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs font-medium text-green-700 mb-1.5">
-                    Class Members ({classMembers.length})
-                  </p>
-                  <div className="space-y-1">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-green-700">
+                      Class Members ({classMembers.length})
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allSelected = classMembers.every((k) =>
+                          selectedKidIds.has(k.id)
+                        );
+                        setSelectedKidIds((prev) => {
+                          const next = new Set(prev);
+                          for (const kid of classMembers) {
+                            if (allSelected) {
+                              next.delete(kid.id);
+                            } else {
+                              next.add(kid.id);
+                            }
+                          }
+                          return next;
+                        });
+                      }}
+                      className="text-xs font-medium text-green-600 hover:text-green-800 active:text-green-900 py-1 px-2 -mr-2"
+                    >
+                      {classMembers.every((k) =>
+                        selectedKidIds.has(k.id)
+                      )
+                        ? "Deselect All"
+                        : "Select All"}
+                    </button>
+                  </div>
+                  <div className="space-y-0.5">
                     {classMembers.map((kid) => (
                       <label
                         key={kid.id}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-sand-50 cursor-pointer"
+                        className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-sand-50 active:bg-sand-100 cursor-pointer min-h-[44px]"
                       >
                         <input
                           type="checkbox"
                           checked={selectedKidIds.has(kid.id)}
                           onChange={() => toggleKid(kid.id)}
-                          className="rounded border-sand-300 text-green-600 focus:ring-green-500"
+                          className="h-5 w-5 rounded border-sand-300 text-green-600 focus:ring-green-500"
                         />
                         <span className="text-sm text-sand-900">
                           {kid.name}
@@ -565,21 +593,49 @@ export default function ClassLogForm({
 
               {/* Orphanage Guests */}
               {orphanageGuests.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs font-medium text-blue-700 mb-1.5">
-                    Other Kids from Orphanage ({orphanageGuests.length})
-                  </p>
-                  <div className="space-y-1">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-blue-700">
+                      Other Kids from Orphanage ({orphanageGuests.length})
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allSelected = orphanageGuests.every((k) =>
+                          selectedKidIds.has(k.id)
+                        );
+                        setSelectedKidIds((prev) => {
+                          const next = new Set(prev);
+                          for (const kid of orphanageGuests) {
+                            if (allSelected) {
+                              next.delete(kid.id);
+                            } else {
+                              next.add(kid.id);
+                            }
+                          }
+                          return next;
+                        });
+                      }}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-800 active:text-blue-900 py-1 px-2 -mr-2"
+                    >
+                      {orphanageGuests.every((k) =>
+                        selectedKidIds.has(k.id)
+                      )
+                        ? "Deselect All"
+                        : "Select All"}
+                    </button>
+                  </div>
+                  <div className="space-y-0.5">
                     {orphanageGuests.map((kid) => (
                       <label
                         key={kid.id}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-sand-50 cursor-pointer"
+                        className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-sand-50 active:bg-sand-100 cursor-pointer min-h-[44px]"
                       >
                         <input
                           type="checkbox"
                           checked={selectedKidIds.has(kid.id)}
                           onChange={() => toggleKid(kid.id)}
-                          className="rounded border-sand-300 text-blue-600 focus:ring-blue-500"
+                          className="h-5 w-5 rounded border-sand-300 text-blue-600 focus:ring-blue-500"
                         />
                         <span className="text-sm text-sand-900">
                           {kid.name}
@@ -592,21 +648,21 @@ export default function ClassLogForm({
 
               {/* External Kids */}
               <div className="mb-3">
-                <p className="text-xs font-medium text-sage-700 mb-1.5">
+                <p className="text-xs font-medium text-sage-700 mb-2">
                   External Kids (from other orphanages)
                 </p>
                 {externalKids.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {externalKids.map((name, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center gap-1 rounded-full bg-sage-100 px-2.5 py-0.5 text-xs font-medium text-sage-800"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-sage-100 pl-3 pr-1 py-1 text-sm font-medium text-sage-800"
                       >
                         {name}
                         <button
                           type="button"
                           onClick={() => removeExternalKid(index)}
-                          className="text-sage-500 hover:text-sage-800"
+                          className="flex items-center justify-center w-7 h-7 rounded-full text-sage-500 hover:text-sage-800 active:bg-sage-200"
                         >
                           &times;
                         </button>
@@ -625,13 +681,13 @@ export default function ClassLogForm({
                         addExternalKid();
                       }
                     }}
-                    placeholder="Enter name and press Enter"
-                    className="flex-1 rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-900"
+                    placeholder="Enter name and press Add"
+                    className="flex-1 rounded-lg border border-sand-200 px-3 py-2.5 text-sm text-sand-900"
                   />
                   <button
                     type="button"
                     onClick={addExternalKid}
-                    className="rounded-lg bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-800 hover:bg-sage-200 transition-colors"
+                    className="rounded-lg bg-sage-100 px-4 py-2.5 text-sm font-medium text-sage-800 hover:bg-sage-200 active:bg-sage-300 transition-colors"
                   >
                     Add
                   </button>
