@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { Role } from "@/types/auth";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
-import { orphanages, classLogs, donations, events, users } from "@/db/schema";
+import { orphanages, classLogs, donations, events, users, kids } from "@/db/schema";
 import { sql, eq, gte, and } from "drizzle-orm";
 import Link from "next/link";
 
@@ -66,8 +66,8 @@ export default async function AdminDashboard({
       : Promise.resolve(0),
     canViewOrphanages
       ? db
-          .select({ total: sql<number>`COALESCE(SUM(student_count), 0)` })
-          .from(orphanages)
+          .select({ total: sql<number>`count(*)::int` })
+          .from(kids)
           .then((r) => Number(r[0]?.total || 0))
       : Promise.resolve(0),
   ]);

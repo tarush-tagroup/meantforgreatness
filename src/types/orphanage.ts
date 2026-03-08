@@ -12,7 +12,6 @@ export interface Orphanage {
   location: string;
   studentCount: number;
   classGroups: ClassGroup[];
-  classesPerWeek: number;
   description: string;
   runningSince?: string;
   imageUrl?: string;

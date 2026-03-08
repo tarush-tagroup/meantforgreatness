@@ -2,8 +2,8 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { orphanages, classGroups } from "@/db/schema";
-import { asc } from "drizzle-orm";
+import { orphanages, classGroups, kids } from "@/db/schema";
+import { asc, sql } from "drizzle-orm";
 import Link from "next/link";
 
 export default async function AdminOrphanagesPage() {
@@ -22,6 +22,17 @@ export default async function AdminOrphanagesPage() {
   for (const g of groups) {
     groupCounts.set(g.orphanageId, (groupCounts.get(g.orphanageId) || 0) + 1);
   }
+
+  // Auto-compute student counts from kids table
+  const kidCounts = await db
+    .select({
+      orphanageId: kids.orphanageId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(kids)
+    .groupBy(kids.orphanageId);
+
+  const kidCountMap = new Map(kidCounts.map((r) => [r.orphanageId, r.count]));
 
   const canEdit = hasPermission(user.roles, "orphanages:edit");
 
@@ -66,10 +77,7 @@ export default async function AdminOrphanagesPage() {
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                  {orphanage.studentCount} students
-                </span>
-                <span className="inline-flex items-center rounded-full bg-sage-50 px-2.5 py-0.5 text-xs font-medium text-sage-700 ring-1 ring-inset ring-sage-600/20">
-                  {orphanage.classesPerWeek}x/week
+                  {kidCountMap.get(orphanage.id) ?? 0} students
                 </span>
                 <span className="inline-flex items-center rounded-full bg-sand-100 px-2.5 py-0.5 text-xs font-medium text-sand-600">
                   {groupCounts.get(orphanage.id) || 0} groups

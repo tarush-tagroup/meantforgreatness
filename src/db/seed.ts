@@ -55,8 +55,6 @@ async function seed() {
       location: "Denpasar, Bali",
       latitude: -8.6604026,
       longitude: 115.1875247,
-      studentCount: 18,
-      classesPerWeek: 4,
       description:
         "Chloe Orphanage is home to 18 students receiving beginner English instruction. With a small Kids group and a larger Junior class, students build foundational English skills through consistent sessions four times per week.",
       classGroupsData: [
@@ -71,8 +69,6 @@ async function seed() {
       location: "Denpasar, Bali",
       latitude: -8.6109385,
       longitude: 115.1777757,
-      studentCount: 48,
-      classesPerWeek: 15,
       runningSince: "September 2024",
       description:
         "Our largest program with 48 students across 5 class levels. Seeds of Hope runs 15 classes per week, Monday through Friday, covering everything from beginner Kids groups to Upper Intermediate level. This orphanage has been part of our program since the very beginning.",
@@ -107,8 +103,6 @@ async function seed() {
       location: "Badung, Bali",
       latitude: -8.6105845,
       longitude: 115.1598903,
-      studentCount: 25,
-      classesPerWeek: 4,
       description:
         'Sekar Pengharapan serves 25 students in three focused class groups. Using the structured "English for Everyone – Level 2" curriculum, students progress through grammar, vocabulary, and conversation skills across four classes per week.',
       classGroupsData: [
@@ -135,8 +129,6 @@ async function seed() {
       location: "Denpasar, Bali",
       latitude: -8.6528080,
       longitude: 115.1899000,
-      studentCount: 17,
-      classesPerWeek: 6,
       description:
         "Sunya Giri Orphanage focuses on practical English skills, with vocabulary centered on jobs, occupations, and personal goals. The 17 students learn language they can directly apply to future career opportunities across six classes per week.",
       classGroupsData: [

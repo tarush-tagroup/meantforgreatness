@@ -14,8 +14,6 @@ const updateSchema = z.object({
   description: z.string().min(1),
   runningSince: z.string().max(50).nullable().optional(),
   imageUrl: z.string().nullable().optional(),
-  studentCount: z.number().int().min(0),
-  classesPerWeek: z.number().int().min(0),
   websiteUrl: z.string().nullable().optional(),
 });
 
@@ -103,8 +101,6 @@ export async function PUT(
       description: data.description,
       runningSince: data.runningSince ?? null,
       imageUrl: data.imageUrl ?? existing.imageUrl,
-      studentCount: data.studentCount,
-      classesPerWeek: data.classesPerWeek,
       websiteUrl: data.websiteUrl ?? null,
       latitude,
       longitude,

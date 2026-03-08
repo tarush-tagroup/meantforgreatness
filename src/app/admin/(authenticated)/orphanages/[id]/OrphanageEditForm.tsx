@@ -12,8 +12,6 @@ interface OrphanageData {
   description: string;
   runningSince: string | null;
   imageUrl: string | null;
-  studentCount: number;
-  classesPerWeek: number;
   latitude: number | null;
   longitude: number | null;
   websiteUrl: string | null;
@@ -31,8 +29,6 @@ export default function OrphanageEditForm({
     location: orphanage.location,
     description: orphanage.description,
     runningSince: orphanage.runningSince || "",
-    studentCount: orphanage.studentCount,
-    classesPerWeek: orphanage.classesPerWeek,
     websiteUrl: orphanage.websiteUrl || "",
   });
   const [imageUrl, setImageUrl] = useState(orphanage.imageUrl || "");
@@ -277,37 +273,6 @@ export default function OrphanageEditForm({
           rows={4}
           className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
         />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Student Count *
-          </label>
-          <input
-            name="studentCount"
-            type="number"
-            min={0}
-            value={form.studentCount}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-sand-700">
-            Classes per Week *
-          </label>
-          <input
-            name="classesPerWeek"
-            type="number"
-            min={0}
-            value={form.classesPerWeek}
-            onChange={handleChange}
-            required
-            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          />
-        </div>
       </div>
 
       <div>
