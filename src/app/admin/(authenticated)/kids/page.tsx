@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { kids, orphanages, classGroups } from "@/db/schema";
 import { asc, eq, gte, lte, and } from "drizzle-orm";
 import Link from "next/link";
+import KidsFilters from "./KidsFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -81,21 +82,6 @@ export default async function AdminKidsPage({
     .leftJoin(orphanages, eq(classGroups.orphanageId, orphanages.id))
     .orderBy(asc(orphanages.name), asc(classGroups.sortOrder));
 
-  function filterUrl(overrides: Record<string, string | undefined>) {
-    const p = new URLSearchParams();
-    const merged = {
-      orphanageId: params.orphanageId,
-      ageGroup: params.ageGroup,
-      classGroupId: params.classGroupId,
-      ...overrides,
-    };
-    if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
-    if (merged.ageGroup) p.set("ageGroup", merged.ageGroup);
-    if (merged.classGroupId) p.set("classGroupId", merged.classGroupId);
-    const qs = p.toString();
-    return `/admin/kids${qs ? `?${qs}` : ""}`;
-  }
-
   const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId);
 
   return (
@@ -118,87 +104,9 @@ export default async function AdminKidsPage({
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div>
-          <select
-            id="orphanage-filter"
-            defaultValue={params.orphanageId || ""}
-            className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          >
-            <option value="">All Orphanages</option>
-            {orphanageOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <select
-            id="class-filter"
-            defaultValue={params.classGroupId || ""}
-            className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          >
-            <option value="">All Classes</option>
-            {orphanageOptions.map((o) => {
-              const groupsForOrphanage = classGroupOptions.filter(
-                (g) => g.orphanageId === o.id
-              );
-              if (groupsForOrphanage.length === 0) return null;
-              return (
-                <optgroup key={o.id} label={o.name}>
-                  {groupsForOrphanage.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
-        </div>
-
-        {/* Age group pills */}
-        <div className="flex items-center gap-1">
-          {[
-            { label: "All Ages", value: undefined },
-            { label: "5-8", value: "5-8" },
-            { label: "9-12", value: "9-12" },
-            { label: "13+", value: "13+" },
-          ].map((ag) => {
-            const isActive = params.ageGroup === ag.value || (!params.ageGroup && !ag.value);
-            return (
-              <Link
-                key={ag.label}
-                href={filterUrl({ ageGroup: ag.value })}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-green-600 text-white"
-                    : "bg-sand-100 text-sand-600 hover:bg-sand-200"
-                }`}
-              >
-                {ag.label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {hasFilters && (
-          <Link
-            href="/admin/kids"
-            className="text-xs text-sand-500 hover:text-sand-700 underline"
-          >
-            Clear filters
-          </Link>
-        )}
-      </div>
-
-      {/* Filter navigation scripts */}
-      <FilterScript
+      <KidsFilters
         orphanageOptions={orphanageOptions}
         classGroupOptions={classGroupOptions}
-        currentParams={params}
       />
 
       {rows.length === 0 ? (
@@ -293,49 +201,3 @@ export default async function AdminKidsPage({
   );
 }
 
-/**
- * Inline script for filter select navigation.
- * Uses a simple approach: build the base URL and let the script
- * construct the URL from the current select values on change.
- */
-function FilterScript({
-  orphanageOptions,
-  classGroupOptions,
-  currentParams,
-}: {
-  orphanageOptions: { id: string; name: string }[];
-  classGroupOptions: { id: string; name: string; orphanageId: string; orphanageName: string | null }[];
-  currentParams: { orphanageId?: string; ageGroup?: string; classGroupId?: string };
-}) {
-  // Pass current ageGroup so the script can preserve it
-  const ageGroup = currentParams.ageGroup || "";
-
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          (function() {
-            var ageGroup = ${JSON.stringify(ageGroup)};
-
-            function navigate() {
-              var orphSel = document.getElementById('orphanage-filter');
-              var classSel = document.getElementById('class-filter');
-              var p = new URLSearchParams();
-              if (orphSel && orphSel.value) p.set('orphanageId', orphSel.value);
-              if (classSel && classSel.value) p.set('classGroupId', classSel.value);
-              if (ageGroup) p.set('ageGroup', ageGroup);
-              var qs = p.toString();
-              window.location.href = '/admin/kids' + (qs ? '?' + qs : '');
-            }
-
-            var orphSel = document.getElementById('orphanage-filter');
-            if (orphSel) orphSel.addEventListener('change', navigate);
-
-            var classSel = document.getElementById('class-filter');
-            if (classSel) classSel.addEventListener('change', navigate);
-          })();
-        `,
-      }}
-    />
-  );
-}
