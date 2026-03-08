@@ -84,6 +84,9 @@ export const classLogs = pgTable(
     teacherId: uuid("teacher_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    classGroupId: uuid("class_group_id").references(() => classGroups.id, {
+      onDelete: "set null",
+    }),
     classDate: date("class_date").notNull(),
     classTime: varchar("class_time", { length: 20 }),
     studentCount: integer("student_count"),
@@ -126,6 +129,24 @@ export const classLogPhotos = pgTable("class_log_photos", {
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+// ─── Class Log Attendance ─────────────────────────────────────────────────────
+export const classLogAttendance = pgTable(
+  "class_log_attendance",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    classLogId: uuid("class_log_id")
+      .notNull()
+      .references(() => classLogs.id, { onDelete: "cascade" }),
+    kidId: varchar("kid_id", { length: 50 }).references(() => kids.id, {
+      onDelete: "set null",
+    }),
+    kidName: varchar("kid_name", { length: 255 }).notNull(),
+    attendanceType: varchar("attendance_type", { length: 20 }).notNull(), // "class_member" | "orphanage_guest" | "external"
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("class_log_attendance_log_idx").on(table.classLogId)]
+);
 
 // ─── Events ──────────────────────────────────────────────────────────────────
 export const events = pgTable("events", {

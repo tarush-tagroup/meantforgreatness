@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
-import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
+import {
+  classLogs,
+  classLogPhotos,
+  classLogAttendance,
+  orphanages,
+  users,
+} from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
 import { analyzeClassLogPhotos } from "@/lib/ai-photo-analysis";
@@ -14,13 +20,21 @@ const photoSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
+const attendeeSchema = z.object({
+  kidId: z.string().nullable().optional(),
+  kidName: z.string().min(1),
+  type: z.enum(["class_member", "orphanage_guest", "external"]),
+});
+
 const updateSchema = z.object({
   orphanageId: z.string().min(1).optional(),
+  classGroupId: z.string().uuid().nullable().optional(),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
   classTime: z.string().max(20).nullable().optional(),
   studentCount: z.number().int().min(0).nullable().optional(),
   photos: z.array(photoSchema).min(1, "At least one photo is required").optional(),
   notes: z.string().max(2000).nullable().optional(),
+  attendance: z.array(attendeeSchema).optional(),
 });
 
 export async function GET(
@@ -151,10 +165,17 @@ export async function PUT(
 
   const updateData: Record<string, unknown> = {};
   if (parsed.data.orphanageId !== undefined) updateData.orphanageId = parsed.data.orphanageId;
+  if (parsed.data.classGroupId !== undefined) updateData.classGroupId = parsed.data.classGroupId;
   if (parsed.data.classDate !== undefined) updateData.classDate = parsed.data.classDate;
   if (parsed.data.classTime !== undefined) updateData.classTime = parsed.data.classTime;
-  if (parsed.data.studentCount !== undefined) updateData.studentCount = parsed.data.studentCount;
   if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
+
+  // If attendance is provided, compute studentCount from it; otherwise use manual value
+  if (parsed.data.attendance) {
+    updateData.studentCount = parsed.data.attendance.length;
+  } else if (parsed.data.studentCount !== undefined) {
+    updateData.studentCount = parsed.data.studentCount;
+  }
 
   // Replace photos if provided — but only re-analyze if photo URLs actually changed
   let photosChanged = false;
@@ -194,6 +215,23 @@ export async function PUT(
           url: p.url,
           caption: p.caption || null,
           sortOrder: p.sortOrder ?? i,
+        }))
+      );
+    }
+  }
+
+  // Update attendance records if provided
+  if (parsed.data.attendance) {
+    await db
+      .delete(classLogAttendance)
+      .where(eq(classLogAttendance.classLogId, id));
+    if (parsed.data.attendance.length > 0) {
+      await db.insert(classLogAttendance).values(
+        parsed.data.attendance.map((a) => ({
+          classLogId: id,
+          kidId: a.kidId || null,
+          kidName: a.kidName,
+          attendanceType: a.type,
         }))
       );
     }

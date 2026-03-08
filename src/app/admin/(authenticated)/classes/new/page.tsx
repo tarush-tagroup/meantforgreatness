@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { orphanages, users } from "@/db/schema";
+import { orphanages, users, classGroups, kids } from "@/db/schema";
 import { asc, sql } from "drizzle-orm";
 import ClassLogForm from "../ClassLogForm";
 
@@ -25,6 +25,25 @@ export default async function NewClassLogPage() {
     )
     .orderBy(asc(users.name));
 
+  const classGroupOptions = await db
+    .select({
+      id: classGroups.id,
+      name: classGroups.name,
+      orphanageId: classGroups.orphanageId,
+    })
+    .from(classGroups)
+    .orderBy(asc(classGroups.sortOrder));
+
+  const kidsList = await db
+    .select({
+      id: kids.id,
+      name: kids.name,
+      orphanageId: kids.orphanageId,
+      classGroupId: kids.classGroupId,
+    })
+    .from(kids)
+    .orderBy(asc(kids.name));
+
   return (
     <div>
       <div className="mb-6">
@@ -39,6 +58,8 @@ export default async function NewClassLogPage() {
           orphanages={orphanageOptions}
           teachers={teacherOptions}
           currentUserId={user.id}
+          classGroups={classGroupOptions}
+          allKids={kidsList}
         />
       </div>
     </div>

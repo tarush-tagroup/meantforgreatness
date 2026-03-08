@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { db } from "@/db";
-import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
+import {
+  classLogs,
+  classLogPhotos,
+  classLogAttendance,
+  orphanages,
+  users,
+} from "@/db/schema";
 import { eq, desc, and, gte, lte, sql, asc } from "drizzle-orm";
 import { z } from "zod";
 import { analyzeClassLogPhotos, validatePhotoDate } from "@/lib/ai-photo-analysis";
@@ -15,14 +21,22 @@ const photoSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
+const attendeeSchema = z.object({
+  kidId: z.string().nullable().optional(),
+  kidName: z.string().min(1),
+  type: z.enum(["class_member", "orphanage_guest", "external"]),
+});
+
 const createSchema = z.object({
   orphanageId: z.string().min(1),
   teacherId: z.string().min(1, "Teacher is required"),
+  classGroupId: z.string().uuid().optional(),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
   classTime: z.string().max(20).optional(),
   studentCount: z.number().int().min(0).optional(),
   photos: z.array(photoSchema).min(1, "At least one photo is required"),
   notes: z.string().max(2000).optional(),
+  attendance: z.array(attendeeSchema).optional(),
   photoGps: z
     .object({
       latitude: z.number(),
@@ -181,14 +195,20 @@ async function postHandler(req: NextRequest) {
     );
   }
 
+  // If attendance is provided, compute studentCount from it
+  const computedStudentCount = parsed.data.attendance
+    ? parsed.data.attendance.length
+    : parsed.data.studentCount ?? null;
+
   const [created] = await db
     .insert(classLogs)
     .values({
       orphanageId: parsed.data.orphanageId,
       teacherId: parsed.data.teacherId,
+      classGroupId: parsed.data.classGroupId || null,
       classDate: parsed.data.classDate,
       classTime: parsed.data.classTime || null,
-      studentCount: parsed.data.studentCount ?? null,
+      studentCount: computedStudentCount,
       photoUrl: parsed.data.photos[0]?.url || null, // keep legacy field with first photo
       notes: parsed.data.notes || null,
     })
@@ -202,6 +222,18 @@ async function postHandler(req: NextRequest) {
         url: p.url,
         caption: p.caption || null,
         sortOrder: p.sortOrder ?? i,
+      }))
+    );
+  }
+
+  // Insert attendance records
+  if (parsed.data.attendance && parsed.data.attendance.length > 0) {
+    await db.insert(classLogAttendance).values(
+      parsed.data.attendance.map((a) => ({
+        classLogId: created.id,
+        kidId: a.kidId || null,
+        kidName: a.kidName,
+        attendanceType: a.type,
       }))
     );
   }
