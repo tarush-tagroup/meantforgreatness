@@ -1,20 +1,18 @@
 import Link from "next/link";
 import { db } from "@/db";
-import { orphanages } from "@/db/schema";
+import { orphanages, kids } from "@/db/schema";
 import { sql } from "drizzle-orm";
 import { DONATION_TIERS } from "@/lib/donation-tiers";
 
 export default async function Sponsorship() {
   // Fetch live stats from the database
-  const [stats] = await db
-    .select({
-      orphanageCount: sql<number>`count(*)`,
-      totalStudents: sql<number>`coalesce(sum(${orphanages.studentCount}), 0)`,
-    })
-    .from(orphanages);
+  const [[orphanageStats], [kidStats]] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(orphanages),
+    db.select({ count: sql<number>`count(*)` }).from(kids),
+  ]);
 
-  const orphanageCount = Number(stats?.orphanageCount || 0);
-  const totalStudents = Number(stats?.totalStudents || 0);
+  const orphanageCount = Number(orphanageStats?.count || 0);
+  const totalStudents = Number(kidStats?.count || 0);
 
   return (
     <section className="py-16 sm:py-20 bg-sage-50">

@@ -39,6 +39,19 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     ])
   );
 
+  // Get total kid count per orphanage
+  const kidCountsByOrphanage = await db
+    .select({
+      orphanageId: kids.orphanageId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(kids)
+    .groupBy(kids.orphanageId);
+
+  const orphanageKidCounts = new Map(
+    kidCountsByOrphanage.map((r) => [r.orphanageId, r.count])
+  );
+
   // Group class groups by orphanage ID
   const groupsByOrphanage = new Map<string, ClassGroup[]>();
   for (const g of groups) {
@@ -58,9 +71,8 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     indonesianName: row.indonesianName || undefined,
     address: row.address || undefined,
     location: row.location,
-    studentCount: row.studentCount,
+    studentCount: orphanageKidCounts.get(row.id) ?? 0,
     classGroups: groupsByOrphanage.get(row.id) || [],
-    classesPerWeek: row.classesPerWeek,
     description: row.description,
     runningSince: row.runningSince || undefined,
     imageUrl: row.imageUrl || undefined,
@@ -112,13 +124,19 @@ export async function getOrphanageById(
     ])
   );
 
+  // Get total kid count for this orphanage
+  const [kidCount] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(kids)
+    .where(eq(kids.orphanageId, id));
+
   return {
     id: row.id,
     name: row.name,
     indonesianName: row.indonesianName || undefined,
     address: row.address || undefined,
     location: row.location,
-    studentCount: row.studentCount,
+    studentCount: kidCount?.count ?? 0,
     classGroups: groups.map((g) => {
       const stats = statsMap.get(g.id);
       return {
@@ -127,7 +145,6 @@ export async function getOrphanageById(
         ageRange: stats?.ageRange ?? "",
       };
     }),
-    classesPerWeek: row.classesPerWeek,
     description: row.description,
     runningSince: row.runningSince || undefined,
     imageUrl: row.imageUrl || undefined,

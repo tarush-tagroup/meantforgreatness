@@ -40,8 +40,6 @@ const createSchema = z.object({
   description: z.string().min(1, "Description is required"),
   runningSince: z.string().max(50).nullable().optional(),
   imageUrl: z.string().nullable().optional(),
-  studentCount: z.number().int().min(0).default(0),
-  classesPerWeek: z.number().int().min(0).default(0),
   websiteUrl: z.string().nullable().optional(),
 });
 
@@ -119,8 +117,6 @@ export async function POST(req: NextRequest) {
     description: data.description,
     runningSince: data.runningSince ?? null,
     imageUrl: data.imageUrl ?? null,
-    studentCount: data.studentCount,
-    classesPerWeek: data.classesPerWeek,
     websiteUrl: data.websiteUrl ?? null,
     latitude,
     longitude,

@@ -38,9 +38,6 @@ export default function OrphanageSection({
             <span className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700 border border-green-200">
               {orphanage.studentCount} students
             </span>
-            <span className="inline-flex items-center rounded-full bg-sage-50 px-3 py-1 text-sm font-medium text-sage-700 border border-sage-200">
-              {orphanage.classesPerWeek}x/week
-            </span>
           </div>
         </div>
 

@@ -237,21 +237,8 @@ async function seedKids() {
   console.log(`\nCreated ${Object.values(classGroupData).flat().length} class groups.\n`);
 
   // Step 2: Update orphanage student counts
-  console.log("Step 2: Updating orphanage student counts...");
-  const orphanageStudentCounts: Record<string, number> = {};
-  for (const kid of kidsData) {
-    const orphId = kid[2];
-    orphanageStudentCounts[orphId] = (orphanageStudentCounts[orphId] || 0) + 1;
-  }
-  for (const [orphId, count] of Object.entries(orphanageStudentCounts)) {
-    await db
-      .update(orphanages)
-      .set({ studentCount: count, updatedAt: new Date() })
-      .where(eq(orphanages.id, orphId));
-    console.log(`  ${orphId}: ${count} students`);
-  }
-
-  // Step 3: Insert kids
+  // Step 2: Insert kids (student counts are auto-computed from kids table)
+  console.log("Step 2: Inserting kids...");
   console.log("\nStep 3: Inserting kids...");
   let inserted = 0;
   let skipped = 0;

@@ -52,8 +52,6 @@ export const orphanages = pgTable("orphanages", {
   description: text("description").notNull(),
   runningSince: varchar("running_since", { length: 50 }),
   imageUrl: text("image_url"),
-  studentCount: integer("student_count").notNull().default(0),
-  classesPerWeek: integer("classes_per_week").notNull().default(0),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   websiteUrl: text("website_url"),
