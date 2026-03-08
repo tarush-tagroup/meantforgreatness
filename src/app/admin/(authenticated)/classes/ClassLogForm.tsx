@@ -416,7 +416,7 @@ export default function ClassLogForm({
         </div>
       )}
 
-      <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-5">
+      <div className="rounded-lg border border-sand-200 bg-white p-4 sm:p-6 space-y-5">
         {/* Orphanage */}
         <div>
           <label
@@ -681,13 +681,13 @@ export default function ClassLogForm({
                         addExternalKid();
                       }
                     }}
-                    placeholder="Enter name and press Add"
-                    className="flex-1 rounded-lg border border-sand-200 px-3 py-2.5 text-sm text-sand-900"
+                    placeholder="Enter name"
+                    className="min-w-0 flex-1 rounded-lg border border-sand-200 px-3 py-2.5 text-sm text-sand-900"
                   />
                   <button
                     type="button"
                     onClick={addExternalKid}
-                    className="rounded-lg bg-sage-100 px-4 py-2.5 text-sm font-medium text-sage-800 hover:bg-sage-200 active:bg-sage-300 transition-colors"
+                    className="shrink-0 rounded-lg bg-sage-100 px-4 py-2.5 text-sm font-medium text-sage-800 hover:bg-sage-200 active:bg-sage-300 transition-colors"
                   >
                     Add
                   </button>
