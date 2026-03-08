@@ -2,7 +2,7 @@
 
 import posthog, { PostHog } from "posthog-js";
 import { PostHogProvider as PHProvider, usePostHog } from "posthog-js/react";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, Suspense, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 /** Cache PostHog instances by API key so we never double-init */
@@ -25,6 +25,16 @@ function getOrCreateInstance(apiKey: string, apiHost: string): PostHog {
 
   instances.set(apiKey, ph);
   return ph;
+}
+
+/** SSR-safe check: returns false on server, true on client */
+const emptySubscribe = () => () => {};
+function useIsClient() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 }
 
 function PostHogPageView() {
@@ -52,8 +62,8 @@ function PostHogPageView() {
  *
  * Pass `apiKey` and optionally `apiHost` to override the defaults.
  *
- * IMPORTANT: Always renders children on both server & client to avoid
- * hydration mismatches. PostHog init is deferred to a useEffect.
+ * Uses useSyncExternalStore to safely detect client-side rendering
+ * and avoid hydration mismatches.
  */
 export default function PostHogProvider({
   children,
@@ -70,19 +80,13 @@ export default function PostHogProvider({
     process.env.NEXT_PUBLIC_POSTHOG_HOST ||
     "https://us.i.posthog.com";
 
-  const [client, setClient] = useState<PostHog | null>(null);
+  const isClient = useIsClient();
 
-  useEffect(() => {
-    if (key) {
-      setClient(getOrCreateInstance(key, host));
-    }
-  }, [key, host]);
-
-  // Before PostHog initializes (server + first client render), render
-  // children without the provider — same output on both sides, no mismatch.
-  if (!client) {
+  if (!isClient || !key) {
     return <>{children}</>;
   }
+
+  const client = getOrCreateInstance(key, host);
 
   return (
     <PHProvider client={client}>
