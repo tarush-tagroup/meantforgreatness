@@ -85,6 +85,13 @@
       "when": 1773002508412,
       "tag": "0011_open_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1773005853232,
+      "tag": "0012_lean_ogun",
+      "breakpoints": true
     }
   ]
 }

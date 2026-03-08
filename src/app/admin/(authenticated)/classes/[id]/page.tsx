@@ -2,7 +2,15 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { classLogs, classLogPhotos, orphanages, users } from "@/db/schema";
+import {
+  classLogs,
+  classLogPhotos,
+  classLogAttendance,
+  classGroups,
+  kids,
+  orphanages,
+  users,
+} from "@/db/schema";
 import { eq, asc, sql } from "drizzle-orm";
 import ClassLogForm from "../ClassLogForm";
 import DeleteClassLogButton from "./DeleteClassLogButton";
@@ -45,6 +53,7 @@ export default async function ClassLogDetailPage({
       orphanageName: orphanages.name,
       teacherId: classLogs.teacherId,
       teacherName: users.name,
+      classGroupId: classLogs.classGroupId,
       classDate: classLogs.classDate,
       classTime: classLogs.classTime,
       studentCount: classLogs.studentCount,
@@ -103,6 +112,16 @@ export default async function ClassLogDetailPage({
     aiAnalyzedAt: row.aiAnalyzedAt?.toISOString() || null,
   };
 
+  // Fetch attendance records for this class log
+  const attendanceRecords = await db
+    .select({
+      kidId: classLogAttendance.kidId,
+      kidName: classLogAttendance.kidName,
+      attendanceType: classLogAttendance.attendanceType,
+    })
+    .from(classLogAttendance)
+    .where(eq(classLogAttendance.classLogId, id));
+
   if (canEdit) {
     // Editable mode: show form
     const orphanageOptions = await db
@@ -117,6 +136,25 @@ export default async function ClassLogDetailPage({
         sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
       )
       .orderBy(asc(users.name));
+
+    const classGroupOptions = await db
+      .select({
+        id: classGroups.id,
+        name: classGroups.name,
+        orphanageId: classGroups.orphanageId,
+      })
+      .from(classGroups)
+      .orderBy(asc(classGroups.sortOrder));
+
+    const kidsList = await db
+      .select({
+        id: kids.id,
+        name: kids.name,
+        orphanageId: kids.orphanageId,
+        classGroupId: kids.classGroupId,
+      })
+      .from(kids)
+      .orderBy(asc(kids.name));
 
     return (
       <div>
@@ -137,16 +175,24 @@ export default async function ClassLogDetailPage({
             orphanages={orphanageOptions}
             teachers={teacherOptions}
             currentUserId={user.id}
+            classGroups={classGroupOptions}
+            allKids={kidsList}
             aiMetadata={aiMetadata}
             initialData={{
               id: row.id,
               orphanageId: row.orphanageId,
               teacherId: row.teacherId,
+              classGroupId: row.classGroupId,
               classDate: row.classDate,
               classTime: row.classTime,
               studentCount: row.studentCount,
               notes: row.notes,
               photos: photos.map((p) => ({ url: p.url, caption: p.caption })),
+              attendance: attendanceRecords.map((a) => ({
+                kidId: a.kidId,
+                kidName: a.kidName,
+                type: a.attendanceType as "class_member" | "orphanage_guest" | "external",
+              })),
             }}
           />
         </div>
@@ -201,6 +247,41 @@ export default async function ClassLogDetailPage({
               </p>
             </div>
           </div>
+
+          {/* Attendance breakdown */}
+          {attendanceRecords.length > 0 && (
+            <div className="pt-4 border-t border-sand-100">
+              <p className="text-xs font-medium text-sand-500 mb-2">
+                Attendance ({attendanceRecords.length})
+              </p>
+              <div className="space-y-1">
+                {attendanceRecords.filter(a => a.attendanceType === "class_member").length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-green-700 mb-0.5">Class Members</p>
+                    <p className="text-sm text-sand-700">
+                      {attendanceRecords.filter(a => a.attendanceType === "class_member").map(a => a.kidName).join(", ")}
+                    </p>
+                  </div>
+                )}
+                {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-blue-700 mb-0.5">Other Orphanage Kids</p>
+                    <p className="text-sm text-sand-700">
+                      {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").map(a => a.kidName).join(", ")}
+                    </p>
+                  </div>
+                )}
+                {attendanceRecords.filter(a => a.attendanceType === "external").length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-sage-700 mb-0.5">External Kids</p>
+                    <p className="text-sm text-sand-700">
+                      {attendanceRecords.filter(a => a.attendanceType === "external").map(a => a.kidName).join(", ")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Photos */}
           {photos.length > 0 && (
