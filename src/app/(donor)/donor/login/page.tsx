@@ -40,6 +40,7 @@ function DonorLoginForm() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const verifyingRef = useRef(false);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -78,6 +79,9 @@ function DonorLoginForm() {
   }
 
   async function handleVerifyOtp(code: string) {
+    // Guard against double submission (auto-submit + button click race)
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
     setError("");
     setLoading(true);
 
@@ -104,6 +108,7 @@ function DonorLoginForm() {
       setError("Network error. Please try again.");
     } finally {
       setLoading(false);
+      verifyingRef.current = false;
     }
   }
 
