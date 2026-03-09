@@ -14,6 +14,7 @@ interface KidData {
   imageUrl: string | null;
   orphanageId: string | null;
   classGroupId: string | null;
+  status: string;
 }
 
 interface ClassGroupOption {
@@ -38,6 +39,7 @@ export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
     favoriteWord: kid.favoriteWord || "",
     orphanageId: kid.orphanageId || "",
     classGroupId: kid.classGroupId || "",
+    status: kid.status || "active",
   });
   const [imageUrl, setImageUrl] = useState(kid.imageUrl || "");
   const [uploading, setUploading] = useState(false);
@@ -109,6 +111,7 @@ export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
           imageUrl: imageUrl || null,
           orphanageId: form.orphanageId || null,
           classGroupId: form.classGroupId || null,
+          status: form.status,
         }),
       });
 
@@ -169,6 +172,22 @@ export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
             className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-sand-700">Status</label>
+        <select
+          name="status"
+          value={form.status}
+          onChange={handleChange}
+          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+        >
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <p className="mt-1 text-xs text-sand-400">
+          Inactive = kid has left the orphanage or is not currently in a class
+        </p>
       </div>
 
       <div>

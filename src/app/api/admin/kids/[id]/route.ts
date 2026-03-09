@@ -15,6 +15,7 @@ const updateSchema = z.object({
   imageUrl: z.string().nullable().optional(),
   orphanageId: z.string().min(1, "Orphanage is required").max(50),
   classGroupId: z.string().uuid().nullable().optional(),
+  status: z.enum(["active", "inactive"]).optional(),
 });
 
 export async function GET(
@@ -120,6 +121,7 @@ export async function PUT(
       imageUrl: data.imageUrl ?? existing.imageUrl,
       orphanageId: data.orphanageId,
       classGroupId: data.classGroupId ?? null,
+      status: data.status ?? existing.status,
       updatedAt: new Date(),
     })
     .where(eq(kids.id, id));

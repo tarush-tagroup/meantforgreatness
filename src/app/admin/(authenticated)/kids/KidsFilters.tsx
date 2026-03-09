@@ -24,8 +24,10 @@ export default function KidsFilters({
   const orphanageId = searchParams.get("orphanageId") || "";
   const classGroupId = searchParams.get("classGroupId") || "";
   const ageGroup = searchParams.get("ageGroup") || "";
+  const sortBy = searchParams.get("sortBy") || "";
+  const status = searchParams.get("status") || "";
 
-  const hasFilters = !!(orphanageId || ageGroup || classGroupId);
+  const hasFilters = !!(orphanageId || ageGroup || classGroupId || sortBy || status);
 
   const buildUrl = useCallback(
     (overrides: Record<string, string>) => {
@@ -34,15 +36,19 @@ export default function KidsFilters({
         orphanageId,
         ageGroup,
         classGroupId,
+        sortBy,
+        status,
         ...overrides,
       };
       if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
       if (merged.ageGroup) p.set("ageGroup", merged.ageGroup);
       if (merged.classGroupId) p.set("classGroupId", merged.classGroupId);
+      if (merged.sortBy) p.set("sortBy", merged.sortBy);
+      if (merged.status) p.set("status", merged.status);
       const qs = p.toString();
       return `/admin/kids${qs ? `?${qs}` : ""}`;
     },
-    [orphanageId, ageGroup, classGroupId]
+    [orphanageId, ageGroup, classGroupId, sortBy, status]
   );
 
   return (
@@ -110,6 +116,44 @@ export default function KidsFilters({
             </Link>
           );
         })}
+      </div>
+
+      {/* Status pills */}
+      <div className="flex items-center gap-1">
+        {[
+          { label: "All", value: "" },
+          { label: "Active", value: "active" },
+          { label: "Inactive", value: "inactive" },
+        ].map((s) => {
+          const isActive = status === s.value;
+          return (
+            <Link
+              key={s.label}
+              href={buildUrl({ status: s.value })}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                isActive
+                  ? "bg-green-600 text-white"
+                  : "bg-sand-100 text-sand-600 hover:bg-sand-200"
+              }`}
+            >
+              {s.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Sort dropdown */}
+      <div>
+        <select
+          value={sortBy}
+          onChange={(e) => router.push(buildUrl({ sortBy: e.target.value }))}
+          className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+        >
+          <option value="">Sort: Name</option>
+          <option value="age">Sort: Age</option>
+          <option value="total_classes">Sort: Total Classes</option>
+          <option value="recent_classes">Sort: Recent Classes</option>
+        </select>
       </div>
 
       {hasFilters && (

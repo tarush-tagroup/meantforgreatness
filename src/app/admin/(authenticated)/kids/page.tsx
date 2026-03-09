@@ -2,8 +2,8 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { kids, orphanages, classGroups } from "@/db/schema";
-import { asc, eq, gte, lte, and } from "drizzle-orm";
+import { kids, orphanages, classGroups, classLogAttendance, classLogs } from "@/db/schema";
+import { asc, desc, eq, gte, lte, and, sql } from "drizzle-orm";
 import Link from "next/link";
 import KidsFilters from "./KidsFilters";
 
@@ -12,7 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function AdminKidsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orphanageId?: string; ageGroup?: string; classGroupId?: string }>;
+  searchParams: Promise<{
+    orphanageId?: string;
+    ageGroup?: string;
+    classGroupId?: string;
+    sortBy?: string;
+    status?: string;
+  }>;
 }) {
   const user = await getSessionUser();
   if (!user || !hasPermission(user.roles, "kids:view")) {
@@ -39,10 +45,33 @@ export default async function AdminKidsPage({
   } else if (params.ageGroup === "13+") {
     conditions.push(gte(kids.age, 13));
   }
+  if (params.status === "active" || params.status === "inactive") {
+    conditions.push(eq(kids.status, params.status));
+  }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  // Query with orphanage + class group join
+  // 30 days ago for recent classes count
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
+
+  // Determine sort order
+  const sortBy = params.sortBy || "name";
+  const orderByClause = (() => {
+    switch (sortBy) {
+      case "age":
+        return asc(kids.age);
+      case "total_classes":
+        return desc(sql`(SELECT COUNT(*)::int FROM class_log_attendance WHERE class_log_attendance.kid_id = ${kids.id})`);
+      case "recent_classes":
+        return desc(sql`(SELECT COUNT(*)::int FROM class_log_attendance INNER JOIN class_logs ON class_logs.id = class_log_attendance.class_log_id WHERE class_log_attendance.kid_id = ${kids.id} AND class_logs.class_date >= ${thirtyDaysAgoStr})`);
+      default:
+        return asc(kids.name);
+    }
+  })();
+
+  // Query with orphanage + class group join + attendance stats
   const rows = await db
     .select({
       id: kids.id,
@@ -57,12 +86,41 @@ export default async function AdminKidsPage({
       orphanageName: orphanages.name,
       classGroupId: kids.classGroupId,
       classGroupName: classGroups.name,
+      status: kids.status,
+      totalClasses: sql<number>`COALESCE((
+        SELECT COUNT(*)::int FROM class_log_attendance
+        WHERE class_log_attendance.kid_id = ${kids.id}
+      ), 0)`.as("total_classes"),
+      recentClasses: sql<number>`COALESCE((
+        SELECT COUNT(*)::int FROM class_log_attendance
+        INNER JOIN class_logs ON class_logs.id = class_log_attendance.class_log_id
+        WHERE class_log_attendance.kid_id = ${kids.id}
+          AND class_logs.class_date >= ${thirtyDaysAgoStr}
+      ), 0)`.as("recent_classes"),
     })
     .from(kids)
     .leftJoin(orphanages, eq(kids.orphanageId, orphanages.id))
     .leftJoin(classGroups, eq(kids.classGroupId, classGroups.id))
     .where(whereClause)
-    .orderBy(asc(kids.name));
+    .orderBy(orderByClause);
+
+  // Get totals for the subtitle
+  const totalKids = rows.length;
+  const activeKids = rows.filter((k) => k.status === "active").length;
+
+  // If filtering by status, we need the unfiltered counts
+  let allActiveCount = activeKids;
+  let allTotalCount = totalKids;
+  if (conditions.length > 0) {
+    const [counts] = await db
+      .select({
+        total: sql<number>`COUNT(*)::int`,
+        active: sql<number>`COUNT(*) FILTER (WHERE ${kids.status} = 'active')::int`,
+      })
+      .from(kids);
+    allActiveCount = counts?.active ?? 0;
+    allTotalCount = counts?.total ?? 0;
+  }
 
   // Get orphanage options for filter
   const orphanageOptions = await db
@@ -82,7 +140,7 @@ export default async function AdminKidsPage({
     .leftJoin(orphanages, eq(classGroups.orphanageId, orphanages.id))
     .orderBy(asc(orphanages.name), asc(classGroups.sortOrder));
 
-  const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId);
+  const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId || params.sortBy || params.status);
 
   return (
     <div>
@@ -90,7 +148,17 @@ export default async function AdminKidsPage({
         <div>
           <h1 className="text-2xl font-bold text-sand-900">Kids</h1>
           <p className="mt-1 text-sm text-sand-500">
-            {rows.length} kid{rows.length !== 1 ? "s" : ""} in the program
+            {hasFilters ? (
+              <>
+                {rows.length} kid{rows.length !== 1 ? "s" : ""} shown &middot;{" "}
+                {allActiveCount} active of {allTotalCount} total
+              </>
+            ) : (
+              <>
+                {activeKids} active kid{activeKids !== 1 ? "s" : ""} out of{" "}
+                {totalKids} total
+              </>
+            )}
           </p>
         </div>
         {canEdit && (
@@ -126,7 +194,9 @@ export default async function AdminKidsPage({
           {rows.map((kid) => (
             <div
               key={kid.id}
-              className="rounded-lg border border-sand-200 bg-white overflow-hidden"
+              className={`rounded-lg border border-sand-200 bg-white overflow-hidden ${
+                kid.status === "inactive" ? "opacity-60" : ""
+              }`}
             >
               {kid.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -143,9 +213,16 @@ export default async function AdminKidsPage({
                 </div>
               )}
               <div className="p-4">
-                <h2 className="font-semibold text-sand-900 truncate">
-                  {kid.name}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-sand-900 truncate">
+                    {kid.name}
+                  </h2>
+                  {kid.status === "inactive" && (
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-sand-100 px-2 py-0.5 text-xs font-medium text-sand-500 ring-1 ring-inset ring-sand-200">
+                      Inactive
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
                     Age {kid.age}
@@ -160,14 +237,20 @@ export default async function AdminKidsPage({
                       {kid.classGroupName}
                     </span>
                   )}
-                  {kid.location && (
-                    <span className="text-xs text-sand-500 truncate">
-                      {kid.location}
-                    </span>
-                  )}
                 </div>
+                {/* Class stats */}
+                <div className="flex items-center gap-3 mt-2 text-xs text-sand-500">
+                  <span>{kid.totalClasses} class{kid.totalClasses !== 1 ? "es" : ""} total</span>
+                  <span className="text-sand-300">&middot;</span>
+                  <span>{kid.recentClasses} in last 30d</span>
+                </div>
+                {kid.location && (
+                  <p className="mt-2 text-xs text-sand-500 truncate">
+                    {kid.location}
+                  </p>
+                )}
                 {kid.hobby && (
-                  <p className="mt-2 text-sm text-sand-600 line-clamp-1">
+                  <p className="mt-1.5 text-sm text-sand-600 line-clamp-1">
                     <span className="font-medium text-sand-700">Hobby:</span> {kid.hobby}
                   </p>
                 )}
@@ -200,4 +283,3 @@ export default async function AdminKidsPage({
     </div>
   );
 }
-

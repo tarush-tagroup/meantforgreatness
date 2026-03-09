@@ -24,6 +24,7 @@ const createSchema = z.object({
   imageUrl: z.string().nullable().optional(),
   orphanageId: z.string().min(1, "Orphanage is required").max(50),
   classGroupId: z.string().uuid().nullable().optional(),
+  status: z.enum(["active", "inactive"]).optional().default("active"),
 });
 
 function slugify(name: string): string {
@@ -113,6 +114,7 @@ export async function POST(req: NextRequest) {
     imageUrl: data.imageUrl ?? null,
     orphanageId: data.orphanageId,
     classGroupId: data.classGroupId ?? null,
+    status: data.status ?? "active",
   });
 
   return NextResponse.json({ id, success: true }, { status: 201 });

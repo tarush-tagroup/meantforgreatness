@@ -93,6 +93,7 @@ export default function KidCreateForm({ orphanages, classGroups }: Props) {
           imageUrl: imageUrl || null,
           orphanageId: form.orphanageId || null,
           classGroupId: form.classGroupId || null,
+          status: "active",
         }),
       });
 
