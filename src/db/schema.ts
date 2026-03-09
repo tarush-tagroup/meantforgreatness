@@ -143,6 +143,7 @@ export const classLogAttendance = pgTable(
     }),
     kidName: varchar("kid_name", { length: 255 }).notNull(),
     attendanceType: varchar("attendance_type", { length: 20 }).notNull(), // "class_member" | "orphanage_guest" | "external"
+    note: text("note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [index("class_log_attendance_log_idx").on(table.classLogId)]

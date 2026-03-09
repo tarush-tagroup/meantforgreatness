@@ -1,0 +1,1 @@
+ALTER TABLE "class_log_attendance" ADD COLUMN "note" text;

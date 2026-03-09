@@ -30,6 +30,7 @@ interface AttendanceRecord {
   kidId: string | null;
   kidName: string;
   type: "class_member" | "orphanage_guest" | "external";
+  note?: string;
 }
 
 interface ClassLogFormProps {
@@ -138,6 +139,18 @@ export default function ClassLogForm({
   const [hasInitializedAttendance, setHasInitializedAttendance] = useState(
     !!initialData?.attendance && initialData.attendance.length > 0
   );
+  // Per-kid notes (kidId → note text)
+  const [kidNotes, setKidNotes] = useState<Map<string, string>>(() => {
+    const map = new Map<string, string>();
+    if (initialData?.attendance) {
+      for (const a of initialData.attendance) {
+        if (a.kidId && a.note) {
+          map.set(a.kidId, a.note);
+        }
+      }
+    }
+    return map;
+  });
 
   // Filtered class groups for selected orphanage
   const filteredClassGroups = useMemo(
@@ -181,6 +194,7 @@ export default function ClassLogForm({
     setOrphanageId(newOrphanageId);
     setClassGroupId("");
     setSelectedKidIds(new Set());
+    setKidNotes(new Map());
     setHasInitializedAttendance(false);
   }
 
@@ -220,6 +234,18 @@ export default function ClassLogForm({
 
   function removeExternalKid(index: number) {
     setExternalKids((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateKidNote(kidId: string, note: string) {
+    setKidNotes((prev) => {
+      const next = new Map(prev);
+      if (note) {
+        next.set(kidId, note);
+      } else {
+        next.delete(kidId);
+      }
+      return next;
+    });
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -351,21 +377,27 @@ export default function ClassLogForm({
         // Add selected class members
         for (const kid of classMembers) {
           if (selectedKidIds.has(kid.id)) {
-            attendance.push({
+            const record: AttendanceRecord = {
               kidId: kid.id,
               kidName: kid.name,
               type: "class_member",
-            });
+            };
+            const note = kidNotes.get(kid.id);
+            if (note) record.note = note;
+            attendance.push(record);
           }
         }
         // Add selected orphanage guests
         for (const kid of orphanageGuests) {
           if (selectedKidIds.has(kid.id)) {
-            attendance.push({
+            const record: AttendanceRecord = {
               kidId: kid.id,
               kidName: kid.name,
               type: "orphanage_guest",
-            });
+            };
+            const note = kidNotes.get(kid.id);
+            if (note) record.note = note;
+            attendance.push(record);
           }
         }
         // Add external kids
@@ -572,20 +604,30 @@ export default function ClassLogForm({
                   </div>
                   <div className="space-y-0.5">
                     {classMembers.map((kid) => (
-                      <label
-                        key={kid.id}
-                        className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-sand-50 active:bg-sand-100 cursor-pointer min-h-[44px]"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedKidIds.has(kid.id)}
-                          onChange={() => toggleKid(kid.id)}
-                          className="h-5 w-5 rounded border-sand-300 text-green-600 focus:ring-green-500"
-                        />
-                        <span className="text-sm text-sand-900">
-                          {kid.name}
-                        </span>
-                      </label>
+                      <div key={kid.id}>
+                        <label
+                          className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-sand-50 active:bg-sand-100 cursor-pointer min-h-[44px]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedKidIds.has(kid.id)}
+                            onChange={() => toggleKid(kid.id)}
+                            className="h-5 w-5 rounded border-sand-300 text-green-600 focus:ring-green-500"
+                          />
+                          <span className="text-sm text-sand-900">
+                            {kid.name}
+                          </span>
+                        </label>
+                        {selectedKidIds.has(kid.id) && (
+                          <input
+                            type="text"
+                            value={kidNotes.get(kid.id) || ""}
+                            onChange={(e) => updateKidNote(kid.id, e.target.value)}
+                            placeholder="Add note (optional)"
+                            className="ml-10 mr-2 mb-1 w-[calc(100%-3rem)] rounded border border-sand-150 px-2 py-1 text-xs text-sand-700 placeholder:text-sand-400 focus:border-green-300 focus:ring-0"
+                          />
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -627,20 +669,30 @@ export default function ClassLogForm({
                   </div>
                   <div className="space-y-0.5">
                     {orphanageGuests.map((kid) => (
-                      <label
-                        key={kid.id}
-                        className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-sand-50 active:bg-sand-100 cursor-pointer min-h-[44px]"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedKidIds.has(kid.id)}
-                          onChange={() => toggleKid(kid.id)}
-                          className="h-5 w-5 rounded border-sand-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-sand-900">
-                          {kid.name}
-                        </span>
-                      </label>
+                      <div key={kid.id}>
+                        <label
+                          className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-sand-50 active:bg-sand-100 cursor-pointer min-h-[44px]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedKidIds.has(kid.id)}
+                            onChange={() => toggleKid(kid.id)}
+                            className="h-5 w-5 rounded border-sand-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-sand-900">
+                            {kid.name}
+                          </span>
+                        </label>
+                        {selectedKidIds.has(kid.id) && (
+                          <input
+                            type="text"
+                            value={kidNotes.get(kid.id) || ""}
+                            onChange={(e) => updateKidNote(kid.id, e.target.value)}
+                            placeholder="Add note (optional)"
+                            className="ml-10 mr-2 mb-1 w-[calc(100%-3rem)] rounded border border-sand-150 px-2 py-1 text-xs text-sand-700 placeholder:text-sand-400 focus:border-blue-300 focus:ring-0"
+                          />
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
