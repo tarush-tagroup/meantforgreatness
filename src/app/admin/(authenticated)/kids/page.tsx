@@ -203,9 +203,10 @@ export default async function AdminKidsPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((kid) => (
-            <div
+            <Link
               key={kid.id}
-              className={`rounded-lg border border-sand-200 bg-white overflow-hidden ${
+              href={`/admin/kids/${kid.id}`}
+              className={`block rounded-lg border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md ${
                 kid.status === "inactive" ? "opacity-60" : ""
               }`}
             >
@@ -276,18 +277,8 @@ export default async function AdminKidsPage({
                     {kid.favoriteWord}
                   </p>
                 )}
-                {canEdit && (
-                  <div className="mt-3 pt-3 border-t border-sand-100">
-                    <Link
-                      href={`/admin/kids/${kid.id}`}
-                      className="text-sm font-medium text-green-600 hover:text-green-700"
-                    >
-                      Edit &rarr;
-                    </Link>
-                  </div>
-                )}
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
