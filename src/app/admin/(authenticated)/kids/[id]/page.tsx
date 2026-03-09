@@ -222,8 +222,8 @@ export default async function AdminKidPage({
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Date</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Orphanage</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Class</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Teacher</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Notes</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider hidden sm:table-cell">Teacher</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider hidden sm:table-cell">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
@@ -239,8 +239,8 @@ export default async function AdminKidPage({
                       </td>
                       <td className="px-4 py-2.5 text-sm text-sand-700">{entry.orphanageName || "—"}</td>
                       <td className="px-4 py-2.5 text-sm text-sand-700">{entry.classGroupName || "—"}</td>
-                      <td className="px-4 py-2.5 text-sm text-sand-700">{entry.teacherName || "—"}</td>
-                      <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs">
+                      <td className="px-4 py-2.5 text-sm text-sand-700 hidden sm:table-cell">{entry.teacherName || "—"}</td>
+                      <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs hidden sm:table-cell">
                         {entry.attendanceNote || entry.classNotes ? (
                           <div className="space-y-1">
                             {entry.attendanceNote && (
