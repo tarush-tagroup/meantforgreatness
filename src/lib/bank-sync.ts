@@ -372,9 +372,10 @@ export async function syncPayPal(fullSync = false): Promise<number> {
   let startDate: Date;
 
   if (fullSync) {
-    // Go back 3 years for full backfill
+    // Go back ~2 years 11 months (PayPal rejects dates beyond 3 years)
     startDate = new Date(now);
     startDate.setFullYear(startDate.getFullYear() - 3);
+    startDate.setDate(startDate.getDate() + 35);
   } else {
     // Last 31 days for regular sync
     startDate = new Date(now);
