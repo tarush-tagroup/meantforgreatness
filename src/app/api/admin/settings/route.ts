@@ -40,8 +40,6 @@ export async function PATCH(req: NextRequest) {
     const allowedKeys = [
       "payment_stripe_enabled",
       "payment_paypal_enabled",
-      "paypal_client_id",
-      "paypal_client_secret",
     ];
 
     for (const [key, value] of Object.entries(updates)) {
