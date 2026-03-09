@@ -160,7 +160,7 @@ export default async function BankingPage({ searchParams }: PageProps) {
       {accounts.length === 0 ? (
         <div className="rounded-lg border border-sand-200 bg-white p-8 text-center">
           <p className="text-sm text-sand-500">
-            No bank accounts synced yet. Add your Mercury and Wise API tokens to
+            No bank accounts synced yet. Add your Mercury, Wise, or PayPal API tokens to
             Vercel environment variables, then click Refresh.
           </p>
         </div>
@@ -173,7 +173,7 @@ export default async function BankingPage({ searchParams }: PageProps) {
                 className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4"
               >
                 <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
-                  {acct.provider === "mercury" ? "Mercury" : "Wise"} ({acct.currency.toUpperCase()})
+                  {acct.provider === "mercury" ? "Mercury" : acct.provider === "paypal" ? "PayPal" : "Wise"} ({acct.currency.toUpperCase()})
                 </p>
                 <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
                   {formatCurrency(acct.balanceCents, acct.currency)}
@@ -276,10 +276,12 @@ export default async function BankingPage({ searchParams }: PageProps) {
                           className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
                             txn.provider === "mercury"
                               ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
+                              : txn.provider === "paypal"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {txn.provider === "mercury" ? "Mercury" : "Wise"}
+                          {txn.provider === "mercury" ? "Mercury" : txn.provider === "paypal" ? "PayPal" : "Wise"}
                         </span>
                         <span className="text-xs text-sand-500">
                           {new Date(txn.date + "T00:00:00").toLocaleDateString(
@@ -339,10 +341,12 @@ export default async function BankingPage({ searchParams }: PageProps) {
                           className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                             txn.provider === "mercury"
                               ? "bg-blue-100 text-blue-700"
-                              : "bg-green-100 text-green-700"
+                              : txn.provider === "paypal"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-green-100 text-green-700"
                           }`}
                         >
-                          {txn.provider === "mercury" ? "Mercury" : "Wise"}
+                          {txn.provider === "mercury" ? "Mercury" : txn.provider === "paypal" ? "PayPal" : "Wise"}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-sand-700 max-w-[200px] truncate">
