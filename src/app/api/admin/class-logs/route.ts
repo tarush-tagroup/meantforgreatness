@@ -25,6 +25,7 @@ const attendeeSchema = z.object({
   kidId: z.string().nullable().optional(),
   kidName: z.string().min(1),
   type: z.enum(["class_member", "orphanage_guest", "external"]),
+  note: z.string().max(500).optional(),
 });
 
 const createSchema = z.object({
@@ -234,6 +235,7 @@ async function postHandler(req: NextRequest) {
         kidId: a.kidId || null,
         kidName: a.kidName,
         attendanceType: a.type,
+        note: a.note || null,
       }))
     );
   }

@@ -118,6 +118,7 @@ export default async function ClassLogDetailPage({
       kidId: classLogAttendance.kidId,
       kidName: classLogAttendance.kidName,
       attendanceType: classLogAttendance.attendanceType,
+      note: classLogAttendance.note,
     })
     .from(classLogAttendance)
     .where(eq(classLogAttendance.classLogId, id));
@@ -192,6 +193,7 @@ export default async function ClassLogDetailPage({
                 kidId: a.kidId,
                 kidName: a.kidName,
                 type: a.attendanceType as "class_member" | "orphanage_guest" | "external",
+                note: a.note || undefined,
               })),
             }}
           />
@@ -258,17 +260,27 @@ export default async function ClassLogDetailPage({
                 {attendanceRecords.filter(a => a.attendanceType === "class_member").length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-green-700 mb-0.5">Class Members</p>
-                    <p className="text-sm text-sand-700">
-                      {attendanceRecords.filter(a => a.attendanceType === "class_member").map(a => a.kidName).join(", ")}
-                    </p>
+                    <div className="text-sm text-sand-700 space-y-0.5">
+                      {attendanceRecords.filter(a => a.attendanceType === "class_member").map((a, i) => (
+                        <p key={i}>
+                          {a.kidName}
+                          {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-blue-700 mb-0.5">Other Orphanage Kids</p>
-                    <p className="text-sm text-sand-700">
-                      {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").map(a => a.kidName).join(", ")}
-                    </p>
+                    <div className="text-sm text-sand-700 space-y-0.5">
+                      {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").map((a, i) => (
+                        <p key={i}>
+                          {a.kidName}
+                          {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {attendanceRecords.filter(a => a.attendanceType === "external").length > 0 && (
