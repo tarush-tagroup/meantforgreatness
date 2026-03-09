@@ -5,8 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 interface Settings {
   payment_stripe_enabled?: string;
   payment_paypal_enabled?: string;
-  paypal_client_id?: string;
-  paypal_client_secret?: string;
 }
 
 export default function PlatformSettings() {
@@ -18,18 +16,12 @@ export default function PlatformSettings() {
     text: string;
   } | null>(null);
 
-  // PayPal form state (local until saved)
-  const [paypalClientId, setPaypalClientId] = useState("");
-  const [paypalClientSecret, setPaypalClientSecret] = useState("");
-
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/settings");
       if (res.ok) {
         const data = await res.json();
         setSettings(data.settings || {});
-        setPaypalClientId(data.settings?.paypal_client_id || "");
-        setPaypalClientSecret(data.settings?.paypal_client_secret || "");
       }
     } catch {
       // Settings table might not exist yet
@@ -76,8 +68,8 @@ export default function PlatformSettings() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="h-48 rounded-lg bg-sand-100" />
-        <div className="h-48 rounded-lg bg-sand-100" />
+        <div className="h-32 rounded-lg bg-sand-100" />
+        <div className="h-32 rounded-lg bg-sand-100" />
       </div>
     );
   }
@@ -150,10 +142,9 @@ export default function PlatformSettings() {
 
         <div className="mt-4 rounded-lg bg-sand-50 px-4 py-3">
           <p className="text-xs text-sand-500">
-            Stripe is configured via environment variables (
+            Configured via environment variables (
             <code className="text-sand-600">STRIPE_SECRET_KEY</code> and{" "}
-            <code className="text-sand-600">STRIPE_WEBHOOK_SECRET</code>). No
-            additional setup needed here.
+            <code className="text-sand-600">STRIPE_WEBHOOK_SECRET</code>).
           </p>
         </div>
       </div>
@@ -209,55 +200,14 @@ export default function PlatformSettings() {
           </div>
         </div>
 
-        {/* PayPal credentials */}
-        <div className="mt-4 space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-sand-600 mb-1">
-              Client ID
-            </label>
-            <input
-              type="text"
-              value={paypalClientId}
-              onChange={(e) => setPaypalClientId(e.target.value)}
-              placeholder="PayPal Client ID"
-              className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-700 placeholder:text-sand-300 focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-sand-600 mb-1">
-              Client Secret
-            </label>
-            <input
-              type="password"
-              value={paypalClientSecret}
-              onChange={(e) => setPaypalClientSecret(e.target.value)}
-              placeholder="PayPal Client Secret"
-              className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-700 placeholder:text-sand-300 focus:border-blue-300 focus:ring-1 focus:ring-blue-300"
-            />
-          </div>
-          <button
-            onClick={() =>
-              updateSettings({
-                paypal_client_id: paypalClientId,
-                paypal_client_secret: paypalClientSecret,
-              })
-            }
-            disabled={saving}
-            className="rounded-lg bg-sand-800 px-4 py-2 text-sm font-medium text-white hover:bg-sand-700 disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save PayPal Credentials"}
-          </button>
+        <div className="mt-4 rounded-lg bg-sand-50 px-4 py-3">
+          <p className="text-xs text-sand-500">
+            Configured via environment variables (
+            <code className="text-sand-600">PAYPAL_CLIENT_ID</code>,{" "}
+            <code className="text-sand-600">PAYPAL_CLIENT_SECRET</code>, and{" "}
+            <code className="text-sand-600">PAYPAL_WEBHOOK_ID</code>).
+          </p>
         </div>
-
-        {!paypalEnabled && (
-          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-            <p className="text-xs text-amber-700">
-              PayPal is currently disabled. Enter your credentials and toggle it
-              on when ready. The donation form will automatically show PayPal as
-              a payment option.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Info box */}
@@ -267,10 +217,9 @@ export default function PlatformSettings() {
         </h4>
         <p className="text-xs text-sand-500 leading-relaxed">
           The donation form automatically adapts based on which platforms are
-          enabled. If only Stripe is active, the form works exactly as it does
-          now. If both are active, donors can choose between card payment
-          (Stripe) and PayPal. At least one platform must be enabled for
-          donations to work.
+          enabled. If only Stripe is active, donors pay with card. If both are
+          active, donors can choose between card (Stripe) and PayPal. At least
+          one platform must be enabled for donations to work.
         </p>
       </div>
     </div>
