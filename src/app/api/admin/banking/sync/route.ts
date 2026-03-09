@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { syncMercury, syncWise, syncExchangeRate } from "@/lib/bank-sync";
+import { syncMercury, syncWise, syncPayPal, syncExchangeRate } from "@/lib/bank-sync";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { withLogging } from "@/lib/with-logging";
@@ -54,6 +54,15 @@ async function postHandler(req: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err);
     errors.push(`Wise: ${msg}`);
     logger.error("bank-sync", "Manual Wise sync failed", { error: msg });
+  }
+
+  try {
+    const paypalItems = await syncPayPal();
+    totalItems += paypalItems;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    errors.push(`PayPal: ${msg}`);
+    logger.error("bank-sync", "Manual PayPal sync failed", { error: msg });
   }
 
   await syncExchangeRate();

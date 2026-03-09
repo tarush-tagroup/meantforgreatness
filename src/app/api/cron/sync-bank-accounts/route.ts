@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "@/lib/timing-safe";
-import { syncMercury, syncWise, syncExchangeRate } from "@/lib/bank-sync";
+import { syncMercury, syncWise, syncPayPal, syncExchangeRate } from "@/lib/bank-sync";
 import { db } from "@/db";
 import { cronRuns } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -49,6 +49,16 @@ export async function GET(req: NextRequest) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push(`Wise: ${msg}`);
       logger.error("bank-sync", "Wise sync failed", { error: msg });
+    }
+
+    // Sync PayPal
+    try {
+      const paypalItems = await syncPayPal();
+      totalItems += paypalItems;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`PayPal: ${msg}`);
+      logger.error("bank-sync", "PayPal sync failed", { error: msg });
     }
 
     // Sync exchange rate
