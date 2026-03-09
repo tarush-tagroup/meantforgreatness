@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { orphanages, classGroups, kids } from "@/db/schema";
-import { eq, asc, sql, min, max } from "drizzle-orm";
+import { eq, asc, and, sql, min, max } from "drizzle-orm";
 import type { Orphanage, ClassGroup } from "@/types/orphanage";
 
 /**
@@ -15,7 +15,7 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     .from(classGroups)
     .orderBy(asc(classGroups.sortOrder));
 
-  // Get real kid counts and age ranges per class group
+  // Get real kid counts and age ranges per class group (active kids only)
   const kidStats = await db
     .select({
       classGroupId: kids.classGroupId,
@@ -24,6 +24,7 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
       maxAge: max(kids.age),
     })
     .from(kids)
+    .where(eq(kids.status, "active"))
     .groupBy(kids.classGroupId);
 
   const statsMap = new Map(
@@ -39,13 +40,14 @@ export async function getAllOrphanages(): Promise<Orphanage[]> {
     ])
   );
 
-  // Get total kid count per orphanage
+  // Get total active kid count per orphanage
   const kidCountsByOrphanage = await db
     .select({
       orphanageId: kids.orphanageId,
       count: sql<number>`count(*)::int`,
     })
     .from(kids)
+    .where(eq(kids.status, "active"))
     .groupBy(kids.orphanageId);
 
   const orphanageKidCounts = new Map(
@@ -100,7 +102,7 @@ export async function getOrphanageById(
     .where(eq(classGroups.orphanageId, id))
     .orderBy(asc(classGroups.sortOrder));
 
-  // Get real kid counts per class group
+  // Get real kid counts per class group (active kids only)
   const kidStats = await db
     .select({
       classGroupId: kids.classGroupId,
@@ -109,7 +111,7 @@ export async function getOrphanageById(
       maxAge: max(kids.age),
     })
     .from(kids)
-    .where(eq(kids.orphanageId, id))
+    .where(and(eq(kids.orphanageId, id), eq(kids.status, "active")))
     .groupBy(kids.classGroupId);
 
   const statsMap = new Map(
@@ -125,11 +127,11 @@ export async function getOrphanageById(
     ])
   );
 
-  // Get total kid count for this orphanage
+  // Get total active kid count for this orphanage
   const [kidCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(kids)
-    .where(eq(kids.orphanageId, id));
+    .where(and(eq(kids.orphanageId, id), eq(kids.status, "active")));
 
   return {
     id: row.id,
