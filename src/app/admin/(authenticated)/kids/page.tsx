@@ -3,7 +3,7 @@ import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { kids, orphanages, classGroups, classLogAttendance, classLogs } from "@/db/schema";
-import { asc, desc, eq, gte, lte, and, sql } from "drizzle-orm";
+import { asc, desc, eq, gte, lte, and, sql, ilike } from "drizzle-orm";
 import Link from "next/link";
 import KidsFilters from "./KidsFilters";
 
@@ -18,6 +18,7 @@ export default async function AdminKidsPage({
     classGroupId?: string;
     sortBy?: string;
     status?: string;
+    q?: string;
   }>;
 }) {
   const user = await getSessionUser();
@@ -47,6 +48,9 @@ export default async function AdminKidsPage({
   }
   if (params.status === "active" || params.status === "inactive") {
     conditions.push(eq(kids.status, params.status));
+  }
+  if (params.q) {
+    conditions.push(ilike(kids.name, `%${params.q}%`));
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -140,7 +144,13 @@ export default async function AdminKidsPage({
     .leftJoin(orphanages, eq(classGroups.orphanageId, orphanages.id))
     .orderBy(asc(orphanages.name), asc(classGroups.sortOrder));
 
-  const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId || params.sortBy || params.status);
+  // Get all kid names for search autocomplete (unfiltered)
+  const allKids = await db
+    .select({ id: kids.id, name: kids.name })
+    .from(kids)
+    .orderBy(asc(kids.name));
+
+  const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId || params.sortBy || params.status || params.q);
 
   return (
     <div>
@@ -175,6 +185,7 @@ export default async function AdminKidsPage({
       <KidsFilters
         orphanageOptions={orphanageOptions}
         classGroupOptions={classGroupOptions}
+        allKids={allKids}
       />
 
       {rows.length === 0 ? (
