@@ -55,14 +55,29 @@ export default async function AdminOrphanagesPage() {
         )}
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         {rows.map((orphanage) => (
-          <div
+          <Link
             key={orphanage.id}
-            className="rounded-lg border border-sand-200 bg-white p-5"
+            href={`/admin/orphanages/${orphanage.id}`}
+            className="block rounded-lg border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
           >
-            <div>
-              <div className="flex items-center gap-3">
+            {orphanage.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={orphanage.imageUrl}
+                alt={orphanage.name}
+                className="h-40 w-full object-cover"
+              />
+            ) : (
+              <div className="h-40 bg-sand-100 flex items-center justify-center">
+                <span className="text-4xl text-sand-300">
+                  {orphanage.name.charAt(0)}
+                </span>
+              </div>
+            )}
+            <div className="p-4">
+              <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold text-sand-900 truncate">
                   {orphanage.name}
                 </h2>
@@ -72,7 +87,7 @@ export default async function AdminOrphanagesPage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-sand-500 mt-1">
+              <p className="text-sm text-sand-500 mt-1 truncate">
                 {orphanage.location}
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -83,23 +98,13 @@ export default async function AdminOrphanagesPage() {
                   {groupCounts.get(orphanage.id) || 0} groups
                 </span>
               </div>
+              {orphanage.description && (
+                <p className="mt-2 text-sm text-sand-600 line-clamp-2">
+                  {orphanage.description}
+                </p>
+              )}
             </div>
-
-            <p className="mt-3 text-sm text-sand-600 line-clamp-2">
-              {orphanage.description}
-            </p>
-
-            {canEdit && (
-              <div className="mt-4 pt-3 border-t border-sand-100">
-                <Link
-                  href={`/admin/orphanages/${orphanage.id}`}
-                  className="text-sm font-medium text-green-600 hover:text-green-700"
-                >
-                  Edit details &rarr;
-                </Link>
-              </div>
-            )}
-          </div>
+          </Link>
         ))}
       </div>
     </div>
