@@ -146,7 +146,10 @@ export const classLogAttendance = pgTable(
     note: text("note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("class_log_attendance_log_idx").on(table.classLogId)]
+  (table) => [
+    index("class_log_attendance_log_idx").on(table.classLogId),
+    index("class_log_attendance_kid_idx").on(table.kidId),
+  ]
 );
 
 // ─── Events ──────────────────────────────────────────────────────────────────
@@ -300,6 +303,7 @@ export const kids = pgTable("kids", {
   classGroupId: uuid("class_group_id").references(() => classGroups.id, {
     onDelete: "set null",
   }),
+  status: varchar("status", { length: 20 }).notNull().default("active"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
