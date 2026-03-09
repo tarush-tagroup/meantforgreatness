@@ -276,12 +276,24 @@ export default async function AdminClassesPage({
     .limit(limit)
     .offset(offset);
 
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(classLogs)
-    .where(whereClause);
+  // 30 days ago for recent count
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
 
-  const total = Number(countResult?.count || 0);
+  const [countResult, recentCountResult] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(classLogs)
+      .where(whereClause),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(classLogs)
+      .where(gte(classLogs.classDate, thirtyDaysAgoStr)),
+  ]);
+
+  const total = Number(countResult[0]?.count || 0);
+  const recentTotal = Number(recentCountResult[0]?.count || 0);
   const totalPages = Math.ceil(total / limit);
 
   // Get filter options
@@ -306,7 +318,7 @@ export default async function AdminClassesPage({
         <div>
           <h1 className="text-2xl font-bold text-sand-900">Class Logs</h1>
           <p className="mt-1 text-sm text-sand-500">
-            {total} class log{total !== 1 ? "s" : ""} recorded
+            {total} class log{total !== 1 ? "s" : ""} recorded &middot; {recentTotal} in last 30 days
           </p>
         </div>
         {canCreate && (

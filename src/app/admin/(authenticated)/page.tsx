@@ -57,7 +57,7 @@ export default async function AdminDashboard({
   const periodStart = getPeriodStart(period);
 
   // ── All-time totals (always visible at the top) ──────────────────────────
-  const [orphanageCount, totalStudents] = await Promise.all([
+  const [orphanageCount, totalStudents, activeStudents] = await Promise.all([
     canViewOrphanages
       ? db
           .select({ count: sql<number>`count(*)` })
@@ -68,6 +68,13 @@ export default async function AdminDashboard({
       ? db
           .select({ total: sql<number>`count(*)::int` })
           .from(kids)
+          .then((r) => Number(r[0]?.total || 0))
+      : Promise.resolve(0),
+    canViewOrphanages
+      ? db
+          .select({ total: sql<number>`count(*)::int` })
+          .from(kids)
+          .where(eq(kids.status, "active"))
           .then((r) => Number(r[0]?.total || 0))
       : Promise.resolve(0),
   ]);
@@ -289,9 +296,10 @@ export default async function AdminDashboard({
         )}
         {canViewOrphanages && (
           <StatCard
-            label="Total Students"
-            value={totalStudents.toLocaleString()}
-            subtitle="Across all orphanages"
+            label="Active Students"
+            value={activeStudents.toLocaleString()}
+            subtitle={`${totalStudents.toLocaleString()} total across all orphanages`}
+            href="/admin/kids"
           />
         )}
       </div>

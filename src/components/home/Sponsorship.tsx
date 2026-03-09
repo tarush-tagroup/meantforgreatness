@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { db } from "@/db";
 import { orphanages, kids } from "@/db/schema";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { DONATION_TIERS } from "@/lib/donation-tiers";
 
 export default async function Sponsorship() {
   // Fetch live stats from the database
   const [[orphanageStats], [kidStats]] = await Promise.all([
     db.select({ count: sql<number>`count(*)` }).from(orphanages),
-    db.select({ count: sql<number>`count(*)` }).from(kids),
+    db.select({ count: sql<number>`count(*)` }).from(kids).where(eq(kids.status, "active")),
   ]);
 
   const orphanageCount = Number(orphanageStats?.count || 0);
