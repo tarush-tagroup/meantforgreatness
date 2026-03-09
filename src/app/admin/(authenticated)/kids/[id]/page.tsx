@@ -53,6 +53,7 @@ export default async function AdminKidPage({
       teacherName: users.name,
       classGroupName: classGroups.name,
       attendanceNote: classLogAttendance.note,
+      classNotes: classLogs.notes,
     })
     .from(classLogAttendance)
     .innerJoin(classLogs, eq(classLogAttendance.classLogId, classLogs.id))
@@ -222,7 +223,7 @@ export default async function AdminKidPage({
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Orphanage</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Class</th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Teacher</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Note</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
@@ -239,7 +240,24 @@ export default async function AdminKidPage({
                       <td className="px-4 py-2.5 text-sm text-sand-700">{entry.orphanageName || "—"}</td>
                       <td className="px-4 py-2.5 text-sm text-sand-700">{entry.classGroupName || "—"}</td>
                       <td className="px-4 py-2.5 text-sm text-sand-700">{entry.teacherName || "—"}</td>
-                      <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs truncate">{entry.attendanceNote || "—"}</td>
+                      <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs">
+                        {entry.attendanceNote || entry.classNotes ? (
+                          <div className="space-y-1">
+                            {entry.attendanceNote && (
+                              <p className="truncate" title={entry.attendanceNote}>
+                                <span className="font-medium text-sand-600">Kid:</span> {entry.attendanceNote}
+                              </p>
+                            )}
+                            {entry.classNotes && (
+                              <p className="truncate" title={entry.classNotes}>
+                                <span className="font-medium text-sand-600">Class:</span> {entry.classNotes}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -80,11 +80,6 @@ export default function KidsFilters({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Reset highlight when suggestions change
-  useEffect(() => {
-    setHighlightIndex(-1);
-  }, [searchQuery]);
-
   function handleSearchSubmit() {
     setShowDropdown(false);
     router.push(buildUrl({ q: searchQuery.trim() }));
@@ -151,6 +146,7 @@ export default function KidsFilters({
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
+              setHighlightIndex(-1);
               setShowDropdown(e.target.value.trim().length > 0);
             }}
             onFocus={() => {
