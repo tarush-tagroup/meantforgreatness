@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { kids, orphanages, classGroups, classLogAttendance, classLogs } from "@/db/schema";
+import { kids, orphanages, classGroups } from "@/db/schema";
 import { asc, desc, eq, gte, lte, and, sql, ilike } from "drizzle-orm";
 import Link from "next/link";
 import KidsFilters from "./KidsFilters";
