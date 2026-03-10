@@ -2,8 +2,8 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { classLogs, orphanages, users } from "@/db/schema";
-import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
+import { classLogs, classLogAttendance, kids, orphanages, users } from "@/db/schema";
+import { eq, desc, asc, and, gte, lte, sql, inArray } from "drizzle-orm";
 import Link from "next/link";
 import Image from "next/image";
 import ClassLogFilters from "./ClassLogFilters";
@@ -11,21 +11,11 @@ import { parseTimeRange } from "@/lib/ai-photo-analysis";
 
 export const dynamic = "force-dynamic";
 
-/* ── Verification helpers (unchanged) ─────────────────────────────────────── */
+/* ── Verification helpers ──────────────────────────────────────────────── */
 
 function isOrphanageVerified(aiMatch: string | null): boolean | null {
   if (!aiMatch) return null;
   return aiMatch === "high" || aiMatch === "likely";
-}
-
-function isDateVerified(aiDateMatch: string | null): boolean | null {
-  if (!aiDateMatch || aiDateMatch === "no_exif") return null;
-  return aiDateMatch === "match";
-}
-
-function isTimeVerified(aiTimeMatch: string | null): boolean | null {
-  if (!aiTimeMatch || aiTimeMatch === "no_exif" || aiTimeMatch === "no_time") return null;
-  return aiTimeMatch === "match";
 }
 
 function formatStartTime(classTime: string | null): string | null {
@@ -116,16 +106,16 @@ function computeVerificationLevel(log: {
 }
 
 const levelStyles = {
-  green: "text-green-700 bg-green-50",
-  yellow: "text-amber-700 bg-amber-50",
-  red: "text-red-700 bg-red-50",
+  green: "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20",
+  yellow: "text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-600/20",
+  red: "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20",
 } as const;
 
 function VerificationPill({ level, label, reasons }: { level: "green" | "yellow" | "red"; label: string; reasons: string[] }) {
   const tooltip = reasons.length > 0 ? reasons.join(" · ") : undefined;
   return (
     <span className="relative group/pill inline-flex">
-      <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-default ${levelStyles[level]}`}>
+      <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-default ${levelStyles[level]}`}>
         {label}
       </span>
       {tooltip && (
@@ -138,7 +128,7 @@ function VerificationPill({ level, label, reasons }: { level: "green" | "yellow"
   );
 }
 
-/* ── Main page ────────────────────────────────────────────────────────────── */
+/* ── Main page ────────────────────────────────────────────────────────── */
 
 export default async function AdminClassesPage({
   searchParams,
@@ -146,9 +136,11 @@ export default async function AdminClassesPage({
   searchParams: Promise<{
     orphanageId?: string;
     teacherId?: string;
+    kidId?: string;
     dateFrom?: string;
     dateTo?: string;
     sortBy?: string;
+    verification?: string;
     page?: string;
   }>;
 }) {
@@ -159,7 +151,7 @@ export default async function AdminClassesPage({
 
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page || "1"));
-  const limit = 24; // divisible by 2 and 3 for grid
+  const limit = 24;
   const offset = (page - 1) * limit;
 
   // Parse multi-select filters (comma-separated)
@@ -174,6 +166,18 @@ export default async function AdminClassesPage({
     if (ids.length === 1) conditions.push(eq(classLogs.teacherId, ids[0]));
     else if (ids.length > 1) conditions.push(inArray(classLogs.teacherId, ids));
   }
+  if (params.kidId) {
+    const ids = params.kidId.split(",").filter(Boolean);
+    if (ids.length > 0) {
+      conditions.push(
+        sql`${classLogs.id} IN (
+          SELECT ${classLogAttendance.classLogId}
+          FROM ${classLogAttendance}
+          WHERE ${classLogAttendance.kidId} IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})
+        )`
+      );
+    }
+  }
   if (params.dateFrom) conditions.push(gte(classLogs.classDate, params.dateFrom));
   if (params.dateTo) conditions.push(lte(classLogs.classDate, params.dateTo));
 
@@ -185,61 +189,100 @@ export default async function AdminClassesPage({
     ? [desc(classLogs.studentCount), desc(classLogs.classDate)]
     : [desc(classLogs.classDate), desc(classLogs.createdAt)];
 
-  const rows = await db
-    .select({
-      id: classLogs.id,
-      orphanageId: classLogs.orphanageId,
-      orphanageName: orphanages.name,
-      teacherName: users.name,
-      classDate: classLogs.classDate,
-      classTime: classLogs.classTime,
-      studentCount: classLogs.studentCount,
-      notes: classLogs.notes,
-      photoUrl: classLogs.photoUrl,
-      aiKidsCount: classLogs.aiKidsCount,
-      aiOrphanageMatch: classLogs.aiOrphanageMatch,
-      aiPrimaryPhotoUrl: classLogs.aiPrimaryPhotoUrl,
-      aiAnalyzedAt: classLogs.aiAnalyzedAt,
-      aiDateMatch: classLogs.aiDateMatch,
-      aiDateNotes: classLogs.aiDateNotes,
-      aiTimeMatch: classLogs.aiTimeMatch,
-      aiTimeNotes: classLogs.aiTimeNotes,
-      aiGpsDistance: classLogs.aiGpsDistance,
-      exifDateTaken: classLogs.exifDateTaken,
-    })
+  // Parse verification filter
+  const verificationFilter = params.verification
+    ? params.verification.split(",").filter(Boolean)
+    : [];
+  const useJsPagination = verificationFilter.length > 0;
+
+  // Query: fetch all rows when verification filter active, else use SQL pagination
+  const selectFields = {
+    id: classLogs.id,
+    orphanageId: classLogs.orphanageId,
+    orphanageName: orphanages.name,
+    teacherName: users.name,
+    classDate: classLogs.classDate,
+    classTime: classLogs.classTime,
+    studentCount: classLogs.studentCount,
+    notes: classLogs.notes,
+    photoUrl: classLogs.photoUrl,
+    aiKidsCount: classLogs.aiKidsCount,
+    aiOrphanageMatch: classLogs.aiOrphanageMatch,
+    aiPrimaryPhotoUrl: classLogs.aiPrimaryPhotoUrl,
+    aiAnalyzedAt: classLogs.aiAnalyzedAt,
+    aiDateMatch: classLogs.aiDateMatch,
+    aiDateNotes: classLogs.aiDateNotes,
+    aiTimeMatch: classLogs.aiTimeMatch,
+    aiTimeNotes: classLogs.aiTimeNotes,
+    aiGpsDistance: classLogs.aiGpsDistance,
+    exifDateTaken: classLogs.exifDateTaken,
+  };
+
+  const baseQuery = db
+    .select(selectFields)
     .from(classLogs)
     .leftJoin(orphanages, eq(classLogs.orphanageId, orphanages.id))
     .leftJoin(users, eq(classLogs.teacherId, users.id))
     .where(whereClause)
-    .orderBy(...orderByClause)
-    .limit(limit)
-    .offset(offset);
+    .orderBy(...orderByClause);
 
-  // Counts
+  const allMatchingRows = useJsPagination
+    ? await baseQuery
+    : await baseQuery.limit(limit).offset(offset);
+
+  // Verification level map
+  const verificationLevelMap: Record<string, "green" | "yellow" | "red"> = {
+    verified: "green",
+    check: "yellow",
+    audit: "red",
+  };
+
+  let rows: typeof allMatchingRows;
+  let total: number;
+
+  if (useJsPagination) {
+    const filtered = allMatchingRows.filter((log) => {
+      const vl = computeVerificationLevel(log);
+      if (!vl) return false; // No verification data — exclude when filtering by verification
+      return verificationFilter.some((f) => verificationLevelMap[f] === vl.level);
+    });
+    total = filtered.length;
+    rows = filtered.slice(offset, offset + limit);
+  } else {
+    rows = allMatchingRows;
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(classLogs)
+      .where(whereClause);
+    total = Number(countResult?.count || 0);
+  }
+
+  const totalPages = Math.ceil(total / limit);
+
+  // Counts for header
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
 
-  const [countResult, recentCountResult] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(classLogs).where(whereClause),
-    db.select({ count: sql<number>`count(*)` }).from(classLogs).where(gte(classLogs.classDate, thirtyDaysAgoStr)),
-  ]);
-
-  const total = Number(countResult[0]?.count || 0);
-  const recentTotal = Number(recentCountResult[0]?.count || 0);
-  const totalPages = Math.ceil(total / limit);
+  const [recentCountResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(classLogs)
+    .where(gte(classLogs.classDate, thirtyDaysAgoStr));
+  const recentTotal = Number(recentCountResult?.count || 0);
 
   // Filter options
-  const orphanageOptions = await db
-    .select({ id: orphanages.id, name: orphanages.name })
-    .from(orphanages)
-    .orderBy(orphanages.name);
-
-  const teacherOptions = await db
-    .select({ id: users.id, name: users.name })
-    .from(users)
-    .where(sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`)
-    .orderBy(users.name);
+  const [orphanageOptions, teacherOptions, kidOptions] = await Promise.all([
+    db.select({ id: orphanages.id, name: orphanages.name })
+      .from(orphanages).orderBy(asc(orphanages.name)),
+    db.select({ id: users.id, name: users.name })
+      .from(users)
+      .where(sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`)
+      .orderBy(asc(users.name)),
+    db.selectDistinct({ id: kids.id, name: kids.name })
+      .from(kids)
+      .innerJoin(classLogAttendance, eq(classLogAttendance.kidId, kids.id))
+      .orderBy(asc(kids.name)),
+  ]);
 
   const canCreate = hasPermission(user.roles, "class_logs:create");
 
@@ -265,6 +308,7 @@ export default async function AdminClassesPage({
       <ClassLogFilters
         orphanages={orphanageOptions}
         teachers={teacherOptions}
+        kids={kidOptions}
       />
 
       {rows.length === 0 ? (
@@ -285,8 +329,6 @@ export default async function AdminClassesPage({
             const vLevel = computeVerificationLevel(log);
             const hasAi = !!log.aiAnalyzedAt;
             const hasGps = log.aiGpsDistance != null;
-            const dateVerified = isDateVerified(log.aiDateMatch);
-            const timeVerified = isTimeVerified(log.aiTimeMatch);
 
             return (
               <Link
@@ -314,22 +356,41 @@ export default async function AdminClassesPage({
                 )}
 
                 <div className="p-4">
-                  {/* Date + time */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-sand-900">
+                  {/* Notes at top */}
+                  {log.notes && (
+                    <p className="text-xs text-sand-400 line-clamp-2 mb-2 italic">{log.notes}</p>
+                  )}
+
+                  {/* Date · Time merged */}
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-sand-900">
                       {log.classDate}
-                    </span>
-                    {log.classTime && (
-                      <span className="text-xs text-sand-500">{formatStartTime(log.classTime)}</span>
+                      {log.classTime && (
+                        <span className="font-normal text-sand-500"> · {formatStartTime(log.classTime)}</span>
+                      )}
+                    </p>
+                    {vLevel && (
+                      <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
                     )}
                   </div>
 
-                  {/* Orphanage + teacher */}
+                  {/* Orphanage with GPS inline */}
                   <p className="text-sm text-sand-600 mt-1 truncate">
                     {log.orphanageName || "—"}
+                    {hasGps && (
+                      <span className={`inline-flex items-center ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                        isOrphanageVerified(log.aiOrphanageMatch)
+                          ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                          : "text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-600/20"
+                      }`}>
+                        GPS
+                      </span>
+                    )}
                   </p>
-                  <p className="text-xs text-sand-500 truncate">
-                    {log.teacherName || "Unknown"} &middot; {log.studentCount ?? "?"} students
+
+                  {/* Teacher · student count */}
+                  <p className="text-xs text-sand-500 mt-0.5 truncate">
+                    {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students
                     {hasAi && log.aiKidsCount != null && (
                       <span className={`ml-1 ${
                         log.studentCount != null && Math.abs(log.aiKidsCount - log.studentCount) <= 3
@@ -339,38 +400,6 @@ export default async function AdminClassesPage({
                       </span>
                     )}
                   </p>
-
-                  {/* Verification badges */}
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {vLevel && (
-                      <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
-                    )}
-                    {hasGps && (
-                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
-                        isOrphanageVerified(log.aiOrphanageMatch) ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
-                      }`}>
-                        GPS
-                      </span>
-                    )}
-                    {dateVerified !== null && (
-                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
-                        dateVerified ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
-                      }`}>
-                        Date
-                      </span>
-                    )}
-                    {timeVerified !== null && (
-                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
-                        timeVerified ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
-                      }`}>
-                        Time
-                      </span>
-                    )}
-                  </div>
-
-                  {log.notes && (
-                    <p className="text-xs text-sand-400 mt-2 line-clamp-1">{log.notes}</p>
-                  )}
                 </div>
               </Link>
             );
@@ -408,15 +437,15 @@ export default async function AdminClassesPage({
       {/* Legend */}
       <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-sand-400">
         <span className="flex items-center gap-1">
-          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-green-700 bg-green-50">Verified</span>
+          <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${levelStyles.green}`}>Verified</span>
           = All checks passed
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">Check</span>
+          <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${levelStyles.yellow}`}>Check</span>
           = Minor issue
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-red-700 bg-red-50">Audit required</span>
+          <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full ${levelStyles.red}`}>Audit required</span>
           = Needs review
         </span>
       </div>
@@ -431,9 +460,11 @@ function buildFilterUrl(
   const searchParams = new URLSearchParams();
   if (params.orphanageId) searchParams.set("orphanageId", params.orphanageId);
   if (params.teacherId) searchParams.set("teacherId", params.teacherId);
+  if (params.kidId) searchParams.set("kidId", params.kidId);
   if (params.dateFrom) searchParams.set("dateFrom", params.dateFrom);
   if (params.dateTo) searchParams.set("dateTo", params.dateTo);
   if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+  if (params.verification) searchParams.set("verification", params.verification);
   searchParams.set("page", String(page));
   return `/admin/classes?${searchParams.toString()}`;
 }
