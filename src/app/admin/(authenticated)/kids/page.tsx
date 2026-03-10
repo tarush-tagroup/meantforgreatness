@@ -3,7 +3,7 @@ import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { kids, orphanages, classGroups } from "@/db/schema";
-import { asc, desc, eq, gte, lte, and, sql, ilike } from "drizzle-orm";
+import { asc, desc, eq, gte, lte, and, sql, ilike, inArray } from "drizzle-orm";
 import Link from "next/link";
 import KidsFilters from "./KidsFilters";
 
@@ -29,25 +29,36 @@ export default async function AdminKidsPage({
   const params = await searchParams;
   const canEdit = hasPermission(user.roles, "kids:edit");
 
-  // Build filters
+  // Build filters (supports comma-separated multi-select)
   const conditions = [];
   if (params.orphanageId) {
-    conditions.push(eq(kids.orphanageId, params.orphanageId));
+    const ids = params.orphanageId.split(",").filter(Boolean);
+    if (ids.length === 1) conditions.push(eq(kids.orphanageId, ids[0]));
+    else if (ids.length > 1) conditions.push(inArray(kids.orphanageId, ids));
   }
   if (params.classGroupId) {
-    conditions.push(eq(kids.classGroupId, params.classGroupId));
+    const ids = params.classGroupId.split(",").filter(Boolean);
+    if (ids.length === 1) conditions.push(eq(kids.classGroupId, ids[0]));
+    else if (ids.length > 1) conditions.push(inArray(kids.classGroupId, ids));
   }
-  if (params.ageGroup === "5-8") {
-    conditions.push(gte(kids.age, 5));
-    conditions.push(lte(kids.age, 8));
-  } else if (params.ageGroup === "9-12") {
-    conditions.push(gte(kids.age, 9));
-    conditions.push(lte(kids.age, 12));
-  } else if (params.ageGroup === "13+") {
-    conditions.push(gte(kids.age, 13));
+  if (params.ageGroup) {
+    const ageGroups = params.ageGroup.split(",").filter(Boolean);
+    const ageConditions = [];
+    for (const ag of ageGroups) {
+      if (ag === "5-8") ageConditions.push(and(gte(kids.age, 5), lte(kids.age, 8)));
+      else if (ag === "9-12") ageConditions.push(and(gte(kids.age, 9), lte(kids.age, 12)));
+      else if (ag === "13+") ageConditions.push(gte(kids.age, 13));
+    }
+    if (ageConditions.length === 1) conditions.push(ageConditions[0]!);
+    else if (ageConditions.length > 1) conditions.push(sql`(${sql.join(ageConditions.map(c => c!), sql` OR `)})`);
   }
-  if (params.status === "active" || params.status === "inactive") {
-    conditions.push(eq(kids.status, params.status));
+  if (params.status) {
+    const statuses = params.status.split(",").filter(Boolean);
+    if (statuses.length === 1 && (statuses[0] === "active" || statuses[0] === "inactive")) {
+      conditions.push(eq(kids.status, statuses[0]));
+    } else if (statuses.length > 1) {
+      conditions.push(inArray(kids.status, statuses));
+    }
   }
   if (params.q) {
     conditions.push(ilike(kids.name, `%${params.q}%`));

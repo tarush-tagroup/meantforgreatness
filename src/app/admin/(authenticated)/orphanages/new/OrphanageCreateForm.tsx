@@ -10,7 +10,8 @@ export default function OrphanageCreateForm() {
     address: "",
     location: "",
     description: "",
-    runningSince: "",
+    runningSinceMonth: "",
+    runningSinceYear: "",
     websiteUrl: "",
   });
   const [imageUrl, setImageUrl] = useState("");
@@ -20,7 +21,7 @@ export default function OrphanageCreateForm() {
   const router = useRouter();
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value, type } = e.target;
     setForm((prev) => ({
@@ -67,14 +68,20 @@ export default function OrphanageCreateForm() {
     setSaving(true);
 
     try {
+      const runningSince = form.runningSinceMonth && form.runningSinceYear
+        ? `${form.runningSinceYear}-${form.runningSinceMonth}`
+        : null;
+
       const res = await fetch("/api/admin/orphanages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          name: form.name,
           indonesianName: form.indonesianName || null,
           address: form.address || null,
-          runningSince: form.runningSince || null,
+          location: form.location,
+          description: form.description,
+          runningSince,
           imageUrl: imageUrl || null,
           websiteUrl: form.websiteUrl || null,
         }),
@@ -195,13 +202,39 @@ export default function OrphanageCreateForm() {
         <label className="block text-sm font-medium text-sand-700">
           Running Since
         </label>
-        <input
-          name="runningSince"
-          value={form.runningSince}
-          onChange={handleChange}
-          placeholder="e.g. September 2024"
-          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-        />
+        <div className="mt-1 flex gap-2">
+          <select
+            name="runningSinceMonth"
+            value={form.runningSinceMonth}
+            onChange={handleChange}
+            className="flex-1 rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">Month</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+          <select
+            name="runningSinceYear"
+            value={form.runningSinceYear}
+            onChange={handleChange}
+            className="w-28 rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">Year</option>
+            {Array.from({ length: 10 }, (_, i) => 2020 + i).map((y) => (
+              <option key={y} value={String(y)}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>

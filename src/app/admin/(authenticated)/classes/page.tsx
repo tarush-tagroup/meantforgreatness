@@ -3,7 +3,7 @@ import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { classLogs, orphanages, users } from "@/db/schema";
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 import Link from "next/link";
 import Image from "next/image";
 import ClassLogFilters from "./ClassLogFilters";
@@ -11,75 +11,48 @@ import { parseTimeRange } from "@/lib/ai-photo-analysis";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Check if AI orphanage match indicates "verified".
- * "high" or "likely" = verified; "uncertain"/"unlikely" = not verified.
- */
+/* ── Verification helpers (unchanged) ─────────────────────────────────────── */
+
 function isOrphanageVerified(aiMatch: string | null): boolean | null {
-  if (!aiMatch) return null; // no AI data
+  if (!aiMatch) return null;
   return aiMatch === "high" || aiMatch === "likely";
 }
 
-/**
- * Check date verification status from EXIF metadata comparison.
- */
 function isDateVerified(aiDateMatch: string | null): boolean | null {
   if (!aiDateMatch || aiDateMatch === "no_exif") return null;
   return aiDateMatch === "match";
 }
 
-/**
- * Check time verification status from EXIF metadata comparison.
- */
 function isTimeVerified(aiTimeMatch: string | null): boolean | null {
   if (!aiTimeMatch || aiTimeMatch === "no_exif" || aiTimeMatch === "no_time") return null;
   return aiTimeMatch === "match";
 }
 
-/**
- * Format a raw class time string into a clean start time.
- * "09.00-10.00 am" → "9:00 AM"
- * "20.00-21.00 pm" → "8:00 PM"
- * "3.00 pm - 6.00 pm" → "3:00 PM"
- * "17.00-18.00" → "5:00 PM"
- * "06:00 PM" → "6:00 PM"
- */
 function formatStartTime(classTime: string | null): string | null {
   if (!classTime) return null;
   const normalized = classTime.replace(/\./g, ":");
   const rangeParts = normalized.split(/\s*-\s*/);
   const startStr = rangeParts[0].trim();
-
-  // Check for am/pm on the start or end part
   const startAmPm = startStr.match(/\s*(am|pm)\s*$/i);
   const endPart = rangeParts[1]?.trim();
   const endAmPm = endPart?.match(/\s*(am|pm)\s*$/i);
   const suffix = startAmPm?.[1]?.toLowerCase() || endAmPm?.[1]?.toLowerCase() || null;
   const clean = startAmPm ? startStr.replace(/\s*(am|pm)\s*$/i, "").trim() : startStr;
-
   const match = clean.match(/^(\d{1,2})(?::(\d{2}))?$/);
-  if (!match) return classTime; // fallback to raw
+  if (!match) return classTime;
   let hour = parseInt(match[1]);
   const min = match[2] || "00";
-
   if (suffix) {
     if (hour <= 12) {
       if (suffix === "pm" && hour !== 12) hour += 12;
       if (suffix === "am" && hour === 12) hour = 0;
     }
   }
-
-  // Convert to 12h format
   const period = hour >= 12 ? "PM" : "AM";
   const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
   return `${h12}:${min} ${period}`;
 }
 
-/**
- * Compute traffic light verification level.
- * RED = "Audit required", YELLOW = "Check", GREEN = "Verified".
- * Missing data = neutral. Shows the most severe flag found.
- */
 function computeVerificationLevel(log: {
   aiDateMatch: string | null;
   aiTimeMatch: string | null;
@@ -92,24 +65,18 @@ function computeVerificationLevel(log: {
   let level: "green" | "yellow" | "red" = "green";
   const reasons: string[] = [];
   let hasAnyMetric = false;
-
-  // Helper to escalate severity
   const escalate = (to: "yellow" | "red", reason: string) => {
     reasons.push(reason);
     if (to === "red") level = "red";
     else if (to === "yellow" && level !== "red") level = "yellow";
   };
 
-  // ── Date: mismatch = RED ──
   const dateAvailable = log.aiDateMatch != null && log.aiDateMatch !== "no_exif";
   if (dateAvailable) {
     hasAnyMetric = true;
-    if (log.aiDateMatch === "mismatch") {
-      escalate("red", "Date mismatch");
-    }
+    if (log.aiDateMatch === "mismatch") escalate("red", "Date mismatch");
   }
 
-  // ── Time: compute actual diff for granular thresholds ──
   if (log.exifDateTaken && log.classTime) {
     const exifDate = new Date(log.exifDateTaken);
     if (!isNaN(exifDate.getTime())) {
@@ -119,75 +86,33 @@ function computeVerificationLevel(log: {
         const exifMinutes = exifDate.getHours() * 60 + exifDate.getMinutes();
         const rangeStartMin = range.startHour * 60;
         const rangeEndMin = range.endHour * 60;
-
-        // Compute gap from the class window (0 if inside)
         let gapMin = 0;
         if (exifMinutes < rangeStartMin) gapMin = rangeStartMin - exifMinutes;
         else if (exifMinutes > rangeEndMin) gapMin = exifMinutes - rangeEndMin;
-
-        if (gapMin > 240) {
-          escalate("red", "Time >4h off");
-        } else if (gapMin > 120) {
-          escalate("yellow", "Time 2–4h off");
-        }
+        if (gapMin > 240) escalate("red", "Time >4h off");
+        else if (gapMin > 120) escalate("yellow", "Time 2–4h off");
       }
     }
   } else if (log.aiTimeMatch != null && log.aiTimeMatch !== "no_exif" && log.aiTimeMatch !== "no_time") {
-    // Fallback: no raw data but we have the match result
     hasAnyMetric = true;
-    // We can't compute exact diff, so use match/mismatch as rough signal
-    // mismatch means >90min off, treat as yellow
-    if (log.aiTimeMatch === "mismatch") {
-      escalate("yellow", "Time outside class range");
-    }
+    if (log.aiTimeMatch === "mismatch") escalate("yellow", "Time outside class range");
   }
 
-  // ── GPS: >500m = RED ──
   if (log.aiGpsDistance != null) {
     hasAnyMetric = true;
-    if (log.aiGpsDistance > 500) {
-      escalate("red", `GPS ${log.aiGpsDistance}m away`);
-    }
+    if (log.aiGpsDistance > 500) escalate("red", `GPS ${log.aiGpsDistance}m away`);
   }
 
-  // ── Kids count: >50% or >5 diff = YELLOW ──
   if (log.aiKidsCount != null && log.studentCount != null && log.studentCount > 0) {
     hasAnyMetric = true;
     const diff = Math.abs(log.aiKidsCount - log.studentCount);
     const pctDiff = diff / log.studentCount;
-    if (diff > 5 || pctDiff > 0.5) {
-      escalate("yellow", `Kid count off (${log.studentCount} reported, ${log.aiKidsCount} detected)`);
-    }
+    if (diff > 5 || pctDiff > 0.5) escalate("yellow", `Kid count off (${log.studentCount} reported, ${log.aiKidsCount} detected)`);
   }
 
   if (!hasAnyMetric) return null;
-
   const labels = { green: "Verified", yellow: "Check", red: "Audit required" };
   return { level, label: labels[level], reasons };
-}
-
-function VerifiedBadge({ verified, label = "AI", tooltip }: { verified: boolean; label?: string; tooltip?: string }) {
-  const checkIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" /></svg>;
-  const warnIcon = <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
-
-  return (
-    <span className="relative group/badge inline-flex">
-      <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded cursor-default ${
-        verified
-          ? "text-green-700 bg-green-50"
-          : "text-amber-700 bg-amber-50"
-      }`}>
-        {verified ? checkIcon : warnIcon}
-        {label}
-      </span>
-      {tooltip && (
-        <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-max max-w-sm rounded-md bg-sand-800 px-2.5 py-1.5 text-[10px] leading-snug text-white opacity-0 transition-opacity group-hover/badge:opacity-100 z-50 text-left break-words shadow-lg">
-          {tooltip}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-sand-800" />
-        </span>
-      )}
-    </span>
-  );
 }
 
 const levelStyles = {
@@ -213,6 +138,8 @@ function VerificationPill({ level, label, reasons }: { level: "green" | "yellow"
   );
 }
 
+/* ── Main page ────────────────────────────────────────────────────────────── */
+
 export default async function AdminClassesPage({
   searchParams,
 }: {
@@ -221,6 +148,7 @@ export default async function AdminClassesPage({
     teacherId?: string;
     dateFrom?: string;
     dateTo?: string;
+    sortBy?: string;
     page?: string;
   }>;
 }) {
@@ -231,23 +159,37 @@ export default async function AdminClassesPage({
 
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page || "1"));
-  const limit = 25;
+  const limit = 24; // divisible by 2 and 3 for grid
   const offset = (page - 1) * limit;
 
+  // Parse multi-select filters (comma-separated)
   const conditions = [];
-  if (params.orphanageId) conditions.push(eq(classLogs.orphanageId, params.orphanageId));
-  if (params.teacherId) conditions.push(eq(classLogs.teacherId, params.teacherId));
+  if (params.orphanageId) {
+    const ids = params.orphanageId.split(",").filter(Boolean);
+    if (ids.length === 1) conditions.push(eq(classLogs.orphanageId, ids[0]));
+    else if (ids.length > 1) conditions.push(inArray(classLogs.orphanageId, ids));
+  }
+  if (params.teacherId) {
+    const ids = params.teacherId.split(",").filter(Boolean);
+    if (ids.length === 1) conditions.push(eq(classLogs.teacherId, ids[0]));
+    else if (ids.length > 1) conditions.push(inArray(classLogs.teacherId, ids));
+  }
   if (params.dateFrom) conditions.push(gte(classLogs.classDate, params.dateFrom));
   if (params.dateTo) conditions.push(lte(classLogs.classDate, params.dateTo));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // Sort
+  const sortBy = params.sortBy || "date";
+  const orderByClause = sortBy === "students"
+    ? [desc(classLogs.studentCount), desc(classLogs.classDate)]
+    : [desc(classLogs.classDate), desc(classLogs.createdAt)];
 
   const rows = await db
     .select({
       id: classLogs.id,
       orphanageId: classLogs.orphanageId,
       orphanageName: orphanages.name,
-      teacherId: classLogs.teacherId,
       teacherName: users.name,
       classDate: classLogs.classDate,
       classTime: classLogs.classTime,
@@ -256,47 +198,38 @@ export default async function AdminClassesPage({
       photoUrl: classLogs.photoUrl,
       aiKidsCount: classLogs.aiKidsCount,
       aiOrphanageMatch: classLogs.aiOrphanageMatch,
-      aiPhotoTimestamp: classLogs.aiPhotoTimestamp,
       aiPrimaryPhotoUrl: classLogs.aiPrimaryPhotoUrl,
       aiAnalyzedAt: classLogs.aiAnalyzedAt,
       aiDateMatch: classLogs.aiDateMatch,
       aiDateNotes: classLogs.aiDateNotes,
       aiTimeMatch: classLogs.aiTimeMatch,
       aiTimeNotes: classLogs.aiTimeNotes,
-      aiConfidenceNotes: classLogs.aiConfidenceNotes,
       aiGpsDistance: classLogs.aiGpsDistance,
       exifDateTaken: classLogs.exifDateTaken,
-      createdAt: classLogs.createdAt,
     })
     .from(classLogs)
     .leftJoin(orphanages, eq(classLogs.orphanageId, orphanages.id))
     .leftJoin(users, eq(classLogs.teacherId, users.id))
     .where(whereClause)
-    .orderBy(desc(classLogs.classDate), desc(classLogs.createdAt))
+    .orderBy(...orderByClause)
     .limit(limit)
     .offset(offset);
 
-  // 30 days ago for recent count
+  // Counts
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
 
   const [countResult, recentCountResult] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(classLogs)
-      .where(whereClause),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(classLogs)
-      .where(gte(classLogs.classDate, thirtyDaysAgoStr)),
+    db.select({ count: sql<number>`count(*)` }).from(classLogs).where(whereClause),
+    db.select({ count: sql<number>`count(*)` }).from(classLogs).where(gte(classLogs.classDate, thirtyDaysAgoStr)),
   ]);
 
   const total = Number(countResult[0]?.count || 0);
   const recentTotal = Number(recentCountResult[0]?.count || 0);
   const totalPages = Math.ceil(total / limit);
 
-  // Get filter options
+  // Filter options
   const orphanageOptions = await db
     .select({ id: orphanages.id, name: orphanages.name })
     .from(orphanages)
@@ -305,9 +238,7 @@ export default async function AdminClassesPage({
   const teacherOptions = await db
     .select({ id: users.id, name: users.name })
     .from(users)
-    .where(
-      sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
-    )
+    .where(sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`)
     .orderBy(users.name);
 
   const canCreate = hasPermission(user.roles, "class_logs:create");
@@ -334,7 +265,6 @@ export default async function AdminClassesPage({
       <ClassLogFilters
         orphanages={orphanageOptions}
         teachers={teacherOptions}
-        currentFilters={params}
       />
 
       {rows.length === 0 ? (
@@ -350,233 +280,102 @@ export default async function AdminClassesPage({
           )}
         </div>
       ) : (
-        <>
-          {/* Mobile card layout */}
-          <div className="space-y-3 md:hidden">
-            {rows.map((log) => {
-              const hasAi = !!log.aiAnalyzedAt;
-              const dateVerified = isDateVerified(log.aiDateMatch);
-              const timeVerified = isTimeVerified(log.aiTimeMatch);
-              const hasGps = log.aiGpsDistance != null;
-              const vLevel = computeVerificationLevel(log);
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map((log) => {
+            const vLevel = computeVerificationLevel(log);
+            const hasAi = !!log.aiAnalyzedAt;
+            const hasGps = log.aiGpsDistance != null;
+            const dateVerified = isDateVerified(log.aiDateMatch);
+            const timeVerified = isTimeVerified(log.aiTimeMatch);
 
-              return (
-                <Link
-                  key={log.id}
-                  href={`/admin/classes/${log.id}`}
-                  className="block rounded-lg border border-sand-200 bg-white p-3 hover:bg-sand-50 transition-colors"
-                >
-                  <div className="flex gap-3">
-                    {/* Photo thumbnail */}
-                    {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
-                      <div className="relative w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-sand-200">
-                        <Image
-                          src={log.aiPrimaryPhotoUrl || log.photoUrl!}
-                          alt="Class photo"
-                          fill
-                          className="object-cover"
-                          sizes="56px"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-14 h-14 shrink-0 rounded-lg bg-sand-100 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-sand-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-                        </svg>
-                      </div>
-                    )}
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-sand-900">
-                          {log.orphanageName || log.orphanageId}
-                        </span>
-                        <span className="text-xs text-sand-500">
-                          {log.classDate}{log.classTime ? ` · ${formatStartTime(log.classTime)}` : ""}
-                        </span>
-                      </div>
-                      <p className="text-xs text-sand-600 mt-0.5">
-                        {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students
-                      </p>
-                      {/* Verification badges */}
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {vLevel && (
-                          <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
-                        )}
-                        {hasGps && (
-                          <VerifiedBadge
-                            verified={isOrphanageVerified(log.aiOrphanageMatch) ?? false}
-                            label="GPS"
-                            tooltip={`${log.aiGpsDistance}m from orphanage`}
-                          />
-                        )}
-                        {dateVerified !== null && (
-                          <VerifiedBadge verified={dateVerified} label="Date" tooltip={log.aiDateNotes || undefined} />
-                        )}
-                        {timeVerified !== null && (
-                          <VerifiedBadge verified={timeVerified} label="Time" tooltip={log.aiTimeNotes || undefined} />
-                        )}
-                        {hasAi && log.aiKidsCount != null && (
-                          <span
-                            className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
-                              log.studentCount != null &&
-                              Math.abs(log.aiKidsCount - log.studentCount) <= 3
-                                ? "text-green-700 bg-green-50"
-                                : "text-sage-700 bg-sage-50"
-                            }`}
-                          >
-                            AI: {log.aiKidsCount} kids
-                          </span>
-                        )}
-                      </div>
-                      {log.notes && (
-                        <p className="text-xs text-sand-400 mt-1 truncate">{log.notes}</p>
-                      )}
-                    </div>
-
-                    {/* Chevron */}
-                    <svg className="w-4 h-4 text-sand-400 shrink-0 self-center" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            return (
+              <Link
+                key={log.id}
+                href={`/admin/classes/${log.id}`}
+                className="block rounded-lg border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
+              >
+                {/* Photo */}
+                {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
+                  <div className="relative h-40 w-full">
+                    <Image
+                      src={log.aiPrimaryPhotoUrl || log.photoUrl!}
+                      alt="Class photo"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-40 bg-sand-100 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-sand-300" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
                     </svg>
                   </div>
-                </Link>
-              );
-            })}
-          </div>
+                )}
 
-          {/* Desktop table layout */}
-          <div className="hidden md:block rounded-lg border border-sand-200 bg-white overflow-hidden">
-            <table className="min-w-full divide-y divide-sand-200">
-              <thead className="bg-sand-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider w-14">
-                    Photo
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Date / Time
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Orphanage
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Teacher
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Students
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Verified
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
-                    Notes
-                  </th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-sand-100">
-                {rows.map((log) => {
-                  const hasAi = !!log.aiAnalyzedAt;
-                  const dateVerified = isDateVerified(log.aiDateMatch);
-                  const timeVerified = isTimeVerified(log.aiTimeMatch);
-                  const hasGps = log.aiGpsDistance != null;
-                  const vLevel = computeVerificationLevel(log);
+                <div className="p-4">
+                  {/* Date + time */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-sand-900">
+                      {log.classDate}
+                    </span>
+                    {log.classTime && (
+                      <span className="text-xs text-sand-500">{formatStartTime(log.classTime)}</span>
+                    )}
+                  </div>
 
-                  return (
-                    <tr key={log.id} className="hover:bg-sand-50">
-                      <td className="px-4 py-3">
-                        {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
-                          <div className="relative w-10 h-10 rounded overflow-hidden border border-sand-200">
-                            <Image
-                              src={log.aiPrimaryPhotoUrl || log.photoUrl!}
-                              alt="Class photo"
-                              fill
-                              className="object-cover"
-                              sizes="40px"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-10 h-10 rounded bg-sand-100 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-sand-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-                            </svg>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <div>
-                            <span className="text-sand-900">{log.classDate}</span>
-                            {log.classTime && (
-                              <span className="block text-xs text-sand-500">{formatStartTime(log.classTime)}</span>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-0.5">
-                            {dateVerified !== null && (
-                              <VerifiedBadge verified={dateVerified} label="Date" tooltip={log.aiDateNotes || undefined} />
-                            )}
-                            {timeVerified !== null && (
-                              <VerifiedBadge verified={timeVerified} label="Time" tooltip={log.aiTimeNotes || undefined} />
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-sand-700">
-                        <span>{log.orphanageName || log.orphanageId}</span>
-                        {hasGps && (
-                          <span className="ml-1.5">
-                            <VerifiedBadge
-                              verified={isOrphanageVerified(log.aiOrphanageMatch) ?? false}
-                              label="GPS"
-                              tooltip={`${log.aiGpsDistance}m from orphanage`}
-                            />
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-sand-700">
-                        {log.teacherName || "Unknown"}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-sand-700 whitespace-nowrap">
-                        {log.studentCount ?? "\u2014"}
-                        {hasAi && log.aiKidsCount != null && (
-                          <span
-                            className={`ml-1 text-xs ${
-                              log.studentCount != null &&
-                              Math.abs(log.aiKidsCount - log.studentCount) <= 3
-                                ? "text-green-600"
-                                : "text-sage-600"
-                            }`}
-                            title={`AI detected ${log.aiKidsCount} student${log.aiKidsCount !== 1 ? "s" : ""} in photos`}
-                          >
-                            ({log.aiKidsCount})
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm whitespace-nowrap">
-                        {vLevel ? (
-                          <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
-                        ) : (
-                          <span className="text-sand-400">{"\u2014"}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-sand-500 max-w-xs truncate">
-                        {log.notes || "\u2014"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/admin/classes/${log.id}`}
-                          className="text-sm font-medium text-green-600 hover:text-green-700"
-                        >
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
+                  {/* Orphanage + teacher */}
+                  <p className="text-sm text-sand-600 mt-1 truncate">
+                    {log.orphanageName || "—"}
+                  </p>
+                  <p className="text-xs text-sand-500 truncate">
+                    {log.teacherName || "Unknown"} &middot; {log.studentCount ?? "?"} students
+                    {hasAi && log.aiKidsCount != null && (
+                      <span className={`ml-1 ${
+                        log.studentCount != null && Math.abs(log.aiKidsCount - log.studentCount) <= 3
+                          ? "text-green-600" : "text-sage-600"
+                      }`}>
+                        (AI: {log.aiKidsCount})
+                      </span>
+                    )}
+                  </p>
+
+                  {/* Verification badges */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {vLevel && (
+                      <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
+                    )}
+                    {hasGps && (
+                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
+                        isOrphanageVerified(log.aiOrphanageMatch) ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
+                      }`}>
+                        GPS
+                      </span>
+                    )}
+                    {dateVerified !== null && (
+                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
+                        dateVerified ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
+                      }`}>
+                        Date
+                      </span>
+                    )}
+                    {timeVerified !== null && (
+                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded ${
+                        timeVerified ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"
+                      }`}>
+                        Time
+                      </span>
+                    )}
+                  </div>
+
+                  {log.notes && (
+                    <p className="text-xs text-sand-400 mt-2 line-clamp-1">{log.notes}</p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       )}
 
       {/* Pagination */}
@@ -606,32 +405,19 @@ export default async function AdminClassesPage({
         </div>
       )}
 
-      {/* Legend for AI badges */}
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-sand-400">
+      {/* Legend */}
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-sand-400">
         <span className="flex items-center gap-1">
           <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-green-700 bg-green-50">Verified</span>
-          <span>= All checks passed</span>
+          = All checks passed
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-amber-700 bg-amber-50">Check</span>
-          <span>= Minor issue</span>
+          = Minor issue
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded text-red-700 bg-red-50">Audit required</span>
-          <span>= Needs review</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <VerifiedBadge verified={true} label="GPS" />
-          <span>= GPS match</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <VerifiedBadge verified={true} label="Date" />
-          / <VerifiedBadge verified={true} label="Time" />
-          <span>= EXIF match</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <VerifiedBadge verified={false} label="" />
-          <span>= Not verified</span>
+          = Needs review
         </span>
       </div>
     </div>
@@ -647,6 +433,7 @@ function buildFilterUrl(
   if (params.teacherId) searchParams.set("teacherId", params.teacherId);
   if (params.dateFrom) searchParams.set("dateFrom", params.dateFrom);
   if (params.dateTo) searchParams.set("dateTo", params.dateTo);
+  if (params.sortBy) searchParams.set("sortBy", params.sortBy);
   searchParams.set("page", String(page));
   return `/admin/classes?${searchParams.toString()}`;
 }

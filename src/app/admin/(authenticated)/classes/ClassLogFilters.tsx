@@ -1,123 +1,117 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
+import Link from "next/link";
+import CheckboxFilter from "@/components/admin/CheckboxFilter";
 
 interface ClassLogFiltersProps {
   orphanages: { id: string; name: string }[];
   teachers: { id: string; name: string | null }[];
-  currentFilters: {
-    orphanageId?: string;
-    teacherId?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  };
 }
 
 export default function ClassLogFilters({
   orphanages,
   teachers,
-  currentFilters,
 }: ClassLogFiltersProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const updateFilter = useCallback(
-    (key: string, value: string) => {
-      const params = new URLSearchParams();
-      const filters = { ...currentFilters, [key]: value || undefined };
-      // Exclude page so filters always reset to page 1
-      for (const [k, v] of Object.entries(filters)) {
-        if (v && k !== "page") params.set(k, v);
-      }
-      const url = `/admin/classes?${params.toString()}`;
-      router.push(url);
-      router.refresh();
+  const orphanageId = searchParams.get("orphanageId") || "";
+  const teacherId = searchParams.get("teacherId") || "";
+  const dateFrom = searchParams.get("dateFrom") || "";
+  const dateTo = searchParams.get("dateTo") || "";
+  const sortBy = searchParams.get("sortBy") || "";
+
+  const selectedOrphanages = orphanageId ? orphanageId.split(",") : [];
+  const selectedTeachers = teacherId ? teacherId.split(",") : [];
+
+  const hasFilters = !!(orphanageId || teacherId || dateFrom || dateTo);
+
+  const buildUrl = useCallback(
+    (overrides: Record<string, string>) => {
+      const p = new URLSearchParams();
+      const merged = { orphanageId, teacherId, dateFrom, dateTo, sortBy, ...overrides };
+      if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
+      if (merged.teacherId) p.set("teacherId", merged.teacherId);
+      if (merged.dateFrom) p.set("dateFrom", merged.dateFrom);
+      if (merged.dateTo) p.set("dateTo", merged.dateTo);
+      if (merged.sortBy) p.set("sortBy", merged.sortBy);
+      const qs = p.toString();
+      return `/admin/classes${qs ? `?${qs}` : ""}`;
     },
-    [currentFilters, router]
+    [orphanageId, teacherId, dateFrom, dateTo, sortBy]
   );
 
-  const clearFilters = useCallback(() => {
-    router.push("/admin/classes");
-    router.refresh();
-  }, [router]);
-
-  const hasFilters =
-    currentFilters.orphanageId ||
-    currentFilters.teacherId ||
-    currentFilters.dateFrom ||
-    currentFilters.dateTo;
-
   return (
-    <div className="mb-6 rounded-lg border border-sand-200 bg-white p-4">
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="min-w-[160px]">
-          <label className="block text-xs font-medium text-sand-500 mb-1">
-            Orphanage
-          </label>
-          <select
-            value={currentFilters.orphanageId || ""}
-            onChange={(e) => updateFilter("orphanageId", e.target.value)}
-            className="w-full rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
-          >
-            <option value="">All orphanages</option>
-            {orphanages.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="mb-6 space-y-3">
+      {/* Filters row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <CheckboxFilter
+          label="Orphanage"
+          options={orphanages.map((o) => ({ value: o.id, label: o.name }))}
+          selected={selectedOrphanages}
+          onChange={(vals) => router.push(buildUrl({ orphanageId: vals.join(",") }))}
+        />
+        <CheckboxFilter
+          label="Teacher"
+          options={teachers.map((t) => ({ value: t.id, label: t.name || t.id }))}
+          selected={selectedTeachers}
+          onChange={(vals) => router.push(buildUrl({ teacherId: vals.join(",") }))}
+        />
 
-        <div className="min-w-[160px]">
-          <label className="block text-xs font-medium text-sand-500 mb-1">
-            Teacher
-          </label>
-          <select
-            value={currentFilters.teacherId || ""}
-            onChange={(e) => updateFilter("teacherId", e.target.value)}
-            className="w-full rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
-          >
-            <option value="">All teachers</option>
-            {teachers.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name || t.id}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-sand-500 mb-1">
-            From
-          </label>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-sand-500">From</label>
           <input
             type="date"
-            value={currentFilters.dateFrom || ""}
-            onChange={(e) => updateFilter("dateFrom", e.target.value)}
-            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
+            value={dateFrom}
+            onChange={(e) => router.push(buildUrl({ dateFrom: e.target.value }))}
+            className="rounded-lg border border-sand-300 px-2 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-sand-500 mb-1">
-            To
-          </label>
+        <div className="flex items-center gap-1.5">
+          <label className="text-xs text-sand-500">To</label>
           <input
             type="date"
-            value={currentFilters.dateTo || ""}
-            onChange={(e) => updateFilter("dateTo", e.target.value)}
-            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-700"
+            value={dateTo}
+            onChange={(e) => router.push(buildUrl({ dateTo: e.target.value }))}
+            className="rounded-lg border border-sand-300 px-2 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
           />
         </div>
 
         {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="rounded-lg border border-sand-200 px-3 py-1.5 text-sm text-sand-600 hover:bg-sand-50"
+          <Link
+            href={buildUrl({ orphanageId: "", teacherId: "", dateFrom: "", dateTo: "" })}
+            className="text-xs text-sand-500 hover:text-sand-700 underline"
           >
             Clear filters
-          </button>
+          </Link>
         )}
+      </div>
+
+      {/* Sort pills */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-sand-500 mr-1">Sort:</span>
+        {[
+          { label: "Most Recent", value: "" },
+          { label: "Students", value: "students" },
+        ].map((s) => {
+          const isActive = sortBy === s.value || (!sortBy && s.value === "");
+          return (
+            <Link
+              key={s.label}
+              href={buildUrl({ sortBy: s.value })}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                isActive
+                  ? "bg-green-600 text-white"
+                  : "bg-sand-100 text-sand-600 hover:bg-sand-200"
+              }`}
+            >
+              {s.label}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

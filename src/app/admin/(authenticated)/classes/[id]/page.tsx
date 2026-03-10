@@ -36,8 +36,10 @@ function matchBadgeColor(match: string | null) {
 
 export default async function ClassLogDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ edit?: string }>;
 }) {
   const user = await getSessionUser();
   if (!user || !hasPermission(user.roles, "class_logs:view_all")) {
@@ -45,6 +47,7 @@ export default async function ClassLogDetailPage({
   }
 
   const { id } = await params;
+  const sp = await searchParams;
 
   const [row] = await db
     .select({
@@ -95,6 +98,7 @@ export default async function ClassLogDetailPage({
   const canEditOwn = hasPermission(user.roles, "class_logs:edit_own");
   const canEditAll = hasPermission(user.roles, "class_logs:edit_all");
   const canEdit = (isOwner && canEditOwn) || canEditAll;
+  const isEditing = canEdit && sp.edit === "true";
 
   const canDeleteOwn = hasPermission(user.roles, "class_logs:delete_own");
   const canDeleteAll = hasPermission(user.roles, "class_logs:delete_all");
@@ -123,55 +127,72 @@ export default async function ClassLogDetailPage({
     .from(classLogAttendance)
     .where(eq(classLogAttendance.classLogId, id));
 
-  if (canEdit) {
-    // Editable mode: show form
-    const orphanageOptions = await db
-      .select({ id: orphanages.id, name: orphanages.name })
-      .from(orphanages)
-      .orderBy(asc(orphanages.name));
+  // If editing, fetch form options
+  let orphanageOptions: { id: string; name: string }[] = [];
+  let teacherOptions: { id: string; name: string | null; email: string }[] = [];
+  let classGroupOptions: { id: string; name: string; orphanageId: string }[] = [];
+  let kidsList: { id: string; name: string; orphanageId: string | null; classGroupId: string | null }[] = [];
 
-    const teacherOptions = await db
-      .select({ id: users.id, name: users.name, email: users.email })
-      .from(users)
-      .where(
-        sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`
-      )
-      .orderBy(asc(users.name));
+  if (isEditing) {
+    [orphanageOptions, teacherOptions, classGroupOptions, kidsList] = await Promise.all([
+      db.select({ id: orphanages.id, name: orphanages.name }).from(orphanages).orderBy(asc(orphanages.name)),
+      db.select({ id: users.id, name: users.name, email: users.email }).from(users)
+        .where(sql`${users.status} = 'active' AND ${users.roles} && ARRAY['teacher_manager', 'admin']::text[]`)
+        .orderBy(asc(users.name)),
+      db.select({ id: classGroups.id, name: classGroups.name, orphanageId: classGroups.orphanageId })
+        .from(classGroups).orderBy(asc(classGroups.sortOrder)),
+      db.select({ id: kids.id, name: kids.name, orphanageId: kids.orphanageId, classGroupId: kids.classGroupId })
+        .from(kids).orderBy(asc(kids.name)),
+    ]);
+  }
 
-    const classGroupOptions = await db
-      .select({
-        id: classGroups.id,
-        name: classGroups.name,
-        orphanageId: classGroups.orphanageId,
-      })
-      .from(classGroups)
-      .orderBy(asc(classGroups.sortOrder));
+  return (
+    <div className="mx-auto max-w-3xl">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-sand-500 mb-4">
+        <Link href="/admin/classes" className="hover:text-sand-700 transition-colors">
+          Classes
+        </Link>
+        <span>/</span>
+        <span className="text-sand-900">
+          {row.classDate} at {row.orphanageName || "Unknown"}
+        </span>
+      </div>
 
-    const kidsList = await db
-      .select({
-        id: kids.id,
-        name: kids.name,
-        orphanageId: kids.orphanageId,
-        classGroupId: kids.classGroupId,
-      })
-      .from(kids)
-      .orderBy(asc(kids.name));
-
-    return (
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-sand-900">
-              Edit Class Log
-            </h1>
-            <p className="mt-1 text-sm text-sand-500">
-              {row.classDate} at {row.orphanageName || row.orphanageId}
-            </p>
-          </div>
-          {canDelete && <DeleteClassLogButton classLogId={row.id} />}
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-sand-900">
+            {isEditing ? "Edit Class Log" : "Class Log Details"}
+          </h1>
+          <p className="mt-1 text-sm text-sand-500">
+            {row.classDate} at {row.orphanageName || row.orphanageId}
+          </p>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {canEdit && !isEditing && (
+            <Link
+              href={`/admin/classes/${row.id}?edit=true`}
+              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700"
+            >
+              Edit
+            </Link>
+          )}
+          {canEdit && isEditing && (
+            <Link
+              href={`/admin/classes/${row.id}`}
+              className="rounded-lg border border-sand-300 px-4 py-2 text-sm font-medium text-sand-700 shadow-sm transition-colors hover:bg-sand-50"
+            >
+              Cancel
+            </Link>
+          )}
+          {canDelete && isEditing && <DeleteClassLogButton classLogId={row.id} />}
+        </div>
+      </div>
 
-        <div className="max-w-2xl">
+      {/* Edit mode */}
+      {isEditing ? (
+        <div className="mt-6 max-w-2xl">
           <ClassLogForm
             orphanages={orphanageOptions}
             teachers={teacherOptions}
@@ -198,190 +219,174 @@ export default async function ClassLogDetailPage({
             }}
           />
         </div>
-      </div>
-    );
-  }
+      ) : (
+        /* View mode */
+        <div className="mt-6 max-w-2xl space-y-4">
+          <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs font-medium text-sand-500">Date</p>
+                <p className="text-sm text-sand-900">{row.classDate}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-sand-500">Time</p>
+                <p className="text-sm text-sand-900">{row.classTime || "\u2014"}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-sand-500">Orphanage</p>
+                <p className="text-sm text-sand-900">
+                  {row.orphanageName || row.orphanageId}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-sand-500">Teacher</p>
+                <p className="text-sm text-sand-900">
+                  {row.teacherName || "Unknown"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-sand-500">
+                  Students Present
+                </p>
+                <p className="text-sm text-sand-900">
+                  {row.studentCount ?? "\u2014"}
+                </p>
+              </div>
+            </div>
 
-  // Read-only view
-  return (
-    <div>
-      <div className="mb-6">
-        <Link
-          href="/admin/classes"
-          className="text-sm text-sand-500 hover:text-sand-700"
-        >
-          &larr; Back to class logs
-        </Link>
-        <h1 className="mt-2 text-2xl font-bold text-sand-900">
-          Class Log Details
-        </h1>
-      </div>
+            {/* Attendance breakdown */}
+            {attendanceRecords.length > 0 && (
+              <div className="pt-4 border-t border-sand-100">
+                <p className="text-xs font-medium text-sand-500 mb-2">
+                  Attendance ({attendanceRecords.length})
+                </p>
+                <div className="space-y-1">
+                  {attendanceRecords.filter(a => a.attendanceType === "class_member").length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-green-700 mb-0.5">Class Members</p>
+                      <div className="text-sm text-sand-700 space-y-0.5">
+                        {attendanceRecords.filter(a => a.attendanceType === "class_member").map((a, i) => (
+                          <p key={i}>
+                            {a.kidName}
+                            {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-blue-700 mb-0.5">Other Orphanage Kids</p>
+                      <div className="text-sm text-sand-700 space-y-0.5">
+                        {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").map((a, i) => (
+                          <p key={i}>
+                            {a.kidName}
+                            {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {attendanceRecords.filter(a => a.attendanceType === "external").length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-sage-700 mb-0.5">External Kids</p>
+                      <p className="text-sm text-sand-700">
+                        {attendanceRecords.filter(a => a.attendanceType === "external").map(a => a.kidName).join(", ")}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-      <div className="max-w-2xl space-y-4">
-        <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs font-medium text-sand-500">Date</p>
-              <p className="text-sm text-sand-900">{row.classDate}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-sand-500">Time</p>
-              <p className="text-sm text-sand-900">{row.classTime || "\u2014"}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-sand-500">Orphanage</p>
-              <p className="text-sm text-sand-900">
-                {row.orphanageName || row.orphanageId}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-sand-500">Teacher</p>
-              <p className="text-sm text-sand-900">
-                {row.teacherName || "Unknown"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-sand-500">
-                Students Present
-              </p>
-              <p className="text-sm text-sand-900">
-                {row.studentCount ?? "\u2014"}
-              </p>
-            </div>
+            {/* Photos */}
+            {photos.length > 0 && (
+              <div className="pt-4 border-t border-sand-100">
+                <p className="text-xs font-medium text-sand-500 mb-2">
+                  Photos ({photos.length})
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative aspect-video rounded-lg overflow-hidden border border-sand-200">
+                      <Image
+                        src={photo.url}
+                        alt={photo.caption || "Class photo"}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {row.notes && (
+              <div className="pt-4 border-t border-sand-100">
+                <p className="text-xs font-medium text-sand-500 mb-1">Notes</p>
+                <p className="text-sm text-sand-700 whitespace-pre-wrap">
+                  {row.notes}
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Attendance breakdown */}
-          {attendanceRecords.length > 0 && (
-            <div className="pt-4 border-t border-sand-100">
-              <p className="text-xs font-medium text-sand-500 mb-2">
-                Attendance ({attendanceRecords.length})
+          {/* AI Photo Analysis Metadata (read-only) */}
+          {aiMetadata.aiAnalyzedAt && (
+            <div className="rounded-lg border border-purple-200 bg-purple-50 p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                </svg>
+                <h3 className="text-sm font-semibold text-purple-900">AI Photo Analysis</h3>
+                <span className="text-xs text-purple-500 ml-auto">
+                  Analyzed {new Date(aiMetadata.aiAnalyzedAt!).toLocaleString()}
+                </span>
+              </div>
+              <p className="text-xs text-purple-600 mb-3">
+                Automatically generated from uploaded photos. Cannot be edited manually.
               </p>
-              <div className="space-y-1">
-                {attendanceRecords.filter(a => a.attendanceType === "class_member").length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-green-700 mb-0.5">Class Members</p>
-                    <div className="text-sm text-sand-700 space-y-0.5">
-                      {attendanceRecords.filter(a => a.attendanceType === "class_member").map((a, i) => (
-                        <p key={i}>
-                          {a.kidName}
-                          {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
-                        </p>
-                      ))}
-                    </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600">Students Detected by AI</p>
+                  <p className="text-lg font-bold text-purple-900">
+                    {aiMetadata.aiKidsCount ?? "N/A"}
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-xs font-medium text-purple-600">Orphanage Match</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${matchBadgeColor(aiMetadata.aiOrphanageMatch)}`}>
+                    {aiMetadata.aiOrphanageMatch || "N/A"}
+                  </span>
+                </div>
+
+                {aiMetadata.aiLocation && (
+                  <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
+                    <p className="text-xs font-medium text-purple-600">Location Cues</p>
+                    <p className="text-sm text-purple-900 mt-0.5">{aiMetadata.aiLocation}</p>
                   </div>
                 )}
-                {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-blue-700 mb-0.5">Other Orphanage Kids</p>
-                    <div className="text-sm text-sand-700 space-y-0.5">
-                      {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").map((a, i) => (
-                        <p key={i}>
-                          {a.kidName}
-                          {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
-                        </p>
-                      ))}
-                    </div>
+
+                {aiMetadata.aiPhotoTimestamp && (
+                  <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
+                    <p className="text-xs font-medium text-purple-600">Photo Timestamp Cues</p>
+                    <p className="text-sm text-purple-900 mt-0.5">{aiMetadata.aiPhotoTimestamp}</p>
                   </div>
                 )}
-                {attendanceRecords.filter(a => a.attendanceType === "external").length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-sage-700 mb-0.5">External Kids</p>
-                    <p className="text-sm text-sand-700">
-                      {attendanceRecords.filter(a => a.attendanceType === "external").map(a => a.kidName).join(", ")}
-                    </p>
+
+                {aiMetadata.aiConfidenceNotes && (
+                  <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
+                    <p className="text-xs font-medium text-purple-600">AI Confidence Notes</p>
+                    <p className="text-xs text-purple-700 mt-0.5">{aiMetadata.aiConfidenceNotes}</p>
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Photos */}
-          {photos.length > 0 && (
-            <div className="pt-4 border-t border-sand-100">
-              <p className="text-xs font-medium text-sand-500 mb-2">
-                Photos ({photos.length})
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {photos.map((photo) => (
-                  <div key={photo.id} className="relative aspect-video rounded-lg overflow-hidden border border-sand-200">
-                    <Image
-                      src={photo.url}
-                      alt={photo.caption || "Class photo"}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 50vw, 33vw"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {row.notes && (
-            <div className="pt-4 border-t border-sand-100">
-              <p className="text-xs font-medium text-sand-500 mb-1">Notes</p>
-              <p className="text-sm text-sand-700 whitespace-pre-wrap">
-                {row.notes}
-              </p>
             </div>
           )}
         </div>
-
-        {/* AI Photo Analysis Metadata (read-only) */}
-        {aiMetadata.aiAnalyzedAt && (
-          <div className="rounded-lg border border-purple-200 bg-purple-50 p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-              </svg>
-              <h3 className="text-sm font-semibold text-purple-900">AI Photo Analysis</h3>
-              <span className="text-xs text-purple-500 ml-auto">
-                Analyzed {new Date(aiMetadata.aiAnalyzedAt!).toLocaleString()}
-              </span>
-            </div>
-            <p className="text-xs text-purple-600 mb-3">
-              Automatically generated from uploaded photos. Cannot be edited manually.
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-lg p-3 border border-purple-100">
-                <p className="text-xs font-medium text-purple-600">Students Detected by AI</p>
-                <p className="text-lg font-bold text-purple-900">
-                  {aiMetadata.aiKidsCount ?? "N/A"}
-                </p>
-              </div>
-
-              <div className="bg-white rounded-lg p-3 border border-purple-100">
-                <p className="text-xs font-medium text-purple-600">Orphanage Match</p>
-                <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${matchBadgeColor(aiMetadata.aiOrphanageMatch)}`}>
-                  {aiMetadata.aiOrphanageMatch || "N/A"}
-                </span>
-              </div>
-
-              {aiMetadata.aiLocation && (
-                <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                  <p className="text-xs font-medium text-purple-600">Location Cues</p>
-                  <p className="text-sm text-purple-900 mt-0.5">{aiMetadata.aiLocation}</p>
-                </div>
-              )}
-
-              {aiMetadata.aiPhotoTimestamp && (
-                <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                  <p className="text-xs font-medium text-purple-600">Photo Timestamp Cues</p>
-                  <p className="text-sm text-purple-900 mt-0.5">{aiMetadata.aiPhotoTimestamp}</p>
-                </div>
-              )}
-
-              {aiMetadata.aiConfidenceNotes && (
-                <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                  <p className="text-xs font-medium text-purple-600">AI Confidence Notes</p>
-                  <p className="text-xs text-purple-700 mt-0.5">{aiMetadata.aiConfidenceNotes}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
