@@ -8,39 +8,47 @@ import CheckboxFilter from "@/components/admin/CheckboxFilter";
 interface ClassLogFiltersProps {
   orphanages: { id: string; name: string }[];
   teachers: { id: string; name: string | null }[];
+  kids: { id: string; name: string }[];
 }
 
 export default function ClassLogFilters({
   orphanages,
   teachers,
+  kids,
 }: ClassLogFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const orphanageId = searchParams.get("orphanageId") || "";
   const teacherId = searchParams.get("teacherId") || "";
+  const kidId = searchParams.get("kidId") || "";
   const dateFrom = searchParams.get("dateFrom") || "";
   const dateTo = searchParams.get("dateTo") || "";
   const sortBy = searchParams.get("sortBy") || "";
+  const verification = searchParams.get("verification") || "";
 
   const selectedOrphanages = orphanageId ? orphanageId.split(",") : [];
   const selectedTeachers = teacherId ? teacherId.split(",") : [];
+  const selectedKids = kidId ? kidId.split(",") : [];
+  const selectedVerifications = verification ? verification.split(",") : [];
 
-  const hasFilters = !!(orphanageId || teacherId || dateFrom || dateTo);
+  const hasFilters = !!(orphanageId || teacherId || kidId || dateFrom || dateTo || verification);
 
   const buildUrl = useCallback(
     (overrides: Record<string, string>) => {
       const p = new URLSearchParams();
-      const merged = { orphanageId, teacherId, dateFrom, dateTo, sortBy, ...overrides };
+      const merged = { orphanageId, teacherId, kidId, dateFrom, dateTo, sortBy, verification, ...overrides };
       if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
       if (merged.teacherId) p.set("teacherId", merged.teacherId);
+      if (merged.kidId) p.set("kidId", merged.kidId);
       if (merged.dateFrom) p.set("dateFrom", merged.dateFrom);
       if (merged.dateTo) p.set("dateTo", merged.dateTo);
       if (merged.sortBy) p.set("sortBy", merged.sortBy);
+      if (merged.verification) p.set("verification", merged.verification);
       const qs = p.toString();
       return `/admin/classes${qs ? `?${qs}` : ""}`;
     },
-    [orphanageId, teacherId, dateFrom, dateTo, sortBy]
+    [orphanageId, teacherId, kidId, dateFrom, dateTo, sortBy, verification]
   );
 
   return (
@@ -58,6 +66,22 @@ export default function ClassLogFilters({
           options={teachers.map((t) => ({ value: t.id, label: t.name || t.id }))}
           selected={selectedTeachers}
           onChange={(vals) => router.push(buildUrl({ teacherId: vals.join(",") }))}
+        />
+        <CheckboxFilter
+          label="Kid"
+          options={kids.map((k) => ({ value: k.id, label: k.name }))}
+          selected={selectedKids}
+          onChange={(vals) => router.push(buildUrl({ kidId: vals.join(",") }))}
+        />
+        <CheckboxFilter
+          label="Verification"
+          options={[
+            { value: "verified", label: "Verified" },
+            { value: "check", label: "Check" },
+            { value: "audit", label: "Audit required" },
+          ]}
+          selected={selectedVerifications}
+          onChange={(vals) => router.push(buildUrl({ verification: vals.join(",") }))}
         />
 
         <div className="flex items-center gap-1.5">
@@ -82,7 +106,7 @@ export default function ClassLogFilters({
 
         {hasFilters && (
           <Link
-            href={buildUrl({ orphanageId: "", teacherId: "", dateFrom: "", dateTo: "" })}
+            href={buildUrl({ orphanageId: "", teacherId: "", kidId: "", dateFrom: "", dateTo: "", verification: "" })}
             className="text-xs text-sand-500 hover:text-sand-700 underline"
           >
             Clear filters
@@ -95,7 +119,7 @@ export default function ClassLogFilters({
         <span className="text-xs text-sand-500 mr-1">Sort:</span>
         {[
           { label: "Most Recent", value: "" },
-          { label: "Students", value: "students" },
+          { label: "# of Students", value: "students" },
         ].map((s) => {
           const isActive = sortBy === s.value || (!sortBy && s.value === "");
           return (

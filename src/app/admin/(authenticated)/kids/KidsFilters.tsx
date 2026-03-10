@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import CheckboxFilter from "@/components/admin/CheckboxFilter";
 
@@ -44,29 +44,26 @@ export default function KidsFilters({
 
   const hasFilters = !!(orphanageId || ageGroup || classGroupId || sortBy || status || q);
 
-  const buildUrl = useCallback(
-    (overrides: Record<string, string>) => {
-      const p = new URLSearchParams();
-      const merged = {
-        orphanageId,
-        ageGroup,
-        classGroupId,
-        sortBy,
-        status,
-        q,
-        ...overrides,
-      };
-      if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
-      if (merged.ageGroup) p.set("ageGroup", merged.ageGroup);
-      if (merged.classGroupId) p.set("classGroupId", merged.classGroupId);
-      if (merged.sortBy) p.set("sortBy", merged.sortBy);
-      if (merged.status) p.set("status", merged.status);
-      if (merged.q) p.set("q", merged.q);
-      const qs = p.toString();
-      return `/admin/kids${qs ? `?${qs}` : ""}`;
-    },
-    [orphanageId, ageGroup, classGroupId, sortBy, status, q]
-  );
+  function buildUrl(overrides: Record<string, string>) {
+    const p = new URLSearchParams();
+    const merged = {
+      orphanageId,
+      ageGroup,
+      classGroupId,
+      sortBy,
+      status,
+      q,
+      ...overrides,
+    };
+    if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
+    if (merged.ageGroup) p.set("ageGroup", merged.ageGroup);
+    if (merged.classGroupId) p.set("classGroupId", merged.classGroupId);
+    if (merged.sortBy) p.set("sortBy", merged.sortBy);
+    if (merged.status) p.set("status", merged.status);
+    if (merged.q) p.set("q", merged.q);
+    const qs = p.toString();
+    return `/admin/kids${qs ? `?${qs}` : ""}`;
+  }
 
   // Filtered suggestions
   const suggestions = searchQuery.trim()
@@ -128,10 +125,14 @@ export default function KidsFilters({
     }
   }
 
-  // Build class group options with orphanage prefix
-  const classGroupFilterOptions = classGroupOptions.map((g) => ({
+  // Filter class groups by selected orphanages (if any)
+  const filteredClassGroups = selectedOrphanages.length > 0
+    ? classGroupOptions.filter((g) => selectedOrphanages.includes(g.orphanageId))
+    : classGroupOptions;
+
+  const classGroupFilterOptions = filteredClassGroups.map((g) => ({
     value: g.id,
-    label: `${g.orphanageName || "Unknown"} — ${g.name}`,
+    label: `${g.name} — ${g.orphanageName || "Unknown"}`,
   }));
 
   return (
@@ -222,7 +223,18 @@ export default function KidsFilters({
           label="Orphanage"
           options={orphanageOptions.map((o) => ({ value: o.id, label: o.name }))}
           selected={selectedOrphanages}
-          onChange={(vals) => router.push(buildUrl({ orphanageId: vals.join(",") }))}
+          onChange={(vals) => {
+            const overrides: Record<string, string> = { orphanageId: vals.join(",") };
+            // Auto-remove class groups that no longer belong to selected orphanages
+            if (vals.length > 0 && selectedClassGroups.length > 0) {
+              const validClassGroups = selectedClassGroups.filter((cgId) => {
+                const cg = classGroupOptions.find((g) => g.id === cgId);
+                return cg && vals.includes(cg.orphanageId);
+              });
+              overrides.classGroupId = validClassGroups.join(",");
+            }
+            router.push(buildUrl(overrides));
+          }}
         />
         <CheckboxFilter
           label="Class"
