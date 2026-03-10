@@ -79,6 +79,9 @@ export default async function AdminOrphanagesPage({
         return (classCountMap.get(b.id) ?? 0) - (classCountMap.get(a.id) ?? 0);
       case "recent_classes":
         return (recentClassCountMap.get(b.id) ?? 0) - (recentClassCountMap.get(a.id) ?? 0);
+      case "running_since":
+        // Sort by runningSince (YYYY-MM), oldest first; null values go last
+        return (a.runningSince || "9999-99").localeCompare(b.runningSince || "9999-99");
       default:
         return a.name.localeCompare(b.name);
     }
@@ -118,6 +121,7 @@ export default async function AdminOrphanagesPage({
           { label: "Name", value: "" },
           { label: "Total Classes", value: "total_classes" },
           { label: "Recent Classes", value: "recent_classes" },
+          { label: "Running Since", value: "running_since" },
         ].map((s) => {
           const isActive = sortBy === s.value || (sortBy === "name" && s.value === "");
           return (

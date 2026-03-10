@@ -22,13 +22,36 @@ export default function OrphanageEditForm({
 }: {
   orphanage: OrphanageData;
 }) {
+  // Parse runningSince: supports "YYYY-MM" or legacy "Month Year" format
+  function parseRunningSince(val: string | null): { month: string; year: string } {
+    if (!val) return { month: "", year: "" };
+    // YYYY-MM format
+    const ymd = val.match(/^(\d{4})-(\d{2})$/);
+    if (ymd) return { month: ymd[2], year: ymd[1] };
+    // Legacy "Month Year" format
+    const months: Record<string, string> = {
+      january: "01", february: "02", march: "03", april: "04",
+      may: "05", june: "06", july: "07", august: "08",
+      september: "09", october: "10", november: "11", december: "12",
+    };
+    const legacy = val.match(/^(\w+)\s+(\d{4})$/);
+    if (legacy) {
+      const m = months[legacy[1].toLowerCase()];
+      if (m) return { month: m, year: legacy[2] };
+    }
+    return { month: "", year: "" };
+  }
+
+  const parsed = parseRunningSince(orphanage.runningSince);
+
   const [form, setForm] = useState({
     name: orphanage.name,
     indonesianName: orphanage.indonesianName || "",
     address: orphanage.address || "",
     location: orphanage.location,
     description: orphanage.description,
-    runningSince: orphanage.runningSince || "",
+    runningSinceMonth: parsed.month,
+    runningSinceYear: parsed.year,
     websiteUrl: orphanage.websiteUrl || "",
   });
   const [imageUrl, setImageUrl] = useState(orphanage.imageUrl || "");
@@ -45,7 +68,7 @@ export default function OrphanageEditForm({
   const router = useRouter();
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     const { name, value, type } = e.target;
     setForm((prev) => ({
@@ -93,14 +116,20 @@ export default function OrphanageEditForm({
     setSaving(true);
 
     try {
+      const runningSince = form.runningSinceMonth && form.runningSinceYear
+        ? `${form.runningSinceYear}-${form.runningSinceMonth}`
+        : null;
+
       const res = await fetch(`/api/admin/orphanages/${orphanage.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          name: form.name,
           indonesianName: form.indonesianName || null,
           address: form.address || null,
-          runningSince: form.runningSince || null,
+          location: form.location,
+          description: form.description,
+          runningSince,
           imageUrl: imageUrl || null,
           websiteUrl: form.websiteUrl || null,
         }),
@@ -279,13 +308,39 @@ export default function OrphanageEditForm({
         <label className="block text-sm font-medium text-sand-700">
           Running Since
         </label>
-        <input
-          name="runningSince"
-          value={form.runningSince}
-          onChange={handleChange}
-          placeholder="e.g. September 2024"
-          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-        />
+        <div className="mt-1 flex gap-2">
+          <select
+            name="runningSinceMonth"
+            value={form.runningSinceMonth}
+            onChange={handleChange}
+            className="flex-1 rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">Month</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
+          <select
+            name="runningSinceYear"
+            value={form.runningSinceYear}
+            onChange={handleChange}
+            className="w-28 rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          >
+            <option value="">Year</option>
+            {Array.from({ length: 10 }, (_, i) => 2020 + i).map((y) => (
+              <option key={y} value={String(y)}>{y}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>

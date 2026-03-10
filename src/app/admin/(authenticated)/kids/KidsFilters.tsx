@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import CheckboxFilter from "@/components/admin/CheckboxFilter";
 
 interface KidsFiltersProps {
   orphanageOptions: { id: string; name: string }[];
@@ -29,6 +30,11 @@ export default function KidsFilters({
   const sortBy = searchParams.get("sortBy") || "";
   const status = searchParams.get("status") || "";
   const q = searchParams.get("q") || "";
+
+  const selectedOrphanages = orphanageId ? orphanageId.split(",") : [];
+  const selectedClassGroups = classGroupId ? classGroupId.split(",") : [];
+  const selectedAgeGroups = ageGroup ? ageGroup.split(",") : [];
+  const selectedStatuses = status ? status.split(",") : [];
 
   const [searchQuery, setSearchQuery] = useState(q);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -122,6 +128,12 @@ export default function KidsFilters({
     }
   }
 
+  // Build class group options with orphanage prefix
+  const classGroupFilterOptions = classGroupOptions.map((g) => ({
+    value: g.id,
+    label: `${g.orphanageName || "Unknown"} — ${g.name}`,
+  }));
+
   return (
     <div className="mb-6 space-y-3">
       {/* Search bar */}
@@ -204,110 +216,39 @@ export default function KidsFilters({
         )}
       </div>
 
-      {/* Filter row */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div>
-          <select
-            value={orphanageId}
-            onChange={(e) => router.push(buildUrl({ orphanageId: e.target.value }))}
-            className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          >
-            <option value="">All Orphanages</option>
-            {orphanageOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <select
-            value={classGroupId}
-            onChange={(e) => router.push(buildUrl({ classGroupId: e.target.value }))}
-            className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          >
-            <option value="">All Classes</option>
-            {orphanageOptions.map((o) => {
-              const groupsForOrphanage = classGroupOptions.filter(
-                (g) => g.orphanageId === o.id
-              );
-              if (groupsForOrphanage.length === 0) return null;
-              return (
-                <optgroup key={o.id} label={o.name}>
-                  {groupsForOrphanage.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
-        </div>
-
-        {/* Age group pills */}
-        <div className="flex items-center gap-1">
-          {[
-            { label: "All Ages", value: "" },
-            { label: "5-8", value: "5-8" },
-            { label: "9-12", value: "9-12" },
-            { label: "13+", value: "13+" },
-          ].map((ag) => {
-            const isActive = ageGroup === ag.value;
-            return (
-              <Link
-                key={ag.label}
-                href={buildUrl({ ageGroup: ag.value })}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-green-600 text-white"
-                    : "bg-sand-100 text-sand-600 hover:bg-sand-200"
-                }`}
-              >
-                {ag.label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Status pills */}
-        <div className="flex items-center gap-1">
-          {[
-            { label: "All", value: "" },
-            { label: "Active", value: "active" },
-            { label: "Inactive", value: "inactive" },
-          ].map((s) => {
-            const isActive = status === s.value;
-            return (
-              <Link
-                key={s.label}
-                href={buildUrl({ status: s.value })}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  isActive
-                    ? "bg-green-600 text-white"
-                    : "bg-sand-100 text-sand-600 hover:bg-sand-200"
-                }`}
-              >
-                {s.label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Sort dropdown */}
-        <div>
-          <select
-            value={sortBy}
-            onChange={(e) => router.push(buildUrl({ sortBy: e.target.value }))}
-            className="rounded-lg border border-sand-300 px-3 py-1.5 text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-          >
-            <option value="">Sort: Name</option>
-            <option value="age">Sort: Age</option>
-            <option value="total_classes">Sort: Total Classes</option>
-            <option value="recent_classes">Sort: Recent Classes</option>
-          </select>
-        </div>
+      {/* Checkbox filters row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <CheckboxFilter
+          label="Orphanage"
+          options={orphanageOptions.map((o) => ({ value: o.id, label: o.name }))}
+          selected={selectedOrphanages}
+          onChange={(vals) => router.push(buildUrl({ orphanageId: vals.join(",") }))}
+        />
+        <CheckboxFilter
+          label="Class"
+          options={classGroupFilterOptions}
+          selected={selectedClassGroups}
+          onChange={(vals) => router.push(buildUrl({ classGroupId: vals.join(",") }))}
+        />
+        <CheckboxFilter
+          label="Age"
+          options={[
+            { value: "5-8", label: "5–8 years" },
+            { value: "9-12", label: "9–12 years" },
+            { value: "13+", label: "13+ years" },
+          ]}
+          selected={selectedAgeGroups}
+          onChange={(vals) => router.push(buildUrl({ ageGroup: vals.join(",") }))}
+        />
+        <CheckboxFilter
+          label="Status"
+          options={[
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ]}
+          selected={selectedStatuses}
+          onChange={(vals) => router.push(buildUrl({ status: vals.join(",") }))}
+        />
 
         {hasFilters && (
           <Link
@@ -317,6 +258,32 @@ export default function KidsFilters({
             Clear filters
           </Link>
         )}
+      </div>
+
+      {/* Sort pills */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-sand-500 mr-1">Sort:</span>
+        {[
+          { label: "Name", value: "" },
+          { label: "Age", value: "age" },
+          { label: "Total Classes", value: "total_classes" },
+          { label: "Recent Classes", value: "recent_classes" },
+        ].map((s) => {
+          const isActive = sortBy === s.value || (!sortBy && s.value === "");
+          return (
+            <Link
+              key={s.label}
+              href={buildUrl({ sortBy: s.value })}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                isActive
+                  ? "bg-green-600 text-white"
+                  : "bg-sand-100 text-sand-600 hover:bg-sand-200"
+              }`}
+            >
+              {s.label}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

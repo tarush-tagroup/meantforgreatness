@@ -87,6 +87,21 @@ export default async function AdminOrphanagePage({
     .orderBy(desc(classLogs.classDate))
     .limit(20);
 
+  // Format YYYY-MM to "Month Year" for display
+  function formatRunningSince(val: string | null): string | null {
+    if (!val) return null;
+    const match = val.match(/^(\d{4})-(\d{2})$/);
+    if (match) {
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+      const monthIdx = parseInt(match[2]) - 1;
+      if (monthIdx >= 0 && monthIdx < 12) return `${monthNames[monthIdx]} ${match[1]}`;
+    }
+    return val; // Fallback: display raw string
+  }
+
+  const runningSinceDisplay = formatRunningSince(orphanage.runningSince);
+
   return (
     <div className="mx-auto max-w-3xl">
       {/* Breadcrumb */}
@@ -184,9 +199,9 @@ export default async function AdminOrphanagePage({
                 <span className="inline-flex items-center rounded-full bg-sand-100 px-2.5 py-0.5 text-xs font-medium text-sand-600">
                   {groups.length} class group{groups.length !== 1 ? "s" : ""}
                 </span>
-                {orphanage.runningSince && (
+                {runningSinceDisplay && (
                   <span className="inline-flex items-center rounded-full bg-sage-50 px-2.5 py-0.5 text-xs font-medium text-sage-700 ring-1 ring-inset ring-sage-600/20">
-                    Since {orphanage.runningSince}
+                    Since {runningSinceDisplay}
                   </span>
                 )}
               </div>
