@@ -336,9 +336,9 @@ export default async function AdminClassesPage({
                 href={`/admin/classes/${log.id}`}
                 className="block rounded-xl border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
               >
-                {/* Photo */}
-                {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
-                  <div className="relative h-40 w-full">
+                {/* Photo with date overlay */}
+                <div className="relative h-40 w-full">
+                  {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
                     <Image
                       src={log.aiPrimaryPhotoUrl || log.photoUrl!}
                       alt="Class photo"
@@ -346,31 +346,27 @@ export default async function AdminClassesPage({
                       className="object-cover"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
-                  </div>
-                ) : (
-                  <div className="h-40 bg-sand-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-sand-300" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
-                    </svg>
-                  </div>
-                )}
-
-                <div className="p-4 space-y-1.5">
-                  {/* Date · Time + verification */}
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium text-sand-900 truncate">
-                      {log.classDate}
-                      {log.classTime && (
-                        <span className="font-normal text-sand-500"> · {formatStartTime(log.classTime)}</span>
-                      )}
-                    </p>
+                  ) : (
+                    <div className="absolute inset-0 bg-sand-100 flex items-center justify-center">
+                      <svg className="w-8 h-8 text-sand-300" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0 0 22.5 18.75V5.25A2.25 2.25 0 0 0 20.25 3H3.75A2.25 2.25 0 0 0 1.5 5.25v13.5A2.25 2.25 0 0 0 3.75 21Z" />
+                      </svg>
+                    </div>
+                  )}
+                  {/* Date + time overlay */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                    <span className="rounded-md bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm">
+                      {log.classDate}{log.classTime ? ` · ${formatStartTime(log.classTime)}` : ""}
+                    </span>
                     {vLevel && (
                       <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
                     )}
                   </div>
+                </div>
 
-                  {/* Orphanage with GPS inline */}
-                  <p className="text-sm text-sand-500 truncate">
+                <div className="p-4 space-y-1">
+                  {/* Orphanage */}
+                  <p className="text-sm text-sand-900 truncate">
                     {log.orphanageName || "—"}
                     {hasGps && (
                       <span className={`inline-flex items-center ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
@@ -383,22 +379,22 @@ export default async function AdminClassesPage({
                     )}
                   </p>
 
-                  {/* Teacher · student count */}
-                  <p className="text-xs text-sand-400 truncate">
-                    {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students
+                  {/* Teacher */}
+                  <p className="text-sm text-sand-900 truncate">
+                    {log.teacherName || "Unknown"}
+                  </p>
+
+                  {/* Student count */}
+                  <p className="text-sm text-sand-900">
+                    {log.studentCount ?? "?"} students
                     {hasAi && log.aiKidsCount != null && (
-                      <span className={`ml-1 ${
-                        log.studentCount != null && Math.abs(log.aiKidsCount - log.studentCount) <= 3
-                          ? "text-green-600" : "text-sage-600"
-                      }`}>
-                        (AI: {log.aiKidsCount})
-                      </span>
+                      <span className="text-sand-400"> (AI: {log.aiKidsCount})</span>
                     )}
                   </p>
 
-                  {/* Notes at bottom */}
+                  {/* Notes */}
                   {log.notes && (
-                    <p className="text-xs text-sand-400 line-clamp-2">{log.notes}</p>
+                    <p className="text-sm text-sand-400 line-clamp-2">{log.notes}</p>
                   )}
                 </div>
               </Link>
