@@ -149,7 +149,7 @@ export default async function AdminOrphanagesPage({
             <Link
               key={orphanage.id}
               href={`/admin/orphanages/${orphanage.id}`}
-              className="block rounded-lg border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
+              className="block rounded-xl border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
             >
               {orphanage.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -165,36 +165,35 @@ export default async function AdminOrphanagesPage({
                   </span>
                 </div>
               )}
-              <div className="p-4">
+              <div className="p-4 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-sand-900 truncate">
+                  <h2 className="text-sm font-medium text-sand-900 truncate">
                     {orphanage.name}
                   </h2>
                   {orphanage.indonesianName && (
-                    <span className="hidden sm:inline text-sm text-sand-400 truncate">
+                    <span className="hidden sm:inline text-xs text-sand-400 truncate">
                       ({orphanage.indonesianName})
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-sand-500 mt-1 truncate">
+                <p className="text-sm text-sand-500 truncate">
                   {orphanage.location}
                 </p>
-                <div className="flex flex-wrap items-center gap-2 mt-2">
-                  <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
                     {kidCountMap.get(orphanage.id) ?? 0} students
                   </span>
-                  <span className="inline-flex items-center rounded-full bg-sand-100 px-2.5 py-0.5 text-xs font-medium text-sand-600">
+                  <span className="inline-flex items-center rounded-full bg-sand-100 px-2 py-0.5 text-xs font-medium text-sand-600 ring-1 ring-inset ring-sand-200">
                     {groupCounts.get(orphanage.id) || 0} groups
                   </span>
                 </div>
-                {/* Class stats */}
-                <div className="flex items-center gap-3 mt-2 text-xs text-sand-500">
+                <div className="flex items-center gap-3 text-xs text-sand-400">
                   <span>{totalClasses} class{totalClasses !== 1 ? "es" : ""} total</span>
                   <span className="text-sand-300">&middot;</span>
                   <span>{recentClasses} in last 30d</span>
                 </div>
                 {orphanage.description && (
-                  <p className="mt-2 text-sm text-sand-600 line-clamp-2">
+                  <p className="text-xs text-sand-400 line-clamp-2">
                     {orphanage.description}
                   </p>
                 )}

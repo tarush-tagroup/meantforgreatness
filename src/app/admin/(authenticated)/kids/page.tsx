@@ -217,7 +217,7 @@ export default async function AdminKidsPage({
             <Link
               key={kid.id}
               href={`/admin/kids/${kid.id}`}
-              className={`block rounded-lg border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md ${
+              className={`block rounded-xl border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md ${
                 kid.status === "inactive" ? "opacity-60" : ""
               }`}
             >
@@ -226,18 +226,18 @@ export default async function AdminKidsPage({
                 <img
                   src={kid.imageUrl}
                   alt={kid.name}
-                  className="h-48 w-full object-cover object-[50%_25%]"
+                  className="h-40 w-full object-cover object-[50%_25%]"
                 />
               ) : (
-                <div className="h-48 bg-sand-100 flex items-center justify-center">
+                <div className="h-40 bg-sand-100 flex items-center justify-center">
                   <span className="text-4xl text-sand-300">
                     {kid.name.charAt(0)}
                   </span>
                 </div>
               )}
-              <div className="p-4">
+              <div className="p-4 space-y-1.5">
                 <div className="flex items-center gap-2">
-                  <h2 className="font-semibold text-sand-900 truncate">
+                  <h2 className="text-sm font-medium text-sand-900 truncate">
                     {kid.name}
                   </h2>
                   {kid.status === "inactive" && (
@@ -246,47 +246,37 @@ export default async function AdminKidsPage({
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
                     Age {kid.age}
                   </span>
                   {kid.orphanageName && (
-                    <span className="inline-flex items-center rounded-full bg-sage-50 px-2 py-0.5 text-xs font-medium text-sage-700 ring-1 ring-inset ring-sage-600/20">
+                    <span className="inline-flex items-center rounded-full bg-sage-50 px-2 py-0.5 text-xs font-medium text-sage-700 ring-1 ring-inset ring-sage-600/20 truncate max-w-[10rem]">
                       {kid.orphanageName}
                     </span>
                   )}
                   {kid.classGroupName && (
-                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 truncate max-w-[10rem]">
                       {kid.classGroupName}
                     </span>
                   )}
                 </div>
-                {/* Class stats */}
-                <div className="flex items-center gap-3 mt-2 text-xs text-sand-500">
+                <div className="flex items-center gap-3 text-xs text-sand-400">
                   <span>{kid.totalClasses} class{kid.totalClasses !== 1 ? "es" : ""} total</span>
                   <span className="text-sand-300">&middot;</span>
                   <span>{kid.recentClasses} in last 30d</span>
                 </div>
                 {kid.location && (
-                  <p className="mt-2 text-xs text-sand-500 truncate">
-                    {kid.location}
-                  </p>
+                  <p className="text-xs text-sand-400 truncate">{kid.location}</p>
                 )}
                 {kid.hobby && (
-                  <p className="mt-1.5 text-sm text-sand-600 line-clamp-1">
-                    <span className="font-medium text-sand-700">Hobby:</span> {kid.hobby}
-                  </p>
+                  <p className="text-xs text-sand-400 line-clamp-1">Hobby: {kid.hobby}</p>
                 )}
                 {kid.about && (
-                  <p className="mt-1.5 text-sm text-sand-600 line-clamp-2">
-                    {kid.about}
-                  </p>
+                  <p className="text-xs text-sand-400 line-clamp-1">{kid.about}</p>
                 )}
                 {kid.favoriteWord && (
-                  <p className="mt-1.5 text-sm text-sand-500 line-clamp-1 italic">
-                    <span className="font-medium not-italic text-sand-700">Favorite word:</span>{" "}
-                    {kid.favoriteWord}
-                  </p>
+                  <p className="text-xs text-sand-400 line-clamp-1">Favorite word: {kid.favoriteWord}</p>
                 )}
               </div>
             </Link>

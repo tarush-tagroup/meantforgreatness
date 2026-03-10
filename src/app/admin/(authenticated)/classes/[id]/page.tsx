@@ -19,21 +19,6 @@ import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
-function matchBadgeColor(match: string | null) {
-  switch (match) {
-    case "high":
-      return "bg-green-100 text-green-800";
-    case "likely":
-      return "bg-green-100 text-green-800";
-    case "uncertain":
-      return "bg-sage-100 text-sage-800";
-    case "unlikely":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-sand-100 text-sand-600";
-  }
-}
-
 export default async function ClassLogDetailPage({
   params,
   searchParams,
@@ -69,6 +54,10 @@ export default async function ClassLogDetailPage({
       aiConfidenceNotes: classLogs.aiConfidenceNotes,
       aiPrimaryPhotoUrl: classLogs.aiPrimaryPhotoUrl,
       aiAnalyzedAt: classLogs.aiAnalyzedAt,
+      aiDateMatch: classLogs.aiDateMatch,
+      aiTimeMatch: classLogs.aiTimeMatch,
+      aiGpsDistance: classLogs.aiGpsDistance,
+      exifDateTaken: classLogs.exifDateTaken,
       createdAt: classLogs.createdAt,
     })
     .from(classLogs)
@@ -221,43 +210,106 @@ export default async function ClassLogDetailPage({
         </div>
       ) : (
         /* View mode */
-        <div className="mt-6 max-w-2xl space-y-4">
-          <div className="rounded-lg border border-sand-200 bg-white p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="mt-6 max-w-2xl">
+          <div className="rounded-xl border border-sand-200 bg-white p-5 sm:p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {/* Date with EXIF verification */}
               <div>
-                <p className="text-xs font-medium text-sand-500">Date</p>
-                <p className="text-sm text-sand-900">{row.classDate}</p>
+                <p className="text-xs font-medium text-sand-400">Date</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm text-sand-900">{row.classDate}</p>
+                  {row.aiDateMatch && row.aiDateMatch !== "no_exif" && (
+                    <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                      row.aiDateMatch === "match"
+                        ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                        : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
+                    }`}>
+                      {row.aiDateMatch === "match" ? "EXIF \u2713" : "EXIF \u2717"}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Time with EXIF verification */}
               <div>
-                <p className="text-xs font-medium text-sand-500">Time</p>
-                <p className="text-sm text-sand-900">{row.classTime || "\u2014"}</p>
+                <p className="text-xs font-medium text-sand-400">Time</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm text-sand-900">{row.classTime || "\u2014"}</p>
+                  {row.aiTimeMatch && row.aiTimeMatch !== "no_exif" && row.aiTimeMatch !== "no_time" && (
+                    <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                      row.aiTimeMatch === "match"
+                        ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                        : "text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-600/20"
+                    }`}>
+                      {row.aiTimeMatch === "match" ? "EXIF \u2713" : "EXIF \u2717"}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Orphanage with GPS distance */}
               <div>
-                <p className="text-xs font-medium text-sand-500">Orphanage</p>
-                <p className="text-sm text-sand-900">
-                  {row.orphanageName || row.orphanageId}
-                </p>
+                <p className="text-xs font-medium text-sand-400">Orphanage</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-sm text-sand-900 truncate">
+                    {row.orphanageName || row.orphanageId}
+                  </p>
+                  {row.aiGpsDistance != null && (
+                    <span className={`inline-flex shrink-0 items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                      row.aiGpsDistance <= 500
+                        ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                        : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
+                    }`}>
+                      GPS: {row.aiGpsDistance < 1000
+                        ? `${Math.round(row.aiGpsDistance)}m`
+                        : `${(row.aiGpsDistance / 1000).toFixed(1)}km`}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Teacher */}
               <div>
-                <p className="text-xs font-medium text-sand-500">Teacher</p>
-                <p className="text-sm text-sand-900">
+                <p className="text-xs font-medium text-sand-400">Teacher</p>
+                <p className="text-sm text-sand-900 mt-0.5">
                   {row.teacherName || "Unknown"}
                 </p>
               </div>
+
+              {/* Students with AI count */}
               <div>
-                <p className="text-xs font-medium text-sand-500">
-                  Students Present
-                </p>
-                <p className="text-sm text-sand-900">
+                <p className="text-xs font-medium text-sand-400">Students Present</p>
+                <p className="text-sm text-sand-900 mt-0.5">
                   {row.studentCount ?? "\u2014"}
                 </p>
+                {row.aiKidsCount != null && (
+                  <p className="text-xs text-sand-400 mt-0.5">
+                    AI detected: {row.aiKidsCount}
+                    {row.studentCount != null && Math.abs(row.aiKidsCount - row.studentCount) > 3 && (
+                      <span className="text-amber-600 ml-1">
+                        ({row.aiKidsCount > row.studentCount ? "+" : ""}{row.aiKidsCount - row.studentCount})
+                      </span>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* Analysis timestamp */}
+            {row.aiAnalyzedAt && (
+              <p className="text-xs text-sand-400 pt-3 border-t border-sand-100">
+                Photo analyzed {row.aiAnalyzedAt.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            )}
 
             {/* Attendance breakdown */}
             {attendanceRecords.length > 0 && (
               <div className="pt-4 border-t border-sand-100">
-                <p className="text-xs font-medium text-sand-500 mb-2">
+                <p className="text-xs font-medium text-sand-400 mb-2">
                   Attendance ({attendanceRecords.length})
                 </p>
                 <div className="space-y-1">
@@ -302,7 +354,7 @@ export default async function ClassLogDetailPage({
             {/* Photos */}
             {photos.length > 0 && (
               <div className="pt-4 border-t border-sand-100">
-                <p className="text-xs font-medium text-sand-500 mb-2">
+                <p className="text-xs font-medium text-sand-400 mb-2">
                   Photos ({photos.length})
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -323,68 +375,13 @@ export default async function ClassLogDetailPage({
 
             {row.notes && (
               <div className="pt-4 border-t border-sand-100">
-                <p className="text-xs font-medium text-sand-500 mb-1">Notes</p>
+                <p className="text-xs font-medium text-sand-400 mb-1">Notes</p>
                 <p className="text-sm text-sand-700 whitespace-pre-wrap">
                   {row.notes}
                 </p>
               </div>
             )}
           </div>
-
-          {/* AI Photo Analysis Metadata (read-only) */}
-          {aiMetadata.aiAnalyzedAt && (
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
-                </svg>
-                <h3 className="text-sm font-semibold text-purple-900">AI Photo Analysis</h3>
-                <span className="text-xs text-purple-500 ml-auto">
-                  Analyzed {new Date(aiMetadata.aiAnalyzedAt!).toLocaleString()}
-                </span>
-              </div>
-              <p className="text-xs text-purple-600 mb-3">
-                Automatically generated from uploaded photos. Cannot be edited manually.
-              </p>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-lg p-3 border border-purple-100">
-                  <p className="text-xs font-medium text-purple-600">Students Detected by AI</p>
-                  <p className="text-lg font-bold text-purple-900">
-                    {aiMetadata.aiKidsCount ?? "N/A"}
-                  </p>
-                </div>
-
-                <div className="bg-white rounded-lg p-3 border border-purple-100">
-                  <p className="text-xs font-medium text-purple-600">Orphanage Match</p>
-                  <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${matchBadgeColor(aiMetadata.aiOrphanageMatch)}`}>
-                    {aiMetadata.aiOrphanageMatch || "N/A"}
-                  </span>
-                </div>
-
-                {aiMetadata.aiLocation && (
-                  <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                    <p className="text-xs font-medium text-purple-600">Location Cues</p>
-                    <p className="text-sm text-purple-900 mt-0.5">{aiMetadata.aiLocation}</p>
-                  </div>
-                )}
-
-                {aiMetadata.aiPhotoTimestamp && (
-                  <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                    <p className="text-xs font-medium text-purple-600">Photo Timestamp Cues</p>
-                    <p className="text-sm text-purple-900 mt-0.5">{aiMetadata.aiPhotoTimestamp}</p>
-                  </div>
-                )}
-
-                {aiMetadata.aiConfidenceNotes && (
-                  <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                    <p className="text-xs font-medium text-purple-600">AI Confidence Notes</p>
-                    <p className="text-xs text-purple-700 mt-0.5">{aiMetadata.aiConfidenceNotes}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
