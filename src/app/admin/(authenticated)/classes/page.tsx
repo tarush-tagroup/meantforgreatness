@@ -334,7 +334,7 @@ export default async function AdminClassesPage({
               <Link
                 key={log.id}
                 href={`/admin/classes/${log.id}`}
-                className="block rounded-lg border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
+                className="block rounded-xl border border-sand-200 bg-white overflow-hidden transition-shadow hover:shadow-md"
               >
                 {/* Photo */}
                 {(log.aiPrimaryPhotoUrl || log.photoUrl) ? (
@@ -355,15 +355,10 @@ export default async function AdminClassesPage({
                   </div>
                 )}
 
-                <div className="p-4">
-                  {/* Notes at top */}
-                  {log.notes && (
-                    <p className="text-xs text-sand-400 line-clamp-2 mb-2 italic">{log.notes}</p>
-                  )}
-
-                  {/* Date · Time merged */}
+                <div className="p-4 space-y-1.5">
+                  {/* Date · Time + verification */}
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-semibold text-sand-900">
+                    <p className="text-sm font-medium text-sand-900 truncate">
                       {log.classDate}
                       {log.classTime && (
                         <span className="font-normal text-sand-500"> · {formatStartTime(log.classTime)}</span>
@@ -375,7 +370,7 @@ export default async function AdminClassesPage({
                   </div>
 
                   {/* Orphanage with GPS inline */}
-                  <p className="text-sm text-sand-600 mt-1 truncate">
+                  <p className="text-sm text-sand-500 truncate">
                     {log.orphanageName || "—"}
                     {hasGps && (
                       <span className={`inline-flex items-center ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
@@ -389,7 +384,7 @@ export default async function AdminClassesPage({
                   </p>
 
                   {/* Teacher · student count */}
-                  <p className="text-xs text-sand-500 mt-0.5 truncate">
+                  <p className="text-xs text-sand-400 truncate">
                     {log.teacherName || "Unknown"} · {log.studentCount ?? "?"} students
                     {hasAi && log.aiKidsCount != null && (
                       <span className={`ml-1 ${
@@ -400,6 +395,11 @@ export default async function AdminClassesPage({
                       </span>
                     )}
                   </p>
+
+                  {/* Notes at bottom */}
+                  {log.notes && (
+                    <p className="text-xs text-sand-400 line-clamp-2">{log.notes}</p>
+                  )}
                 </div>
               </Link>
             );
