@@ -55,6 +55,12 @@ export default function ErrorReporter() {
     }
 
     function handleError(event: ErrorEvent) {
+      // Filter out generic "Script error." from cross-origin scripts (PostHog, Vercel Analytics, browser extensions)
+      // These provide no actionable information due to browser CORS sanitization
+      if (event.message === "Script error." && !event.filename && !event.error?.stack) {
+        return;
+      }
+
       sendError(event.message || "Unknown error", {
         filename: event.filename?.slice(0, 300),
         lineno: event.lineno,
