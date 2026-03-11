@@ -55,6 +55,17 @@ export default function ErrorReporter() {
     }
 
     function handleError(event: ErrorEvent) {
+      // Filter out uninformative "Script error." from cross-origin scripts
+      // (browser extensions, third-party analytics without CORS headers).
+      // Only skip if there's no useful debugging metadata.
+      if (
+        event.message === "Script error." &&
+        !event.filename &&
+        !event.error?.stack
+      ) {
+        return;
+      }
+
       sendError(event.message || "Unknown error", {
         filename: event.filename?.slice(0, 300),
         lineno: event.lineno,
