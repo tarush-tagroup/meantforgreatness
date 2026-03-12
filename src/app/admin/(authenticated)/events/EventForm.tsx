@@ -59,8 +59,8 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
           throw new Error(`${file.name}: Only JPEG, PNG, and WebP images are allowed`);
         }
-        if (file.size > 10 * 1024 * 1024) {
-          throw new Error(`${file.name}: File must be under 10 MB`);
+        if (file.size > 4.5 * 1024 * 1024) {
+          throw new Error(`${file.name}: File must be under 4.5 MB`);
         }
 
         const formData = new FormData();
@@ -72,8 +72,18 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
         });
 
         if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Failed to upload ${file.name}`);
+          let msg = `Failed to upload ${file.name}`;
+          try {
+            const text = await res.text();
+            try {
+              const json = JSON.parse(text);
+              msg = json.error || json.message || msg;
+            } catch {
+              if (res.status === 413) msg = "File too large. Please use a smaller image (max 4.5 MB).";
+              else if (text.length > 0 && text.length < 200) msg = text;
+            }
+          } catch { /* use fallback */ }
+          throw new Error(msg);
         }
 
         const data = await res.json();

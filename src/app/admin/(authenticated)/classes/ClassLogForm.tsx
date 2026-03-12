@@ -63,6 +63,23 @@ interface ClassLogFormProps {
   };
 }
 
+/** Safely extract an error message from a fetch Response (handles non-JSON bodies). */
+async function extractErrorMessage(res: Response, fallback: string): Promise<string> {
+  try {
+    const text = await res.text();
+    try {
+      const json = JSON.parse(text);
+      return json.error || json.message || fallback;
+    } catch {
+      // Non-JSON response (e.g. "Request Entity Too Large")
+      if (res.status === 413) return "File too large. Please use a smaller image (max 4.5 MB).";
+      return text.length > 0 && text.length < 200 ? text : `${fallback} (HTTP ${res.status})`;
+    }
+  } catch {
+    return `${fallback} (HTTP ${res.status})`;
+  }
+}
+
 export default function ClassLogForm({
   orphanages,
   teachers,
@@ -256,8 +273,8 @@ export default function ClassLogForm({
             `${file.name}: Only JPEG, PNG, and WebP images are allowed`
           );
         }
-        if (file.size > 10 * 1024 * 1024) {
-          throw new Error(`${file.name}: File must be under 10 MB`);
+        if (file.size > 4.5 * 1024 * 1024) {
+          throw new Error(`${file.name}: File must be under 4.5 MB`);
         }
 
         const formData = new FormData();
@@ -269,8 +286,8 @@ export default function ClassLogForm({
         });
 
         if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || `Failed to upload ${file.name}`);
+          const msg = await extractErrorMessage(res, `Failed to upload ${file.name}`);
+          throw new Error(msg);
         }
 
         const data = await res.json();
@@ -318,8 +335,8 @@ export default function ClassLogForm({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "AI analysis failed");
+        const msg = await extractErrorMessage(res, "AI analysis failed");
+        throw new Error(msg);
       }
 
       router.refresh();
@@ -420,8 +437,8 @@ export default function ClassLogForm({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save");
+        const msg = await extractErrorMessage(res, "Failed to save");
+        throw new Error(msg);
       }
 
       router.push("/admin/classes");
@@ -891,7 +908,7 @@ export default function ClassLogForm({
 
           {photos.length === 0 && (
             <p className="text-xs text-sand-400 mt-1">
-              JPEG, PNG, or WebP. Max 10 MB per file.
+              JPEG, PNG, or WebP. Max 4.5 MB per file.
             </p>
           )}
         </div>
