@@ -39,6 +39,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       .select({
         totalInvoices: sql<number>`count(*)::int`,
         totalClasses: sql<number>`coalesce(sum(${invoices.totalClasses}), 0)::int`,
+        totalHours: sql<number>`coalesce(sum(${invoices.totalHours}), 0)::float`,
         totalAmountIdr: sql<number>`coalesce(sum(${invoices.totalAmountIdr}), 0)::bigint`,
       })
       .from(invoices)
@@ -120,10 +121,10 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
         </div>
         <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
           <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
-            Classes Logged
+            Hours Billed
           </p>
-          <p className="mt-1 text-base sm:text-xl font-bold text-sand-600">
-            {totalLoggedForFinal.toLocaleString()}
+          <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
+            {Number(s?.totalHours || 0).toLocaleString()}
           </p>
         </div>
         <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">

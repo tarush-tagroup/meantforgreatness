@@ -32,6 +32,7 @@ const updateSchema = z.object({
   classGroupId: z.string().uuid().nullable().optional(),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").optional(),
   classTime: z.string().max(20).nullable().optional(),
+  classDuration: z.number().min(0.5).max(8).optional(),
   studentCount: z.number().int().min(0).nullable().optional(),
   photos: z.array(photoSchema).min(1, "At least one photo is required").optional(),
   notes: z.string().max(2000).nullable().optional(),
@@ -56,6 +57,7 @@ export async function GET(
       teacherName: users.name,
       classDate: classLogs.classDate,
       classTime: classLogs.classTime,
+      classDuration: classLogs.classDuration,
       studentCount: classLogs.studentCount,
       photoUrl: classLogs.photoUrl,
       notes: classLogs.notes,
@@ -169,6 +171,7 @@ export async function PUT(
   if (parsed.data.classGroupId !== undefined) updateData.classGroupId = parsed.data.classGroupId;
   if (parsed.data.classDate !== undefined) updateData.classDate = parsed.data.classDate;
   if (parsed.data.classTime !== undefined) updateData.classTime = parsed.data.classTime;
+  if (parsed.data.classDuration !== undefined) updateData.classDuration = parsed.data.classDuration;
   if (parsed.data.notes !== undefined) updateData.notes = parsed.data.notes;
 
   // If attendance is provided, compute studentCount from it; otherwise use manual value

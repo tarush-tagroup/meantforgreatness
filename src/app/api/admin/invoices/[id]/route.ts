@@ -53,6 +53,7 @@ export async function GET(
         .select({
           orphanageId: classLogs.orphanageId,
           count: sql<number>`count(*)::int`,
+          hours: sql<number>`coalesce(sum(${classLogs.classDuration}), 0)::float`,
         })
         .from(classLogs)
         .where(
@@ -64,10 +65,12 @@ export async function GET(
         .groupBy(classLogs.orphanageId),
     ]);
 
-  // Convert to Record<orphanageId, count>
+  // Convert to Record<orphanageId, count> and Record<orphanageId, hours>
   const loggedCounts: Record<string, number> = {};
+  const loggedHours: Record<string, number> = {};
   for (const row of loggedClassCounts) {
     loggedCounts[row.orphanageId] = row.count;
+    loggedHours[row.orphanageId] = row.hours;
   }
 
   return NextResponse.json({
@@ -76,6 +79,7 @@ export async function GET(
     miscItems,
     allOrphanages,
     loggedCounts,
+    loggedHours,
   });
 }
 
@@ -88,6 +92,7 @@ const patchSchema = z.object({
         orphanageId: z.string().optional(),
         orphanageName: z.string().optional(),
         classCount: z.number().int().min(0),
+        totalHours: z.number().min(0),
       })
     )
     .optional(),
@@ -131,7 +136,7 @@ export async function PATCH(
   // Update line item class counts (update existing or create new)
   if (lineItemUpdates && lineItemUpdates.length > 0) {
     for (const item of lineItemUpdates) {
-      const subtotal = item.classCount * invoice.ratePerClassIdr;
+      const subtotal = Math.round(item.totalHours * invoice.ratePerClassIdr);
 
       if (item.id) {
         // Update existing line item
@@ -139,6 +144,7 @@ export async function PATCH(
           .update(invoiceLineItems)
           .set({
             classCount: item.classCount,
+            totalHours: item.totalHours,
             subtotalIdr: subtotal,
           })
           .where(eq(invoiceLineItems.id, item.id));
@@ -149,6 +155,7 @@ export async function PATCH(
           orphanageId: item.orphanageId,
           orphanageName: item.orphanageName,
           classCount: item.classCount,
+          totalHours: item.totalHours,
           ratePerClassIdr: invoice.ratePerClassIdr,
           subtotalIdr: subtotal,
         });
@@ -159,6 +166,7 @@ export async function PATCH(
     const [totals] = await db
       .select({
         totalClasses: sql<number>`coalesce(sum(${invoiceLineItems.classCount}), 0)::int`,
+        totalHours: sql<number>`coalesce(sum(${invoiceLineItems.totalHours}), 0)::float`,
         totalAmountIdr: sql<number>`coalesce(sum(${invoiceLineItems.subtotalIdr}), 0)::int`,
       })
       .from(invoiceLineItems)
@@ -176,6 +184,7 @@ export async function PATCH(
       .update(invoices)
       .set({
         totalClasses: totals.totalClasses,
+        totalHours: totals.totalHours,
         totalAmountIdr: totals.totalAmountIdr + (miscTotals?.miscTotalIdr || 0),
         miscTotalIdr: miscTotals?.miscTotalIdr || 0,
         updatedAt: new Date(),

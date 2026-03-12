@@ -33,7 +33,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
   if (!invoice) notFound();
 
-  const [lineItems, miscItems, allOrphanages, loggedClassCounts] =
+  const [lineItems, miscItems, allOrphanages, loggedClassCounts, loggedClassHours] =
     await Promise.all([
       db
         .select()
@@ -63,12 +63,30 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
           )
         )
         .groupBy(classLogs.orphanageId),
+      // Sum hours actually logged in the DB for this invoice's period
+      db
+        .select({
+          orphanageId: classLogs.orphanageId,
+          hours: sql<number>`coalesce(sum(${classLogs.classDuration}), 0)::float`,
+        })
+        .from(classLogs)
+        .where(
+          and(
+            gte(classLogs.classDate, invoice.periodStart),
+            lte(classLogs.classDate, invoice.periodEnd)
+          )
+        )
+        .groupBy(classLogs.orphanageId),
     ]);
 
-  // Convert to a simple Record<orphanageId, count>
+  // Convert to simple Record<orphanageId, count/hours>
   const loggedCounts: Record<string, number> = {};
   for (const row of loggedClassCounts) {
     loggedCounts[row.orphanageId] = row.count;
+  }
+  const loggedHours: Record<string, number> = {};
+  for (const row of loggedClassHours) {
+    loggedHours[row.orphanageId] = row.hours;
   }
 
   return (
@@ -78,6 +96,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
       miscItems={JSON.parse(JSON.stringify(miscItems))}
       allOrphanages={allOrphanages}
       loggedCounts={loggedCounts}
+      loggedHours={loggedHours}
     />
   );
 }

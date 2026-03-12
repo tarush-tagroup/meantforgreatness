@@ -73,17 +73,17 @@ export default async function AdminKidsPage({
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
 
   // Determine sort order
-  const sortBy = params.sortBy || "name";
+  const sortBy = params.sortBy || "";
   const orderByClause = (() => {
     switch (sortBy) {
+      case "name":
+        return asc(kids.name);
       case "age":
         return asc(kids.age);
       case "total_classes":
         return desc(sql`(SELECT COUNT(*)::int FROM class_log_attendance WHERE class_log_attendance.kid_id = ${kids.id})`);
-      case "recent_classes":
-        return desc(sql`(SELECT COUNT(*)::int FROM class_log_attendance INNER JOIN class_logs ON class_logs.id = class_log_attendance.class_log_id WHERE class_log_attendance.kid_id = ${kids.id} AND class_logs.class_date >= ${thirtyDaysAgoStr})`);
-      default:
-        return asc(kids.name);
+      default: // "Date Registered" — most recently registered first
+        return desc(kids.dateRegistered);
     }
   })();
 
@@ -103,6 +103,7 @@ export default async function AdminKidsPage({
       classGroupId: kids.classGroupId,
       classGroupName: classGroups.name,
       status: kids.status,
+      dateRegistered: kids.dateRegistered,
       totalClasses: sql<number>`COALESCE((
         SELECT COUNT(*)::int FROM class_log_attendance
         WHERE class_log_attendance.kid_id = ${kids.id}

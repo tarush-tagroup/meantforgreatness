@@ -52,6 +52,7 @@ interface ClassLogFormProps {
     classGroupId?: string | null;
     classDate: string;
     classTime: string | null;
+    classDuration?: number | null;
     studentCount: number | null;
     notes: string | null;
     photos?: { url: string; caption: string | null }[];
@@ -106,6 +107,9 @@ export default function ClassLogForm({
     initialData?.classDate || new Date().toISOString().split("T")[0]
   );
   const [classTime, setClassTime] = useState(initialData?.classTime || "");
+  const [classDuration, setClassDuration] = useState<number>(
+    initialData?.classDuration ?? 1.0
+  );
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [photos, setPhotos] = useState<PhotoItem[]>(
     initialData?.photos?.map((p) => ({ url: p.url, caption: p.caption })) || []
@@ -358,6 +362,7 @@ export default function ClassLogForm({
         orphanageId,
         teacherId,
         classDate,
+        classDuration,
         photos: photos.map((p, i) => ({
           url: p.url,
           caption: p.caption || null,
@@ -558,6 +563,25 @@ export default function ClassLogForm({
             placeholder="e.g. 10:00 AM"
             className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
           />
+        </div>
+
+        {/* Duration */}
+        <div>
+          <label
+            htmlFor="classDuration"
+            className="block text-sm font-medium text-sand-700 mb-1"
+          >
+            Duration
+          </label>
+          <select
+            id="classDuration"
+            value={classDuration}
+            onChange={(e) => setClassDuration(parseFloat(e.target.value))}
+            className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sand-900"
+          >
+            <option value={1.0}>1 hour</option>
+            <option value={1.5}>1.5 hours</option>
+          </select>
         </div>
 
         {/* Attendance Section - show when class group is selected */}

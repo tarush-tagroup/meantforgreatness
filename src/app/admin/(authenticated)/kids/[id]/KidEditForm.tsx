@@ -15,6 +15,7 @@ interface KidData {
   orphanageId: string | null;
   classGroupId: string | null;
   status: string;
+  dateRegistered: string | null;
 }
 
 interface ClassGroupOption {
@@ -40,6 +41,7 @@ export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
     orphanageId: kid.orphanageId || "",
     classGroupId: kid.classGroupId || "",
     status: kid.status || "active",
+    dateRegistered: kid.dateRegistered || "",
   });
   const [imageUrl, setImageUrl] = useState(kid.imageUrl || "");
   const [uploading, setUploading] = useState(false);
@@ -112,6 +114,7 @@ export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
           orphanageId: form.orphanageId || null,
           classGroupId: form.classGroupId || null,
           status: form.status,
+          dateRegistered: form.dateRegistered || null,
         }),
       });
 
@@ -190,15 +193,32 @@ export default function KidEditForm({ kid, orphanages, classGroups }: Props) {
         </p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-sand-700">Hobby</label>
-        <input
-          name="hobby"
-          value={form.hobby}
-          onChange={handleChange}
-          placeholder="e.g. Playing Football"
-          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-sand-700">
+            Date Registered
+          </label>
+          <input
+            name="dateRegistered"
+            type="date"
+            value={form.dateRegistered}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+          <p className="mt-1 text-xs text-sand-400">
+            When this kid joined the program
+          </p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-sand-700">Hobby</label>
+          <input
+            name="hobby"
+            value={form.hobby}
+            onChange={handleChange}
+            placeholder="e.g. Playing Football"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

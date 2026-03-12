@@ -10,6 +10,7 @@ interface LineItem {
   orphanageId: string;
   orphanageName: string;
   classCount: number;
+  totalHours: number;
   ratePerClassIdr: number;
   subtotalIdr: number;
 }
@@ -36,6 +37,7 @@ interface Invoice {
   fromEntity: string;
   toEntity: string;
   totalClasses: number;
+  totalHours: number;
   totalAmountIdr: number;
   miscTotalIdr: number;
   ratePerClassIdr: number;
@@ -53,12 +55,14 @@ export default function InvoiceEditor({
   miscItems: initialMiscItems,
   allOrphanages,
   loggedCounts: initialLoggedCounts,
+  loggedHours: initialLoggedHours,
 }: {
   invoice: Invoice;
   lineItems: LineItem[];
   miscItems: MiscItem[];
   allOrphanages: Orphanage[];
   loggedCounts: Record<string, number>;
+  loggedHours: Record<string, number>;
 }) {
   const router = useRouter();
   const [invoice, setInvoice] = useState(initialInvoice);
@@ -66,11 +70,15 @@ export default function InvoiceEditor({
   const [miscItems, setMiscItems] = useState(initialMiscItems);
   const [orphanages] = useState(allOrphanages);
   const [loggedCounts, setLoggedCounts] = useState(initialLoggedCounts);
+  const [loggedHours, setLoggedHours] = useState(initialLoggedHours);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   // Editing line items — keyed by lineItem.id for existing, or orphanageId for new
   const [editingLineItems, setEditingLineItems] = useState<
+    Record<string, number>
+  >({});
+  const [editingLineHours, setEditingLineHours] = useState<
     Record<string, number>
   >({});
 
@@ -103,6 +111,7 @@ export default function InvoiceEditor({
       orphanageId: orp.id,
       orphanageName: orp.name,
       classCount: 0,
+      totalHours: 0,
       ratePerClassIdr: invoice.ratePerClassIdr,
       subtotalIdr: 0,
       isNew: true as const,
@@ -110,21 +119,37 @@ export default function InvoiceEditor({
   });
 
   async function handleSaveLineItems() {
-    const updates = Object.entries(editingLineItems)
-      .map(([key, classCount]) => {
+    // Collect all keys that have been edited (classes or hours)
+    const allEditedKeys = new Set([
+      ...Object.keys(editingLineItems),
+      ...Object.keys(editingLineHours),
+    ]);
+
+    const updates = Array.from(allEditedKeys)
+      .map((key) => {
         const merged = mergedLineItems.find(
           (m) => m.id === key || `new-${m.orphanageId}` === key
         );
         if (!merged) return null;
+
+        const classCount =
+          editingLineItems[key] !== undefined
+            ? editingLineItems[key]
+            : merged.classCount;
+        const totalHours =
+          editingLineHours[key] !== undefined
+            ? editingLineHours[key]
+            : merged.totalHours;
 
         if (merged.isNew) {
           return {
             orphanageId: merged.orphanageId,
             orphanageName: merged.orphanageName,
             classCount,
+            totalHours,
           };
         }
-        return { id: merged.id, classCount };
+        return { id: merged.id, classCount, totalHours };
       })
       .filter(Boolean);
 
@@ -144,6 +169,7 @@ export default function InvoiceEditor({
       }
 
       setEditingLineItems({});
+      setEditingLineHours({});
       await refreshData();
     } catch {
       alert("Failed to save changes");
@@ -316,10 +342,13 @@ export default function InvoiceEditor({
       setLineItems(data.lineItems);
       setMiscItems(data.miscItems);
       if (data.loggedCounts) setLoggedCounts(data.loggedCounts);
+      if (data.loggedHours) setLoggedHours(data.loggedHours);
     }
   }
 
-  const hasUnsavedLineItems = Object.keys(editingLineItems).length > 0;
+  const hasUnsavedLineItems =
+    Object.keys(editingLineItems).length > 0 ||
+    Object.keys(editingLineHours).length > 0;
   const miscTotal = miscItems.reduce((s, mi) => s + mi.subtotalIdr, 0);
 
   return (
@@ -418,7 +447,7 @@ export default function InvoiceEditor({
           </div>
           <div>
             <p className="text-xs font-medium text-sand-500 uppercase tracking-wider">
-              Rate per Class
+              Rate per Hour
             </p>
             <p className="mt-1 text-sm text-sand-700">
               IDR {formatIdr(invoice.ratePerClassIdr)}
@@ -463,7 +492,9 @@ export default function InvoiceEditor({
                 <th className="px-4 py-2">Orphanage</th>
                 <th className="px-4 py-2 text-right">Logged</th>
                 <th className="px-4 py-2 text-right">Billed</th>
-                <th className="px-4 py-2 text-right">Rate (IDR)</th>
+                <th className="px-4 py-2 text-right">Logged Hrs</th>
+                <th className="px-4 py-2 text-right">Billed Hrs</th>
+                <th className="px-4 py-2 text-right">Rate/hr (IDR)</th>
                 <th className="px-4 py-2 text-right">Subtotal (IDR)</th>
               </tr>
             </thead>
@@ -475,11 +506,15 @@ export default function InvoiceEditor({
                 const editedCount = editingLineItems[editKey];
                 const currentCount =
                   editedCount !== undefined ? editedCount : item.classCount;
+                const currentHours =
+                  editingLineHours[editKey] ?? item.totalHours;
                 const currentSubtotal =
-                  currentCount * item.ratePerClassIdr;
+                  Math.round(currentHours * item.ratePerClassIdr);
 
                 const loggedCount =
                   loggedCounts[item.orphanageId] || 0;
+                const loggedHoursForOrp =
+                  loggedHours[item.orphanageId] || 0;
                 const mismatch =
                   loggedCount !== currentCount && currentCount > 0;
 
@@ -535,6 +570,33 @@ export default function InvoiceEditor({
                         }`}
                       />
                     </td>
+                    <td className="px-4 py-2 text-right">
+                      <span
+                        className={`inline-block min-w-[2rem] rounded px-1.5 py-0.5 text-center text-sm ${
+                          loggedHoursForOrp === 0
+                            ? "text-sand-400"
+                            : "text-sand-700"
+                        }`}
+                      >
+                        {loggedHoursForOrp}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        value={currentHours}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setEditingLineHours((prev) => ({
+                            ...prev,
+                            [editKey]: val,
+                          }));
+                        }}
+                        className="w-20 rounded border border-sand-200 px-2 py-1 text-right text-sm text-sand-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      />
+                    </td>
                     <td className="px-4 py-2 text-right text-sand-600">
                       {formatIdr(item.ratePerClassIdr)}
                     </td>
@@ -571,6 +633,24 @@ export default function InvoiceEditor({
                     return s + count;
                   }, 0)}
                 </td>
+                <td className="px-4 py-3 text-right font-bold text-sand-600">
+                  {Object.values(loggedHours).reduce(
+                    (s, h) => s + h,
+                    0
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right font-bold text-sand-900">
+                  {mergedLineItems.reduce((s, li) => {
+                    const editKey = li.isNew
+                      ? `new-${li.orphanageId}`
+                      : li.id;
+                    const hours =
+                      editingLineHours[editKey] !== undefined
+                        ? editingLineHours[editKey]
+                        : li.totalHours;
+                    return s + hours;
+                  }, 0)}
+                </td>
                 <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right font-bold text-sand-900">
                   IDR{" "}
@@ -579,11 +659,11 @@ export default function InvoiceEditor({
                       const editKey = li.isNew
                         ? `new-${li.orphanageId}`
                         : li.id;
-                      const count =
-                        editingLineItems[editKey] !== undefined
-                          ? editingLineItems[editKey]
-                          : li.classCount;
-                      return s + count * li.ratePerClassIdr;
+                      const hours =
+                        editingLineHours[editKey] !== undefined
+                          ? editingLineHours[editKey]
+                          : li.totalHours;
+                      return s + Math.round(hours * li.ratePerClassIdr);
                     }, 0)
                   )}
                 </td>
@@ -842,8 +922,9 @@ export default function InvoiceEditor({
           <div>
             <p className="text-sm font-bold text-green-900">INVOICE TOTAL</p>
             <p className="text-xs text-green-700 mt-1">
-              {invoice.totalClasses} classes + {miscItems.length} additional
-              item{miscItems.length !== 1 ? "s" : ""}
+              {invoice.totalClasses} classes ({invoice.totalHours}h) +{" "}
+              {miscItems.length} additional item
+              {miscItems.length !== 1 ? "s" : ""}
             </p>
           </div>
           <p className="text-2xl font-bold text-green-900">

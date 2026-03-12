@@ -25,6 +25,7 @@ const createSchema = z.object({
   orphanageId: z.string().min(1, "Orphanage is required").max(50),
   classGroupId: z.string().uuid().nullable().optional(),
   status: z.enum(["active", "inactive"]).optional().default("active"),
+  dateRegistered: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 function slugify(name: string): string {
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
     orphanageId: data.orphanageId,
     classGroupId: data.classGroupId ?? null,
     status: data.status ?? "active",
+    dateRegistered: data.dateRegistered ?? new Date().toISOString().split("T")[0],
   });
 
   return NextResponse.json({ id, success: true }, { status: 201 });

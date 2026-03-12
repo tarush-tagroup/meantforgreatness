@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
 import Link from "next/link";
 import CheckboxFilter from "@/components/admin/CheckboxFilter";
 import ViewToggle from "@/components/admin/ViewToggle";
@@ -27,6 +26,7 @@ export default function ClassLogFilters({
   const dateTo = searchParams.get("dateTo") || "";
   const sortBy = searchParams.get("sortBy") || "";
   const verification = searchParams.get("verification") || "";
+  const view = searchParams.get("view") || "";
 
   const selectedOrphanages = orphanageId ? orphanageId.split(",") : [];
   const selectedTeachers = teacherId ? teacherId.split(",") : [];
@@ -35,22 +35,20 @@ export default function ClassLogFilters({
 
   const hasFilters = !!(orphanageId || teacherId || kidId || dateFrom || dateTo || verification);
 
-  const buildUrl = useCallback(
-    (overrides: Record<string, string>) => {
-      const p = new URLSearchParams();
-      const merged = { orphanageId, teacherId, kidId, dateFrom, dateTo, sortBy, verification, ...overrides };
-      if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
-      if (merged.teacherId) p.set("teacherId", merged.teacherId);
-      if (merged.kidId) p.set("kidId", merged.kidId);
-      if (merged.dateFrom) p.set("dateFrom", merged.dateFrom);
-      if (merged.dateTo) p.set("dateTo", merged.dateTo);
-      if (merged.sortBy) p.set("sortBy", merged.sortBy);
-      if (merged.verification) p.set("verification", merged.verification);
-      const qs = p.toString();
-      return `/admin/classes${qs ? `?${qs}` : ""}`;
-    },
-    [orphanageId, teacherId, kidId, dateFrom, dateTo, sortBy, verification]
-  );
+  function buildUrl(overrides: Record<string, string>) {
+    const p = new URLSearchParams();
+    const merged = { orphanageId, teacherId, kidId, dateFrom, dateTo, sortBy, verification, view, ...overrides };
+    if (merged.orphanageId) p.set("orphanageId", merged.orphanageId);
+    if (merged.teacherId) p.set("teacherId", merged.teacherId);
+    if (merged.kidId) p.set("kidId", merged.kidId);
+    if (merged.dateFrom) p.set("dateFrom", merged.dateFrom);
+    if (merged.dateTo) p.set("dateTo", merged.dateTo);
+    if (merged.sortBy) p.set("sortBy", merged.sortBy);
+    if (merged.verification) p.set("verification", merged.verification);
+    if (merged.view) p.set("view", merged.view);
+    const qs = p.toString();
+    return `/admin/classes${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <div className="mb-6 space-y-3">
@@ -120,8 +118,9 @@ export default function ClassLogFilters({
         <div className="flex items-center gap-2">
           <span className="text-xs text-sand-500 mr-1">Sort:</span>
           {[
-            { label: "Most Recent", value: "" },
-            { label: "# of Students", value: "students" },
+            { label: "Logged Date", value: "" },
+            { label: "Class Date", value: "class_date" },
+            { label: "# of Kids", value: "kids" },
           ].map((s) => {
             const isActive = sortBy === s.value || (!sortBy && s.value === "");
             return (

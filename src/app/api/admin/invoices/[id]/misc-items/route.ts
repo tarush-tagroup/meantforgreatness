@@ -200,6 +200,7 @@ async function recalculateInvoiceTotals(invoiceId: string) {
   const [lineTotals] = await db
     .select({
       totalClasses: sql<number>`coalesce(sum(${invoiceLineItems.classCount}), 0)::int`,
+      totalHours: sql<number>`coalesce(sum(${invoiceLineItems.totalHours}), 0)::float`,
       classAmountIdr: sql<number>`coalesce(sum(${invoiceLineItems.subtotalIdr}), 0)::int`,
     })
     .from(invoiceLineItems)
@@ -219,6 +220,7 @@ async function recalculateInvoiceTotals(invoiceId: string) {
     .update(invoices)
     .set({
       totalClasses: lineTotals?.totalClasses || 0,
+      totalHours: lineTotals?.totalHours || 0,
       totalAmountIdr: classAmount + miscTotal,
       miscTotalIdr: miscTotal,
       updatedAt: new Date(),
