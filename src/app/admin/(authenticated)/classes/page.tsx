@@ -191,7 +191,7 @@ export default async function AdminClassesPage({
       case "class_date":
         return [desc(classLogs.classDate), desc(classLogs.createdAt)];
       case "kids":
-        return [desc(classLogs.aiKidsCount), desc(classLogs.createdAt)];
+        return [sql`${classLogs.aiKidsCount} desc nulls last`, desc(classLogs.createdAt)];
       default: // "Logged Date" — most recently logged first
         return [desc(classLogs.createdAt)];
     }
