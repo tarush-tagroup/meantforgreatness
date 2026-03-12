@@ -176,6 +176,16 @@ export default async function AdminKidPage({
                 )}
               </div>
 
+              {kid.dateRegistered && (
+                <p className="text-sm text-sand-600">
+                  <span className="font-medium text-sand-700">Registered:</span>{" "}
+                  {new Date(kid.dateRegistered + "T00:00:00").toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
+              )}
               {kid.hobby && (
                 <p className="text-sm text-sand-600">
                   <span className="font-medium text-sand-700">Hobby:</span> {kid.hobby}

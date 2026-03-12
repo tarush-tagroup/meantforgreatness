@@ -44,6 +44,7 @@ export default async function ClassLogDetailPage({
       classGroupId: classLogs.classGroupId,
       classDate: classLogs.classDate,
       classTime: classLogs.classTime,
+      classDuration: classLogs.classDuration,
       studentCount: classLogs.studentCount,
       photoUrl: classLogs.photoUrl,
       notes: classLogs.notes,
@@ -196,6 +197,7 @@ export default async function ClassLogDetailPage({
               classGroupId: row.classGroupId,
               classDate: row.classDate,
               classTime: row.classTime,
+              classDuration: row.classDuration,
               studentCount: row.studentCount,
               notes: row.notes,
               photos: photos.map((p) => ({ url: p.url, caption: p.caption })),
@@ -245,6 +247,14 @@ export default async function ClassLogDetailPage({
                     </span>
                   )}
                 </div>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <p className="text-xs font-medium text-sand-400">Duration</p>
+                <p className="text-sm text-sand-900 mt-0.5">
+                  {row.classDuration ?? 1} {(row.classDuration ?? 1) === 1 ? "hour" : "hours"}
+                </p>
               </div>
 
               {/* Orphanage with GPS distance */}

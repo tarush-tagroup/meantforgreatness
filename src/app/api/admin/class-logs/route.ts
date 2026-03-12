@@ -34,6 +34,7 @@ const createSchema = z.object({
   classGroupId: z.string().uuid().optional(),
   classDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
   classTime: z.string().max(20).optional(),
+  classDuration: z.number().min(0.5).max(8).default(1.0),
   studentCount: z.number().int().min(0).optional(),
   photos: z.array(photoSchema).min(1, "At least one photo is required"),
   notes: z.string().max(2000).optional(),
@@ -78,6 +79,7 @@ async function getHandler(req: NextRequest) {
       teacherName: users.name,
       classDate: classLogs.classDate,
       classTime: classLogs.classTime,
+      classDuration: classLogs.classDuration,
       studentCount: classLogs.studentCount,
       photoUrl: classLogs.photoUrl,
       notes: classLogs.notes,
@@ -209,6 +211,7 @@ async function postHandler(req: NextRequest) {
       classGroupId: parsed.data.classGroupId || null,
       classDate: parsed.data.classDate,
       classTime: parsed.data.classTime || null,
+      classDuration: parsed.data.classDuration,
       studentCount: computedStudentCount,
       photoUrl: parsed.data.photos[0]?.url || null, // keep legacy field with first photo
       notes: parsed.data.notes || null,

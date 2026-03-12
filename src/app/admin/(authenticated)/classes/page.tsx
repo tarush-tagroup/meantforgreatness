@@ -185,10 +185,17 @@ export default async function AdminClassesPage({
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
   // Sort
-  const sortBy = params.sortBy || "date";
-  const orderByClause = sortBy === "students"
-    ? [desc(classLogs.studentCount), desc(classLogs.classDate)]
-    : [desc(classLogs.classDate), desc(classLogs.createdAt)];
+  const sortBy = params.sortBy || "";
+  const orderByClause = (() => {
+    switch (sortBy) {
+      case "class_date":
+        return [desc(classLogs.classDate), desc(classLogs.createdAt)];
+      case "kids":
+        return [desc(classLogs.aiKidsCount), desc(classLogs.createdAt)];
+      default: // "Logged Date" — most recently logged first
+        return [desc(classLogs.createdAt)];
+    }
+  })();
 
   // Parse verification filter
   const verificationFilter = params.verification
@@ -204,6 +211,7 @@ export default async function AdminClassesPage({
     teacherName: users.name,
     classDate: classLogs.classDate,
     classTime: classLogs.classTime,
+    classDuration: classLogs.classDuration,
     studentCount: classLogs.studentCount,
     notes: classLogs.notes,
     photoUrl: classLogs.photoUrl,
@@ -437,11 +445,14 @@ export default async function AdminClassesPage({
                     {log.teacherName || "Unknown"}
                   </p>
 
-                  {/* Student count */}
+                  {/* Student count + duration */}
                   <p className="text-sm text-sand-900">
                     {log.studentCount ?? "?"} students
                     {hasAi && log.aiKidsCount != null && (
                       <span className="text-sand-400"> (AI: {log.aiKidsCount})</span>
+                    )}
+                    {log.classDuration && log.classDuration !== 1 && (
+                      <span className="text-sand-400"> · {log.classDuration}h</span>
                     )}
                   </p>
 

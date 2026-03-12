@@ -24,6 +24,7 @@ export default function KidCreateForm({ orphanages, classGroups }: Props) {
     favoriteWord: "",
     orphanageId: "",
     classGroupId: "",
+    dateRegistered: new Date().toISOString().split("T")[0],
   });
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -94,6 +95,7 @@ export default function KidCreateForm({ orphanages, classGroups }: Props) {
           orphanageId: form.orphanageId || null,
           classGroupId: form.classGroupId || null,
           status: "active",
+          dateRegistered: form.dateRegistered || null,
         }),
       });
 
@@ -152,15 +154,32 @@ export default function KidCreateForm({ orphanages, classGroups }: Props) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-sand-700">Hobby</label>
-        <input
-          name="hobby"
-          value={form.hobby}
-          onChange={handleChange}
-          placeholder="e.g. Playing Football"
-          className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-sand-700">Hobby</label>
+          <input
+            name="hobby"
+            value={form.hobby}
+            onChange={handleChange}
+            placeholder="e.g. Playing Football"
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-sand-700">
+            Date Registered
+          </label>
+          <input
+            name="dateRegistered"
+            type="date"
+            value={form.dateRegistered}
+            onChange={handleChange}
+            className="mt-1 block w-full rounded-lg border border-sand-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+          />
+          <p className="mt-1 text-xs text-sand-400">
+            When this kid joined the program
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

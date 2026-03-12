@@ -62,12 +62,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Count classes per orphanage in the previous month
+    // Count classes and sum hours per orphanage in the previous month
     const classCounts = await db
       .select({
         orphanageId: classLogs.orphanageId,
         orphanageName: orphanages.name,
         classCount: sql<number>`count(*)::int`,
+        totalHours: sql<number>`coalesce(sum(${classLogs.classDuration}), 0)::float`,
       })
       .from(classLogs)
       .leftJoin(orphanages, eq(classLogs.orphanageId, orphanages.id))
@@ -79,19 +80,23 @@ export async function GET(req: NextRequest) {
       )
       .groupBy(classLogs.orphanageId, orphanages.name);
 
-    const RATE = 300000; // IDR per class
+    const RATE = 300000; // IDR per hour
     let totalClasses = 0;
+    let totalHours = 0;
     let totalAmountIdr = 0;
 
     const lineItems = classCounts.map((row) => {
       const count = Number(row.classCount);
-      const subtotal = count * RATE;
+      const hours = Number(row.totalHours);
+      const subtotal = Math.round(hours * RATE);
       totalClasses += count;
+      totalHours += hours;
       totalAmountIdr += subtotal;
       return {
         orphanageId: row.orphanageId,
         orphanageName: row.orphanageName || row.orphanageId,
         classCount: count,
+        totalHours: hours,
         ratePerClassIdr: RATE,
         subtotalIdr: subtotal,
       };
@@ -107,6 +112,7 @@ export async function GET(req: NextRequest) {
         fromEntity: "TransforMe Academy",
         toEntity: "White Light Ventures, Inc",
         totalClasses,
+        totalHours,
         totalAmountIdr,
         ratePerClassIdr: RATE,
         status: "draft",
@@ -121,6 +127,7 @@ export async function GET(req: NextRequest) {
           orphanageId: li.orphanageId,
           orphanageName: li.orphanageName,
           classCount: li.classCount,
+          totalHours: li.totalHours,
           ratePerClassIdr: li.ratePerClassIdr,
           subtotalIdr: li.subtotalIdr,
         }))

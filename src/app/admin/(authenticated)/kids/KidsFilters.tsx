@@ -30,6 +30,7 @@ export default function KidsFilters({
   const ageGroup = searchParams.get("ageGroup") || "";
   const sortBy = searchParams.get("sortBy") || "";
   const status = searchParams.get("status") || "";
+  const view = searchParams.get("view") || "";
   const q = searchParams.get("q") || "";
 
   const selectedOrphanages = orphanageId ? orphanageId.split(",") : [];
@@ -53,6 +54,7 @@ export default function KidsFilters({
       classGroupId,
       sortBy,
       status,
+      view,
       q,
       ...overrides,
     };
@@ -61,6 +63,7 @@ export default function KidsFilters({
     if (merged.classGroupId) p.set("classGroupId", merged.classGroupId);
     if (merged.sortBy) p.set("sortBy", merged.sortBy);
     if (merged.status) p.set("status", merged.status);
+    if (merged.view) p.set("view", merged.view);
     if (merged.q) p.set("q", merged.q);
     const qs = p.toString();
     return `/admin/kids${qs ? `?${qs}` : ""}`;
@@ -278,10 +281,10 @@ export default function KidsFilters({
         <div className="flex items-center gap-2">
           <span className="text-xs text-sand-500 mr-1">Sort:</span>
           {[
-            { label: "Name", value: "" },
+            { label: "Date Registered", value: "" },
+            { label: "Name", value: "name" },
             { label: "Age", value: "age" },
             { label: "Total Classes", value: "total_classes" },
-            { label: "Recent Classes", value: "recent_classes" },
           ].map((s) => {
             const isActive = sortBy === s.value || (!sortBy && s.value === "");
             return (
