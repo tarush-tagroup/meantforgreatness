@@ -469,9 +469,24 @@ export default function ClassLogForm({
         <div>
           <label
             htmlFor="orphanageId"
-            className="block text-sm font-medium text-sand-700 mb-1"
+            className="flex items-center gap-2 text-sm font-medium text-sand-700 mb-1"
           >
             Orphanage *
+            {isEditing && aiMetadata?.aiAnalyzedAt && (
+              aiMetadata.aiGpsDistance != null ? (
+                <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  aiMetadata.aiGpsDistance <= 500
+                    ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                    : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
+                }`}>
+                  {aiMetadata.aiGpsDistance <= 500 ? "\u2713" : "\u2717"} {aiMetadata.aiGpsDistance < 1000
+                    ? `${Math.round(aiMetadata.aiGpsDistance)}m`
+                    : `${(aiMetadata.aiGpsDistance / 1000).toFixed(1)}km`}
+                </span>
+              ) : (
+                <span className="text-[10px] text-sand-400 font-normal">No GPS</span>
+              )
+            )}
           </label>
           <select
             id="orphanageId"
@@ -544,9 +559,22 @@ export default function ClassLogForm({
         <div>
           <label
             htmlFor="classDate"
-            className="block text-sm font-medium text-sand-700 mb-1"
+            className="flex items-center gap-2 text-sm font-medium text-sand-700 mb-1"
           >
             Class Date *
+            {isEditing && aiMetadata?.aiAnalyzedAt && (
+              aiMetadata.aiDateMatch && aiMetadata.aiDateMatch !== "no_exif" ? (
+                <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  aiMetadata.aiDateMatch === "match"
+                    ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                    : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
+                }`}>
+                  {aiMetadata.aiDateMatch === "match" ? "\u2713 Verified" : "\u2717 Mismatch"}
+                </span>
+              ) : (
+                <span className="text-[10px] text-sand-400 font-normal">No EXIF</span>
+              )
+            )}
           </label>
           <input
             type="date"
@@ -562,9 +590,22 @@ export default function ClassLogForm({
         <div>
           <label
             htmlFor="classTime"
-            className="block text-sm font-medium text-sand-700 mb-1"
+            className="flex items-center gap-2 text-sm font-medium text-sand-700 mb-1"
           >
             Class Time
+            {isEditing && aiMetadata?.aiAnalyzedAt && (
+              aiMetadata.aiTimeMatch && aiMetadata.aiTimeMatch !== "no_exif" && aiMetadata.aiTimeMatch !== "no_time" ? (
+                <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                  aiMetadata.aiTimeMatch === "match"
+                    ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                    : "text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-600/20"
+                }`}>
+                  {aiMetadata.aiTimeMatch === "match" ? "\u2713 Verified" : "\u2717 Mismatch"}
+                </span>
+              ) : (
+                <span className="text-[10px] text-sand-400 font-normal">No EXIF</span>
+              )
+            )}
           </label>
           <input
             type="text"
@@ -822,12 +863,29 @@ export default function ClassLogForm({
 
         {/* Photos (required) */}
         <div>
-          <label className="block text-sm font-medium text-sand-700 mb-1">
-            Photos *{" "}
-            <span className="text-sand-400 font-normal">
-              (at least 1 required)
-            </span>
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="flex items-center gap-2 text-sm font-medium text-sand-700">
+              Photos *{" "}
+              <span className="text-sand-400 font-normal">
+                (at least 1 required)
+              </span>
+              {isEditing && aiMetadata?.aiAnalyzedAt && aiMetadata.aiKidsCount != null && (
+                <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full text-blue-700 bg-blue-50 ring-1 ring-inset ring-blue-600/20">
+                  AI: {aiMetadata.aiKidsCount} kids
+                </span>
+              )}
+            </label>
+            {isEditing && photos.length > 0 && (
+              <button
+                type="button"
+                onClick={handleRerunAnalysis}
+                disabled={rerunning}
+                className="rounded-md bg-white border border-sand-200 px-2.5 py-1 text-xs font-medium text-sand-700 hover:bg-sand-100 transition-colors disabled:opacity-50"
+              >
+                {rerunning ? "Analyzing..." : "Re-run Analysis"}
+              </button>
+            )}
+          </div>
 
           {/* Photo upload instructions */}
           <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-3">
@@ -937,85 +995,6 @@ export default function ClassLogForm({
           />
         </div>
       </div>
-
-      {/* AI Verification Status — compact bar */}
-      {isEditing && photos.length > 0 && (
-        <div className="rounded-lg border border-sand-200 bg-sand-50 p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-xs font-semibold text-sand-600 uppercase tracking-wider">
-              Photo Verification
-            </p>
-            <button
-              type="button"
-              onClick={handleRerunAnalysis}
-              disabled={rerunning}
-              className="rounded-md bg-white border border-sand-200 px-2.5 py-1 text-xs font-medium text-sand-700 hover:bg-sand-100 transition-colors disabled:opacity-50"
-            >
-              {rerunning ? "Analyzing..." : "Re-run Analysis"}
-            </button>
-          </div>
-          {aiMetadata?.aiAnalyzedAt ? (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              {/* AI Kids Count */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-sand-500">AI Kids:</span>
-                <span className="text-sm font-bold text-sand-900">{aiMetadata.aiKidsCount ?? "—"}</span>
-              </div>
-              {/* Date Verified */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-sand-500">Date:</span>
-                {aiMetadata.aiDateMatch && aiMetadata.aiDateMatch !== "no_exif" ? (
-                  <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                    aiMetadata.aiDateMatch === "match"
-                      ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
-                      : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
-                  }`}>
-                    {aiMetadata.aiDateMatch === "match" ? "\u2713 Verified" : "\u2717 Mismatch"}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-sand-400">No EXIF</span>
-                )}
-              </div>
-              {/* Time Verified */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-sand-500">Time:</span>
-                {aiMetadata.aiTimeMatch && aiMetadata.aiTimeMatch !== "no_exif" && aiMetadata.aiTimeMatch !== "no_time" ? (
-                  <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                    aiMetadata.aiTimeMatch === "match"
-                      ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
-                      : "text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-600/20"
-                  }`}>
-                    {aiMetadata.aiTimeMatch === "match" ? "\u2713 Verified" : "\u2717 Mismatch"}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-sand-400">No EXIF</span>
-                )}
-              </div>
-              {/* GPS Verified */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-sand-500">GPS:</span>
-                {aiMetadata.aiGpsDistance != null ? (
-                  <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-                    aiMetadata.aiGpsDistance <= 500
-                      ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
-                      : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
-                  }`}>
-                    {aiMetadata.aiGpsDistance <= 500 ? "\u2713" : "\u2717"} {aiMetadata.aiGpsDistance < 1000
-                      ? `${Math.round(aiMetadata.aiGpsDistance)}m`
-                      : `${(aiMetadata.aiGpsDistance / 1000).toFixed(1)}km`}
-                  </span>
-                ) : (
-                  <span className="text-[10px] text-sand-400">No GPS</span>
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-sand-500">
-              {rerunning ? "Running analysis..." : "Analysis pending \u2014 photos will be analyzed automatically."}
-            </p>
-          )}
-        </div>
-      )}
 
       <div className="flex items-center gap-3">
         <button
