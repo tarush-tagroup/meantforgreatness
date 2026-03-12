@@ -325,16 +325,22 @@ export default async function ClassLogDetailPage({
                 <p className="text-xs font-medium text-sand-400 mb-2">
                   Attendance ({attendanceRecords.length})
                 </p>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {attendanceRecords.filter(a => a.attendanceType === "class_member").length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-green-700 mb-0.5">Class Members</p>
-                      <div className="text-sm text-sand-700 space-y-0.5">
+                      <div className="text-sm space-y-0.5">
                         {attendanceRecords.filter(a => a.attendanceType === "class_member").map((a, i) => (
-                          <p key={i}>
-                            {a.kidName}
-                            {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
-                          </p>
+                          <div key={i} className="flex items-center gap-1.5">
+                            {a.kidId ? (
+                              <Link href={`/admin/kids/${a.kidId}`} className="text-sand-900 hover:text-green-700 transition-colors">
+                                {a.kidName}
+                              </Link>
+                            ) : (
+                              <span className="text-sand-700">{a.kidName}</span>
+                            )}
+                            {a.note && <span className="text-xs text-sand-500">&mdash; {a.note}</span>}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -342,12 +348,18 @@ export default async function ClassLogDetailPage({
                   {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-blue-700 mb-0.5">Other Orphanage Kids</p>
-                      <div className="text-sm text-sand-700 space-y-0.5">
+                      <div className="text-sm space-y-0.5">
                         {attendanceRecords.filter(a => a.attendanceType === "orphanage_guest").map((a, i) => (
-                          <p key={i}>
-                            {a.kidName}
-                            {a.note && <span className="text-xs text-sand-500 ml-1.5">&mdash; {a.note}</span>}
-                          </p>
+                          <div key={i} className="flex items-center gap-1.5">
+                            {a.kidId ? (
+                              <Link href={`/admin/kids/${a.kidId}`} className="text-sand-900 hover:text-green-700 transition-colors">
+                                {a.kidName}
+                              </Link>
+                            ) : (
+                              <span className="text-sand-700">{a.kidName}</span>
+                            )}
+                            {a.note && <span className="text-xs text-sand-500">&mdash; {a.note}</span>}
+                          </div>
                         ))}
                       </div>
                     </div>

@@ -237,39 +237,45 @@ export default async function AdminKidPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
-                  {classHistory.map((entry, i) => (
-                    <tr key={i} className="hover:bg-sand-50">
-                      <td className="px-4 py-2.5 text-sm whitespace-nowrap">
-                        <Link
-                          href={`/admin/classes/${entry.classLogId}`}
-                          className="text-green-600 hover:text-green-700 font-medium"
-                        >
-                          {entry.classDate}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2.5 text-sm text-sand-700">{entry.orphanageName || "—"}</td>
-                      <td className="px-4 py-2.5 text-sm text-sand-700">{entry.classGroupName || "—"}</td>
-                      <td className="px-4 py-2.5 text-sm text-sand-700 hidden sm:table-cell">{entry.teacherName || "—"}</td>
-                      <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs hidden sm:table-cell">
-                        {entry.attendanceNote || entry.classNotes ? (
-                          <div className="space-y-1">
-                            {entry.attendanceNote && (
-                              <p className="truncate" title={entry.attendanceNote}>
-                                <span className="font-medium text-sand-600">Kid:</span> {entry.attendanceNote}
-                              </p>
+                  {classHistory.map((entry, i) => {
+                    const href = `/admin/classes/${entry.classLogId}`;
+                    return (
+                      <tr key={i} className="hover:bg-sand-50">
+                        <td className="px-4 py-2.5 text-sm whitespace-nowrap">
+                          <Link href={href} className="block text-sand-900 font-medium">{entry.classDate}</Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-sm">
+                          <Link href={href} className="block text-sand-700">{entry.orphanageName || "—"}</Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-sm">
+                          <Link href={href} className="block text-sand-700">{entry.classGroupName || "—"}</Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-sm hidden sm:table-cell">
+                          <Link href={href} className="block text-sand-700">{entry.teacherName || "—"}</Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs hidden sm:table-cell">
+                          <Link href={href} className="block">
+                            {entry.attendanceNote || entry.classNotes ? (
+                              <div className="space-y-1">
+                                {entry.attendanceNote && (
+                                  <p className="truncate" title={entry.attendanceNote}>
+                                    <span className="font-medium text-sand-600">Kid:</span> {entry.attendanceNote}
+                                  </p>
+                                )}
+                                {entry.classNotes && (
+                                  <p className="truncate" title={entry.classNotes}>
+                                    <span className="font-medium text-sand-600">Class:</span> {entry.classNotes}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              "—"
                             )}
-                            {entry.classNotes && (
-                              <p className="truncate" title={entry.classNotes}>
-                                <span className="font-medium text-sand-600">Class:</span> {entry.classNotes}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
