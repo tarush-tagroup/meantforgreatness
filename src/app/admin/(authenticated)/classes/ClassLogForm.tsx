@@ -3,6 +3,7 @@
 import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { upload } from "@vercel/blob/client";
 
 interface GpsData {
   latitude: number;
@@ -72,7 +73,7 @@ async function extractErrorMessage(res: Response, fallback: string): Promise<str
       return json.error || json.message || fallback;
     } catch {
       // Non-JSON response (e.g. "Request Entity Too Large")
-      if (res.status === 413) return "File too large. Please use a smaller image (max 4.5 MB).";
+      if (res.status === 413) return "File too large. Please use a smaller image (max 10 MB).";
       return text.length > 0 && text.length < 200 ? text : `${fallback} (HTTP ${res.status})`;
     }
   } catch {
@@ -273,20 +274,25 @@ export default function ClassLogForm({
             `${file.name}: Only JPEG, PNG, and WebP images are allowed`
           );
         }
-        if (file.size > 4.5 * 1024 * 1024) {
-          throw new Error(`${file.name}: File must be under 4.5 MB`);
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`${file.name}: File must be under 10 MB`);
         }
 
-        const formData = new FormData();
-        formData.append("file", file);
+        // Step 1: Upload raw file directly to Vercel Blob (bypasses 4.5 MB serverless limit)
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/admin/upload-client",
+        });
 
-        const res = await fetch("/api/admin/upload", {
+        // Step 2: Process the upload (extract EXIF, optimize, save to DB)
+        const res = await fetch("/api/admin/upload/process", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rawUrl: blob.url }),
         });
 
         if (!res.ok) {
-          const msg = await extractErrorMessage(res, `Failed to upload ${file.name}`);
+          const msg = await extractErrorMessage(res, `Failed to process ${file.name}`);
           throw new Error(msg);
         }
 
@@ -908,7 +914,7 @@ export default function ClassLogForm({
 
           {photos.length === 0 && (
             <p className="text-xs text-sand-400 mt-1">
-              JPEG, PNG, or WebP. Max 4.5 MB per file.
+              JPEG, PNG, or WebP. Max 10 MB per file.
             </p>
           )}
         </div>

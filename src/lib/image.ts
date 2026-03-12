@@ -234,7 +234,7 @@ const ALLOWED_TYPES = [
   "image/webp",
   "image/jpg",
 ];
-const MAX_SIZE = 4.5 * 1024 * 1024; // 4.5 MB (Vercel serverless body limit)
+const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 /**
  * Validate an uploaded file is an allowed image type and size.
@@ -244,7 +244,7 @@ export function validateImageFile(file: File): string | null {
     return "Only JPEG, PNG, and WebP images are allowed.";
   }
   if (file.size > MAX_SIZE) {
-    return "Image must be less than 4.5 MB.";
+    return "Image must be less than 10 MB.";
   }
   return null;
 }

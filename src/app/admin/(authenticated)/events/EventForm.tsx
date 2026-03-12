@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { upload } from "@vercel/blob/client";
 
 interface PhotoItem {
   url: string;
@@ -59,28 +60,32 @@ export default function EventForm({ orphanages, initialData }: EventFormProps) {
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
           throw new Error(`${file.name}: Only JPEG, PNG, and WebP images are allowed`);
         }
-        if (file.size > 4.5 * 1024 * 1024) {
-          throw new Error(`${file.name}: File must be under 4.5 MB`);
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error(`${file.name}: File must be under 10 MB`);
         }
 
-        const formData = new FormData();
-        formData.append("file", file);
+        // Step 1: Upload raw file directly to Vercel Blob (bypasses 4.5 MB serverless limit)
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/admin/upload-client",
+        });
 
-        const res = await fetch("/api/admin/upload", {
+        // Step 2: Process the upload (optimize, save to DB)
+        const res = await fetch("/api/admin/upload/process", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rawUrl: blob.url }),
         });
 
         if (!res.ok) {
-          let msg = `Failed to upload ${file.name}`;
+          let msg = `Failed to process ${file.name}`;
           try {
             const text = await res.text();
             try {
               const json = JSON.parse(text);
               msg = json.error || json.message || msg;
             } catch {
-              if (res.status === 413) msg = "File too large. Please use a smaller image (max 4.5 MB).";
-              else if (text.length > 0 && text.length < 200) msg = text;
+              if (text.length > 0 && text.length < 200) msg = text;
             }
           } catch { /* use fallback */ }
           throw new Error(msg);
