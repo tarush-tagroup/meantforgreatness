@@ -41,6 +41,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Only allow fetching from Vercel Blob storage (prevent SSRF)
+    const blobUrl = new URL(rawUrl);
+    if (!blobUrl.hostname.endsWith(".public.blob.vercel-storage.com")) {
+      return NextResponse.json(
+        { error: "Invalid file URL" },
+        { status: 400 }
+      );
+    }
+
     // Download the raw image from Vercel Blob
     const fetchRes = await fetch(rawUrl);
     if (!fetchRes.ok) {

@@ -14,9 +14,12 @@ import { logger } from "@/lib/logger";
  * and runs analyzeClassLogPhotos on them. Handles cases where the
  * original fire-and-forget analysis failed or was missed.
  *
- * Limited to 20 logs per run to keep Anthropic API costs bounded.
+ * Limited to 5 logs per run to stay within the 60s serverless timeout
+ * (each Claude Vision call takes 5-15s).
  */
-const MAX_PER_RUN = 20;
+const MAX_PER_RUN = 5;
+
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
