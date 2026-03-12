@@ -69,6 +69,22 @@ export default async function AdminOrphanagePage({
   // Total student count for this orphanage
   const totalStudents = kidStats.reduce((sum, s) => sum + s.count, 0);
 
+  // Get all kids at this orphanage
+  const orphanageKids = await db
+    .select({
+      id: kids.id,
+      name: kids.name,
+      age: kids.age,
+      imageUrl: kids.imageUrl,
+      status: kids.status,
+      classGroupId: kids.classGroupId,
+      classGroupName: classGroups.name,
+    })
+    .from(kids)
+    .leftJoin(classGroups, eq(kids.classGroupId, classGroups.id))
+    .where(eq(kids.orphanageId, id))
+    .orderBy(asc(classGroups.name), asc(kids.name));
+
   // Get recent classes at this orphanage
   const recentClasses = await db
     .select({
@@ -235,40 +251,114 @@ export default async function AdminOrphanagePage({
             </div>
           </div>
 
-          {/* Class Groups */}
+          {/* Class Groups with Kids */}
           {groups.length > 0 && (
             <div className="mt-8">
               <h2 className="text-lg font-semibold text-sand-900 mb-3">
                 Class Groups
               </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-4">
                 {groups.map((g) => {
                   const stats = statsMap.get(g.id);
+                  const groupKids = orphanageKids.filter((k) => k.classGroupId === g.id);
                   return (
                     <div
                       key={g.id}
-                      className="rounded-lg border border-sand-200 bg-white p-4"
+                      className="rounded-lg border border-sand-200 bg-white overflow-hidden"
                     >
-                      <h3 className="font-medium text-sand-900">{g.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-sand-500">
-                          {stats?.studentCount ?? 0} student{(stats?.studentCount ?? 0) !== 1 ? "s" : ""}
-                        </span>
-                        {stats?.ageRange && (
-                          <>
-                            <span className="text-sand-300">&middot;</span>
-                            <span className="text-xs text-sand-500">
-                              Ages {stats.ageRange}
-                            </span>
-                          </>
-                        )}
+                      <div className="p-4 border-b border-sand-100">
+                        <h3 className="font-medium text-sand-900">{g.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs text-sand-500">
+                            {stats?.studentCount ?? 0} student{(stats?.studentCount ?? 0) !== 1 ? "s" : ""}
+                          </span>
+                          {stats?.ageRange && (
+                            <>
+                              <span className="text-sand-300">&middot;</span>
+                              <span className="text-xs text-sand-500">
+                                Ages {stats.ageRange}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
+                      {groupKids.length > 0 && (
+                        <div className="divide-y divide-sand-50">
+                          {groupKids.map((kid) => (
+                            <Link
+                              key={kid.id}
+                              href={`/admin/kids/${kid.id}`}
+                              className="flex items-center gap-3 px-4 py-2.5 hover:bg-sand-50 transition-colors"
+                            >
+                              {kid.imageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={kid.imageUrl} alt="" className="h-7 w-7 rounded-full object-cover shrink-0" />
+                              ) : (
+                                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sand-100 text-xs font-medium text-sand-500 shrink-0">
+                                  {kid.name.charAt(0)}
+                                </span>
+                              )}
+                              <span className="text-sm text-sand-900 truncate">{kid.name}</span>
+                              <span className="text-xs text-sand-400 shrink-0">Age {kid.age}</span>
+                              {kid.status === "inactive" && (
+                                <span className="inline-flex shrink-0 items-center rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-medium text-sand-500">
+                                  Inactive
+                                </span>
+                              )}
+                              <svg className="w-4 h-4 text-sand-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                              </svg>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             </div>
           )}
+
+          {/* Ungrouped Kids */}
+          {(() => {
+            const ungroupedKids = orphanageKids.filter((k) => !k.classGroupId);
+            if (ungroupedKids.length === 0) return null;
+            return (
+              <div className="mt-8">
+                <h2 className="text-lg font-semibold text-sand-900 mb-3">
+                  Unassigned Kids
+                </h2>
+                <div className="rounded-lg border border-sand-200 bg-white overflow-hidden divide-y divide-sand-50">
+                  {ungroupedKids.map((kid) => (
+                    <Link
+                      key={kid.id}
+                      href={`/admin/kids/${kid.id}`}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-sand-50 transition-colors"
+                    >
+                      {kid.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={kid.imageUrl} alt="" className="h-7 w-7 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sand-100 text-xs font-medium text-sand-500 shrink-0">
+                          {kid.name.charAt(0)}
+                        </span>
+                      )}
+                      <span className="text-sm text-sand-900 truncate">{kid.name}</span>
+                      <span className="text-xs text-sand-400 shrink-0">Age {kid.age}</span>
+                      {kid.status === "inactive" && (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-medium text-sand-500">
+                          Inactive
+                        </span>
+                      )}
+                      <svg className="w-4 h-4 text-sand-300 ml-auto shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Recent Classes */}
           <div className="mt-8">
@@ -297,22 +387,28 @@ export default async function AdminOrphanagePage({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-sand-100">
-                      {recentClasses.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-sand-50">
-                          <td className="px-4 py-2.5 text-sm whitespace-nowrap">
-                            <Link
-                              href={`/admin/classes/${entry.id}`}
-                              className="text-green-600 hover:text-green-700 font-medium"
-                            >
-                              {entry.classDate}
-                            </Link>
-                          </td>
-                          <td className="px-4 py-2.5 text-sm text-sand-700">{entry.classGroupName || "—"}</td>
-                          <td className="px-4 py-2.5 text-sm text-sand-700">{entry.teacherName || "—"}</td>
-                          <td className="px-4 py-2.5 text-sm text-sand-700 hidden sm:table-cell">{entry.studentCount ?? "—"}</td>
-                          <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs truncate hidden sm:table-cell">{entry.notes || "—"}</td>
-                        </tr>
-                      ))}
+                      {recentClasses.map((entry) => {
+                        const href = `/admin/classes/${entry.id}`;
+                        return (
+                          <tr key={entry.id} className="hover:bg-sand-50">
+                            <td className="px-4 py-2.5 text-sm whitespace-nowrap">
+                              <Link href={href} className="block text-sand-900 font-medium">{entry.classDate}</Link>
+                            </td>
+                            <td className="px-4 py-2.5 text-sm">
+                              <Link href={href} className="block text-sand-700">{entry.classGroupName || "—"}</Link>
+                            </td>
+                            <td className="px-4 py-2.5 text-sm">
+                              <Link href={href} className="block text-sand-700">{entry.teacherName || "—"}</Link>
+                            </td>
+                            <td className="px-4 py-2.5 text-sm hidden sm:table-cell">
+                              <Link href={href} className="block text-sand-700">{entry.studentCount ?? "—"}</Link>
+                            </td>
+                            <td className="px-4 py-2.5 text-sm text-sand-500 max-w-xs truncate hidden sm:table-cell">
+                              <Link href={href} className="block">{entry.notes || "—"}</Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

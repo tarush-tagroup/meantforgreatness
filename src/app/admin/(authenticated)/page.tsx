@@ -412,30 +412,28 @@ export default async function AdminDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-sand-100">
-                {recentClassesResult.map((c) => (
-                  <tr key={c.id} className="hover:bg-sand-50">
-                    <td className="px-4 py-2.5 text-sm text-sand-900 whitespace-nowrap">
-                      <Link
-                        href={`/admin/classes/${c.id}`}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        {c.classDate}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-sand-700">
-                      {c.orphanageName || "\u2014"}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-sand-700">
-                      {c.teacherName || "\u2014"}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-sand-700">
-                      {c.studentCount ?? "\u2014"}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-sand-400">
-                      {c.aiKidsCount ?? "\u2014"}
-                    </td>
-                  </tr>
-                ))}
+                {recentClassesResult.map((c) => {
+                  const href = `/admin/classes/${c.id}`;
+                  return (
+                    <tr key={c.id} className="hover:bg-sand-50">
+                      <td className="px-4 py-2.5 text-sm whitespace-nowrap">
+                        <Link href={href} className="block text-sand-900">{c.classDate}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block text-sand-700">{c.orphanageName || "\u2014"}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block text-sand-700">{c.teacherName || "\u2014"}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block text-sand-700">{c.studentCount ?? "\u2014"}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block text-sand-400">{c.aiKidsCount ?? "\u2014"}</Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -502,35 +500,35 @@ export default async function AdminDashboard({
                 </tr>
               </thead>
               <tbody className="divide-y divide-sand-100">
-                {recentEventsResult.map((e) => (
-                  <tr key={e.id} className="hover:bg-sand-50">
-                    <td className="px-4 py-2.5 text-sm text-sand-900 whitespace-nowrap">
-                      {e.eventDate || "\u2014"}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-sand-700">
-                      <Link
-                        href={`/admin/events/${e.id}`}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        {e.title}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-sand-700">
-                      {e.orphanageName || "General"}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          e.active
-                            ? "bg-green-50 text-green-700"
-                            : "bg-sand-100 text-sand-500"
-                        }`}
-                      >
-                        {e.active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {recentEventsResult.map((e) => {
+                  const href = `/admin/events/${e.id}`;
+                  return (
+                    <tr key={e.id} className="hover:bg-sand-50">
+                      <td className="px-4 py-2.5 text-sm whitespace-nowrap">
+                        <Link href={href} className="block text-sand-900">{e.eventDate || "\u2014"}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block text-sand-700">{e.title}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block text-sand-700">{e.orphanageName || "General"}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-sm">
+                        <Link href={href} className="block">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              e.active
+                                ? "bg-green-50 text-green-700"
+                                : "bg-sand-100 text-sand-500"
+                            }`}
+                          >
+                            {e.active ? "Active" : "Inactive"}
+                          </span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
