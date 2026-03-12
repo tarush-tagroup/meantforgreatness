@@ -104,6 +104,9 @@ export default async function ClassLogDetailPage({
     aiConfidenceNotes: row.aiConfidenceNotes,
     aiPrimaryPhotoUrl: row.aiPrimaryPhotoUrl,
     aiAnalyzedAt: row.aiAnalyzedAt?.toISOString() || null,
+    aiDateMatch: row.aiDateMatch,
+    aiTimeMatch: row.aiTimeMatch,
+    aiGpsDistance: row.aiGpsDistance,
   };
 
   // Fetch attendance records for this class log
