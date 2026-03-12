@@ -24,6 +24,9 @@ interface AiMetadata {
   aiConfidenceNotes: string | null;
   aiPrimaryPhotoUrl: string | null;
   aiAnalyzedAt: string | null;
+  aiDateMatch: string | null;
+  aiTimeMatch: string | null;
+  aiGpsDistance: number | null;
 }
 
 interface AttendanceRecord {
@@ -58,21 +61,6 @@ interface ClassLogFormProps {
     photos?: { url: string; caption: string | null }[];
     attendance?: AttendanceRecord[];
   };
-}
-
-function matchBadgeColor(match: string | null) {
-  switch (match) {
-    case "high":
-      return "bg-green-100 text-green-800";
-    case "likely":
-      return "bg-green-100 text-green-800";
-    case "uncertain":
-      return "bg-sage-100 text-sage-800";
-    case "unlikely":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-sand-100 text-sand-600";
-  }
 }
 
 export default function ClassLogForm({
@@ -927,141 +915,82 @@ export default function ClassLogForm({
         </div>
       </div>
 
-      {/* AI Photo Analysis Metadata (read-only) */}
-      {isEditing && aiMetadata?.aiAnalyzedAt && (
-        <div className="rounded-lg border border-purple-200 bg-purple-50 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <svg
-              className="w-4 h-4 text-purple-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth="1.5"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
-              />
-            </svg>
-            <h3 className="text-sm font-semibold text-purple-900">
-              AI Photo Analysis
-            </h3>
-            <span className="text-xs text-purple-500 ml-auto">
-              Analyzed {new Date(aiMetadata.aiAnalyzedAt).toLocaleString()}
-            </span>
-          </div>
-          <p className="text-xs text-purple-600 mb-3">
-            This metadata is automatically generated from uploaded photos and
-            cannot be edited. It will update automatically when photos are
-            changed.
-          </p>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-lg p-3 border border-purple-100">
-              <p className="text-xs font-medium text-purple-600">
-                Students Detected
-              </p>
-              <p className="text-lg font-bold text-purple-900">
-                {aiMetadata.aiKidsCount ?? "N/A"}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg p-3 border border-purple-100">
-              <p className="text-xs font-medium text-purple-600">
-                Orphanage Match
-              </p>
-              <span
-                className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${matchBadgeColor(aiMetadata.aiOrphanageMatch)}`}
-              >
-                {aiMetadata.aiOrphanageMatch || "N/A"}
-              </span>
-            </div>
-
-            {aiMetadata.aiLocation && (
-              <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                <p className="text-xs font-medium text-purple-600">
-                  Location Cues
-                </p>
-                <p className="text-sm text-purple-900 mt-0.5">
-                  {aiMetadata.aiLocation}
-                </p>
-              </div>
-            )}
-
-            {aiMetadata.aiPhotoTimestamp && (
-              <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                <p className="text-xs font-medium text-purple-600">
-                  Photo Timestamp Cues
-                </p>
-                <p className="text-sm text-purple-900 mt-0.5">
-                  {aiMetadata.aiPhotoTimestamp}
-                </p>
-              </div>
-            )}
-
-            {aiMetadata.aiConfidenceNotes && (
-              <div className="bg-white rounded-lg p-3 border border-purple-100 col-span-2">
-                <p className="text-xs font-medium text-purple-600">
-                  AI Confidence Notes
-                </p>
-                <p className="text-xs text-purple-700 mt-0.5">
-                  {aiMetadata.aiConfidenceNotes}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={handleRerunAnalysis}
-            disabled={rerunning}
-            className="mt-3 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors disabled:opacity-50"
-          >
-            {rerunning ? "Re-analyzing..." : "Re-run AI Analysis"}
-          </button>
-        </div>
-      )}
-
-      {/* AI analysis pending state */}
-      {isEditing && !aiMetadata?.aiAnalyzedAt && photos.length > 0 && (
-        <div className="rounded-lg border border-sage-200 bg-sage-50 p-4">
-          <div className="flex items-center gap-2">
-            <svg
-              className="w-4 h-4 text-sage-600 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            <p className="text-sm font-medium text-sage-800">
-              AI photo analysis pending
+      {/* AI Verification Status — compact bar */}
+      {isEditing && photos.length > 0 && (
+        <div className="rounded-lg border border-sand-200 bg-sand-50 p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-xs font-semibold text-sand-600 uppercase tracking-wider">
+              Photo Verification
             </p>
+            <button
+              type="button"
+              onClick={handleRerunAnalysis}
+              disabled={rerunning}
+              className="rounded-md bg-white border border-sand-200 px-2.5 py-1 text-xs font-medium text-sand-700 hover:bg-sand-100 transition-colors disabled:opacity-50"
+            >
+              {rerunning ? "Analyzing..." : "Re-run Analysis"}
+            </button>
           </div>
-          <p className="text-xs text-sage-600 mt-1">
-            Analysis runs automatically after photos are uploaded. It may take
-            a minute to complete.
-          </p>
-          <button
-            type="button"
-            onClick={handleRerunAnalysis}
-            disabled={rerunning}
-            className="mt-2 rounded-lg bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-800 hover:bg-sage-200 transition-colors disabled:opacity-50"
-          >
-            {rerunning ? "Analyzing..." : "Run AI Analysis Now"}
-          </button>
+          {aiMetadata?.aiAnalyzedAt ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {/* AI Kids Count */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-sand-500">AI Kids:</span>
+                <span className="text-sm font-bold text-sand-900">{aiMetadata.aiKidsCount ?? "—"}</span>
+              </div>
+              {/* Date Verified */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-sand-500">Date:</span>
+                {aiMetadata.aiDateMatch && aiMetadata.aiDateMatch !== "no_exif" ? (
+                  <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    aiMetadata.aiDateMatch === "match"
+                      ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                      : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
+                  }`}>
+                    {aiMetadata.aiDateMatch === "match" ? "\u2713 Verified" : "\u2717 Mismatch"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-sand-400">No EXIF</span>
+                )}
+              </div>
+              {/* Time Verified */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-sand-500">Time:</span>
+                {aiMetadata.aiTimeMatch && aiMetadata.aiTimeMatch !== "no_exif" && aiMetadata.aiTimeMatch !== "no_time" ? (
+                  <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    aiMetadata.aiTimeMatch === "match"
+                      ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                      : "text-amber-700 bg-amber-50 ring-1 ring-inset ring-amber-600/20"
+                  }`}>
+                    {aiMetadata.aiTimeMatch === "match" ? "\u2713 Verified" : "\u2717 Mismatch"}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-sand-400">No EXIF</span>
+                )}
+              </div>
+              {/* GPS Verified */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-sand-500">GPS:</span>
+                {aiMetadata.aiGpsDistance != null ? (
+                  <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    aiMetadata.aiGpsDistance <= 500
+                      ? "text-green-700 bg-green-50 ring-1 ring-inset ring-green-600/20"
+                      : "text-red-700 bg-red-50 ring-1 ring-inset ring-red-600/20"
+                  }`}>
+                    {aiMetadata.aiGpsDistance <= 500 ? "\u2713" : "\u2717"} {aiMetadata.aiGpsDistance < 1000
+                      ? `${Math.round(aiMetadata.aiGpsDistance)}m`
+                      : `${(aiMetadata.aiGpsDistance / 1000).toFixed(1)}km`}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-sand-400">No GPS</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-sand-500">
+              {rerunning ? "Running analysis..." : "Analysis pending \u2014 photos will be analyzed automatically."}
+            </p>
+          )}
         </div>
       )}
 

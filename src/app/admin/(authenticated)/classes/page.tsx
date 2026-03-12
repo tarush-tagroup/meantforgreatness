@@ -351,35 +351,42 @@ export default async function AdminClassesPage({
               {rows.map((log) => {
                 const vLevel = computeVerificationLevel(log);
                 const hasAi = !!log.aiAnalyzedAt;
+                const href = `/admin/classes/${log.id}`;
                 return (
                   <tr key={log.id} className="transition-colors hover:bg-sand-50">
                     <td className="px-4 py-3">
-                      <Link href={`/admin/classes/${log.id}`} className="text-sand-900 hover:text-green-700">
+                      <Link href={href} className="block text-sand-900">
                         {log.classDate}
                         {log.classTime && (
                           <span className="text-sand-400"> · {formatStartTime(log.classTime)}</span>
                         )}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-sand-900 truncate max-w-[12rem]">
-                      {log.orphanageName || "—"}
+                    <td className="px-4 py-3">
+                      <Link href={href} className="block text-sand-900 truncate max-w-[12rem]">{log.orphanageName || "—"}</Link>
                     </td>
-                    <td className="px-4 py-3 text-sand-900 truncate max-w-[10rem] hidden sm:table-cell">
-                      {log.teacherName || "Unknown"}
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      <Link href={href} className="block text-sand-900 truncate max-w-[10rem]">{log.teacherName || "Unknown"}</Link>
                     </td>
-                    <td className="px-4 py-3 text-right text-sand-900 whitespace-nowrap">
-                      {log.studentCount ?? "—"}
-                      {hasAi && log.aiKidsCount != null && (
-                        <span className="text-sand-400"> ({log.aiKidsCount})</span>
-                      )}
+                    <td className="px-4 py-3 text-right">
+                      <Link href={href} className="block text-sand-900 whitespace-nowrap">
+                        {log.studentCount ?? "—"}
+                        {hasAi && log.aiKidsCount != null && (
+                          <span className="text-sand-400"> ({log.aiKidsCount})</span>
+                        )}
+                      </Link>
                     </td>
-                    <td className="px-4 py-3 text-right text-sand-700 hidden sm:table-cell">
-                      {log.classDuration ?? 1}h
+                    <td className="px-4 py-3 text-right hidden sm:table-cell">
+                      <Link href={href} className="block text-sand-700">{log.classDuration ?? 1}h</Link>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      {vLevel && (
-                        <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
-                      )}
+                      <Link href={href} className="block">
+                        {vLevel ? (
+                          <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
+                        ) : (
+                          <span>&nbsp;</span>
+                        )}
+                      </Link>
                     </td>
                   </tr>
                 );
