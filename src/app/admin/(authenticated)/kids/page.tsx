@@ -19,6 +19,7 @@ export default async function AdminKidsPage({
     sortBy?: string;
     status?: string;
     q?: string;
+    view?: string;
   }>;
 }) {
   const user = await getSessionUser();
@@ -162,6 +163,7 @@ export default async function AdminKidsPage({
     .orderBy(asc(kids.name));
 
   const hasFilters = !!(params.orphanageId || params.ageGroup || params.classGroupId || params.sortBy || params.status || params.q);
+  const view = params.view === "list" ? "list" : "grid";
 
   return (
     <div>
@@ -211,7 +213,58 @@ export default async function AdminKidsPage({
             </Link>
           )}
         </div>
+      ) : view === "list" ? (
+        /* ── List view ──────────────────────────────────────── */
+        <div className="rounded-xl border border-sand-200 bg-white overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-sand-100 text-left text-xs font-medium text-sand-400">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Age</th>
+                <th className="px-4 py-3 hidden sm:table-cell">Orphanage</th>
+                <th className="px-4 py-3 hidden md:table-cell">Class</th>
+                <th className="px-4 py-3 text-right">Classes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-sand-100">
+              {rows.map((kid) => (
+                <tr key={kid.id} className={`transition-colors hover:bg-sand-50 ${kid.status === "inactive" ? "opacity-60" : ""}`}>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/kids/${kid.id}`} className="flex items-center gap-2.5">
+                      {kid.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={kid.imageUrl} alt="" className="h-7 w-7 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sand-100 text-xs font-medium text-sand-500 shrink-0">
+                          {kid.name.charAt(0)}
+                        </span>
+                      )}
+                      <span className="text-sand-900 hover:text-green-700 truncate">{kid.name}</span>
+                      {kid.status === "inactive" && (
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-sand-100 px-1.5 py-0.5 text-[10px] font-medium text-sand-500">
+                          Inactive
+                        </span>
+                      )}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-sand-900">{kid.age}</td>
+                  <td className="px-4 py-3 text-sand-900 truncate max-w-[10rem] hidden sm:table-cell">
+                    {kid.orphanageName || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-sand-900 truncate max-w-[10rem] hidden md:table-cell">
+                    {kid.classGroupName || "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right text-sand-900 whitespace-nowrap">
+                    {kid.totalClasses}
+                    <span className="text-sand-400 ml-1">({kid.recentClasses} recent)</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
+        /* ── Grid view ──────────────────────────────────────── */
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((kid) => (
             <Link

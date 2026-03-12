@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import Link from "next/link";
 import CheckboxFilter from "@/components/admin/CheckboxFilter";
+import ViewToggle from "@/components/admin/ViewToggle";
 
 interface ClassLogFiltersProps {
   orphanages: { id: string; name: string }[];
@@ -114,28 +115,31 @@ export default function ClassLogFilters({
         )}
       </div>
 
-      {/* Sort pills */}
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-sand-500 mr-1">Sort:</span>
-        {[
-          { label: "Most Recent", value: "" },
-          { label: "# of Students", value: "students" },
-        ].map((s) => {
-          const isActive = sortBy === s.value || (!sortBy && s.value === "");
-          return (
-            <Link
-              key={s.label}
-              href={buildUrl({ sortBy: s.value })}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                isActive
-                  ? "bg-green-600 text-white"
-                  : "bg-sand-100 text-sand-600 hover:bg-sand-200"
-              }`}
-            >
-              {s.label}
-            </Link>
-          );
-        })}
+      {/* Sort pills + view toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-sand-500 mr-1">Sort:</span>
+          {[
+            { label: "Most Recent", value: "" },
+            { label: "# of Students", value: "students" },
+          ].map((s) => {
+            const isActive = sortBy === s.value || (!sortBy && s.value === "");
+            return (
+              <Link
+                key={s.label}
+                href={buildUrl({ sortBy: s.value })}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-green-600 text-white"
+                    : "bg-sand-100 text-sand-600 hover:bg-sand-200"
+                }`}
+              >
+                {s.label}
+              </Link>
+            );
+          })}
+        </div>
+        <ViewToggle />
       </div>
     </div>
   );

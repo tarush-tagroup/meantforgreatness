@@ -141,6 +141,7 @@ export default async function AdminClassesPage({
     dateTo?: string;
     sortBy?: string;
     verification?: string;
+    view?: string;
     page?: string;
   }>;
 }) {
@@ -285,6 +286,7 @@ export default async function AdminClassesPage({
   ]);
 
   const canCreate = hasPermission(user.roles, "class_logs:create");
+  const view = params.view === "list" ? "list" : "grid";
 
   return (
     <div>
@@ -323,7 +325,58 @@ export default async function AdminClassesPage({
             </Link>
           )}
         </div>
+      ) : view === "list" ? (
+        /* ── List view ──────────────────────────────────────── */
+        <div className="rounded-xl border border-sand-200 bg-white overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-sand-100 text-left text-xs font-medium text-sand-400">
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Orphanage</th>
+                <th className="px-4 py-3 hidden sm:table-cell">Teacher</th>
+                <th className="px-4 py-3 text-right">Students</th>
+                <th className="px-4 py-3 hidden md:table-cell">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-sand-100">
+              {rows.map((log) => {
+                const vLevel = computeVerificationLevel(log);
+                const hasAi = !!log.aiAnalyzedAt;
+                return (
+                  <tr key={log.id} className="transition-colors hover:bg-sand-50">
+                    <td className="px-4 py-3">
+                      <Link href={`/admin/classes/${log.id}`} className="text-sand-900 hover:text-green-700">
+                        {log.classDate}
+                        {log.classTime && (
+                          <span className="text-sand-400"> · {formatStartTime(log.classTime)}</span>
+                        )}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-sand-900 truncate max-w-[12rem]">
+                      {log.orphanageName || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-sand-900 truncate max-w-[10rem] hidden sm:table-cell">
+                      {log.teacherName || "Unknown"}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sand-900 whitespace-nowrap">
+                      {log.studentCount ?? "—"}
+                      {hasAi && log.aiKidsCount != null && (
+                        <span className="text-sand-400"> ({log.aiKidsCount})</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {vLevel && (
+                        <VerificationPill level={vLevel.level} label={vLevel.label} reasons={vLevel.reasons} />
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
+        /* ── Grid view ──────────────────────────────────────── */
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((log) => {
             const vLevel = computeVerificationLevel(log);
@@ -461,6 +514,7 @@ function buildFilterUrl(
   if (params.dateTo) searchParams.set("dateTo", params.dateTo);
   if (params.sortBy) searchParams.set("sortBy", params.sortBy);
   if (params.verification) searchParams.set("verification", params.verification);
+  if (params.view) searchParams.set("view", params.view);
   searchParams.set("page", String(page));
   return `/admin/classes?${searchParams.toString()}`;
 }
