@@ -124,9 +124,8 @@ export function generateInvoicePdf(
   const colX = {
     num: margin,
     description: margin + 10,
-    classes: pageWidth - margin - 95,
     hours: pageWidth - margin - 75,
-    rate: pageWidth - margin - 50,
+    rate: pageWidth - margin - 45,
     amount: pageWidth - margin,
   };
 
@@ -137,7 +136,6 @@ export function generateInvoicePdf(
   doc.setFont("helvetica", "bold");
   doc.text("#", colX.num, y);
   doc.text("Item & Description", colX.description, y);
-  doc.text("Classes", colX.classes, y, { align: "right" });
   doc.text("Hours", colX.hours, y, { align: "right" });
   doc.text("Rate/hr (IDR)", colX.rate, y, { align: "right" });
   doc.text("Amount (IDR)", colX.amount, y, { align: "right" });
@@ -160,7 +158,6 @@ export function generateInvoicePdf(
     doc.text(String(rowNum), colX.num, y);
     doc.setFont("helvetica", "normal");
     doc.text(item.orphanageName, colX.description, y);
-    doc.text(String(item.classCount), colX.classes, y, { align: "right" });
     doc.text(String(item.totalHours), colX.hours, y, { align: "right" });
     doc.text(formatIdr(item.ratePerClassIdr), colX.rate, y, { align: "right" });
     doc.text(formatIdr(item.subtotalIdr), colX.amount, y, { align: "right" });
@@ -185,8 +182,7 @@ export function generateInvoicePdf(
     doc.text(String(rowNum), colX.num, y);
     doc.setFont("helvetica", "normal");
     doc.text(item.description, colX.description, y);
-    doc.text(String(item.quantity), colX.classes, y, { align: "right" });
-    doc.text("-", colX.hours, y, { align: "right" });
+    doc.text(`×${item.quantity}`, colX.hours, y, { align: "right" });
     doc.text(formatIdr(item.rateIdr), colX.rate, y, { align: "right" });
     doc.text(formatIdr(item.subtotalIdr), colX.amount, y, { align: "right" });
     y += 6;
@@ -222,7 +218,7 @@ export function generateInvoicePdf(
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text(
-    `Total: ${invoice.totalClasses} classes, ${invoice.totalHours} hours`,
+    `Total: ${invoice.totalHours} hours`,
     totalX,
     y
   );

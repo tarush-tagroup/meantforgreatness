@@ -343,6 +343,7 @@ export default async function AdminClassesPage({
                 <th className="px-4 py-3">Orphanage</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Teacher</th>
                 <th className="px-4 py-3 text-right">Students</th>
+                <th className="px-4 py-3 text-right hidden sm:table-cell">Duration</th>
                 <th className="px-4 py-3 hidden md:table-cell">Status</th>
               </tr>
             </thead>
@@ -371,6 +372,9 @@ export default async function AdminClassesPage({
                       {hasAi && log.aiKidsCount != null && (
                         <span className="text-sand-400"> ({log.aiKidsCount})</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-sand-700 hidden sm:table-cell">
+                      {log.classDuration ?? 1}h
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       {vLevel && (
@@ -451,9 +455,7 @@ export default async function AdminClassesPage({
                     {hasAi && log.aiKidsCount != null && (
                       <span className="text-sand-400"> (AI: {log.aiKidsCount})</span>
                     )}
-                    {log.classDuration && log.classDuration !== 1 && (
-                      <span className="text-sand-400"> · {log.classDuration}h</span>
-                    )}
+                    <span className="text-sand-400"> · {log.classDuration ?? 1}h</span>
                   </p>
 
                   {/* Notes */}
