@@ -38,7 +38,6 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
     db
       .select({
         totalInvoices: sql<number>`count(*)::int`,
-        totalClasses: sql<number>`coalesce(sum(${invoices.totalClasses}), 0)::int`,
         totalHours: sql<number>`coalesce(sum(${invoices.totalHours}), 0)::float`,
         totalAmountIdr: sql<number>`coalesce(sum(${invoices.totalAmountIdr}), 0)::bigint`,
       })
@@ -46,9 +45,9 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       .where(eq(invoices.status, "final")),
   ]);
 
-  // For displayed invoices, get logged class counts from DB per period
+  // For displayed invoices, get logged hours from DB per period
   // Find the overall min/max date range, then query class_logs grouped by month
-  const loggedCountsByPeriod: Record<string, number> = {};
+  const loggedHoursByPeriod: Record<string, number> = {};
   if (rows.length > 0) {
     const minStart = rows.reduce(
       (min, r) => (r.periodStart < min ? r.periodStart : min),
@@ -62,7 +61,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
     const loggedRows = await db
       .select({
         month: sql<string>`to_char(${classLogs.classDate}::date, 'YYYY-MM')`,
-        count: sql<number>`count(*)::int`,
+        hours: sql<number>`coalesce(sum(${classLogs.classDuration}), 0)::float`,
       })
       .from(classLogs)
       .where(
@@ -74,7 +73,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       .groupBy(sql`to_char(${classLogs.classDate}::date, 'YYYY-MM')`);
 
     for (const row of loggedRows) {
-      loggedCountsByPeriod[row.month] = row.count;
+      loggedHoursByPeriod[row.month] = row.hours;
     }
   }
 
@@ -87,10 +86,10 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const s = stats[0];
 
-  // Also compute total logged for the stats card (across all final invoice periods)
-  const totalLoggedForFinal = rows
+  // Also compute total logged hours for the stats card (across all final invoice periods)
+  const totalLoggedHoursForFinal = rows
     .filter((r) => r.status === "final")
-    .reduce((sum, r) => sum + (loggedCountsByPeriod[getPeriodKey(r.periodStart)] || 0), 0);
+    .reduce((sum, r) => sum + (loggedHoursByPeriod[getPeriodKey(r.periodStart)] || 0), 0);
 
   function formatIdr(amount: number): string {
     return `IDR ${Math.round(amount).toLocaleString("id-ID")}`;
@@ -110,7 +109,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       </div>
 
       {/* Stats Cards — final invoices only */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
           <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
             Final Invoices
@@ -125,14 +124,6 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
           </p>
           <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
             {Number(s?.totalHours || 0).toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
-          <p className="text-[10px] sm:text-xs font-medium text-sand-500 uppercase tracking-wider">
-            Classes Billed
-          </p>
-          <p className="mt-1 text-base sm:text-xl font-bold text-sand-900">
-            {Number(s?.totalClasses || 0).toLocaleString()}
           </p>
         </div>
         <div className="rounded-lg border border-sand-200 bg-white p-3 sm:p-4">
@@ -154,8 +145,8 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
           {/* Mobile card layout */}
           <div className="space-y-3 md:hidden">
             {rows.map((inv) => {
-              const logged = loggedCountsByPeriod[getPeriodKey(inv.periodStart)] || 0;
-              const mismatch = logged !== inv.totalClasses && inv.totalClasses > 0;
+              const loggedHrs = loggedHoursByPeriod[getPeriodKey(inv.periodStart)] || 0;
+              const mismatch = loggedHrs !== inv.totalHours && inv.totalHours > 0;
               return (
                 <Link
                   key={inv.id}
@@ -186,10 +177,10 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                       </p>
                       <div className="mt-1 flex items-center gap-3 text-xs">
                         <span className={mismatch ? "text-amber-600 font-medium" : "text-sand-500"}>
-                          Logged: {logged}
+                          Logged: {loggedHrs}h
                         </span>
                         <span className="text-sand-500">
-                          Billed: {inv.totalClasses}
+                          Billed: {inv.totalHours}h
                         </span>
                         {mismatch && (
                           <span className="text-amber-500 text-[10px]">
@@ -225,8 +216,8 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                 <tr className="bg-sand-50 text-left text-xs font-medium text-sand-500 uppercase tracking-wider">
                   <th className="px-4 py-2">Invoice #</th>
                   <th className="px-4 py-2">Period</th>
-                  <th className="px-4 py-2 text-right">Logged</th>
-                  <th className="px-4 py-2 text-right">Billed</th>
+                  <th className="px-4 py-2 text-right">Logged Hours</th>
+                  <th className="px-4 py-2 text-right">Billed Hours</th>
                   <th className="px-4 py-2 text-right">Amount (IDR)</th>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2 text-right">Actions</th>
@@ -234,8 +225,8 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
               </thead>
               <tbody className="divide-y divide-sand-100">
                 {rows.map((inv) => {
-                  const logged = loggedCountsByPeriod[getPeriodKey(inv.periodStart)] || 0;
-                  const mismatch = logged !== inv.totalClasses && inv.totalClasses > 0;
+                  const loggedHrs = loggedHoursByPeriod[getPeriodKey(inv.periodStart)] || 0;
+                  const mismatch = loggedHrs !== inv.totalHours && inv.totalHours > 0;
                   return (
                     <tr key={inv.id} className="hover:bg-sand-50">
                       <td className="px-4 py-2 font-medium text-sand-900">
@@ -250,14 +241,14 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                       <td className="px-4 py-2 text-right">
                         <span
                           className={
-                            logged === 0
+                            loggedHrs === 0
                               ? "text-sand-400"
                               : mismatch
                                 ? "font-medium text-amber-700"
                                 : "text-sand-700"
                           }
                         >
-                          {logged}
+                          {loggedHrs}
                         </span>
                       </td>
                       <td className={`px-4 py-2 text-right ${
@@ -265,7 +256,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
                           ? "font-medium text-amber-700"
                           : "text-sand-700"
                       }`}>
-                        {inv.totalClasses.toLocaleString()}
+                        {inv.totalHours}
                       </td>
                       <td className="px-4 py-2 text-right font-medium text-sand-900">
                         {formatIdr(inv.totalAmountIdr)}
