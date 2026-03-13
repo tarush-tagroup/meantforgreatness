@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "img-src 'self' data: blob: https://*.public.blob.vercel-storage.com https://*.googleusercontent.com https://lh3.googleusercontent.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "connect-src 'self' https://accounts.google.com https://api.anthropic.com https://*.public.blob.vercel-storage.com https://api.stripe.com https://us.i.posthog.com https://us-assets.i.posthog.com",
+              "connect-src 'self' https://accounts.google.com https://api.anthropic.com https://*.public.blob.vercel-storage.com https://vercel.com https://api.stripe.com https://us.i.posthog.com https://us-assets.i.posthog.com",
               "frame-src 'self' https://accounts.google.com",
               "object-src 'none'",
               "base-uri 'self'",
