@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth-guard";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { classLogs, classLogAttendance, kids, orphanages, users } from "@/db/schema";
+import { classLogs, classLogAttendance, classGroups, kids, orphanages, users } from "@/db/schema";
 import { eq, desc, asc, and, gte, lte, sql, inArray } from "drizzle-orm";
 import Link from "next/link";
 import Image from "next/image";
@@ -225,6 +225,7 @@ export default async function AdminClassesPage({
     aiTimeNotes: classLogs.aiTimeNotes,
     aiGpsDistance: classLogs.aiGpsDistance,
     exifDateTaken: classLogs.exifDateTaken,
+    classGroupName: classGroups.name,
   };
 
   const baseQuery = db
@@ -232,6 +233,7 @@ export default async function AdminClassesPage({
     .from(classLogs)
     .leftJoin(orphanages, eq(classLogs.orphanageId, orphanages.id))
     .leftJoin(users, eq(classLogs.teacherId, users.id))
+    .leftJoin(classGroups, eq(classLogs.classGroupId, classGroups.id))
     .where(whereClause)
     .orderBy(...orderByClause);
 
@@ -340,7 +342,7 @@ export default async function AdminClassesPage({
             <thead>
               <tr className="border-b border-sand-100 text-left text-xs font-medium text-sand-400">
                 <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Orphanage</th>
+                <th className="px-4 py-3">Class</th>
                 <th className="px-4 py-3 hidden sm:table-cell">Teacher</th>
                 <th className="px-4 py-3 text-right">Students</th>
                 <th className="px-4 py-3 text-right hidden sm:table-cell">Duration</th>
@@ -363,7 +365,15 @@ export default async function AdminClassesPage({
                       </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={href} className="block text-sand-900 truncate max-w-[12rem]">{log.orphanageName || "—"}</Link>
+                      <Link href={href} className="block truncate max-w-[14rem]">
+                        {log.classGroupName && (
+                          <span className="text-sand-900 font-medium">{log.classGroupName}</span>
+                        )}
+                        {log.classGroupName && log.orphanageName && (
+                          <span className="text-sand-400"> · </span>
+                        )}
+                        <span className="text-sand-500">{log.orphanageName || "—"}</span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       <Link href={href} className="block text-sand-900 truncate max-w-[10rem]">{log.teacherName || "Unknown"}</Link>
@@ -437,8 +447,15 @@ export default async function AdminClassesPage({
                 </div>
 
                 <div className="p-4 space-y-1">
+                  {/* Class name */}
+                  {log.classGroupName && (
+                    <p className="text-sm font-semibold text-sand-900 truncate">
+                      {log.classGroupName}
+                    </p>
+                  )}
+
                   {/* Orphanage */}
-                  <p className="text-sm text-sand-900 truncate">
+                  <p className="text-sm text-sand-500 truncate">
                     {log.orphanageName || "—"}
                     {hasGps && (
                       <span className={`inline-flex items-center ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
