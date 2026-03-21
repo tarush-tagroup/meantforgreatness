@@ -42,6 +42,7 @@ export default async function ClassLogDetailPage({
       teacherId: classLogs.teacherId,
       teacherName: users.name,
       classGroupId: classLogs.classGroupId,
+      classGroupName: classGroups.name,
       classDate: classLogs.classDate,
       classTime: classLogs.classTime,
       classDuration: classLogs.classDuration,
@@ -64,6 +65,7 @@ export default async function ClassLogDetailPage({
     .from(classLogs)
     .leftJoin(orphanages, eq(classLogs.orphanageId, orphanages.id))
     .leftJoin(users, eq(classLogs.teacherId, users.id))
+    .leftJoin(classGroups, eq(classLogs.classGroupId, classGroups.id))
     .where(eq(classLogs.id, id))
     .limit(1);
 
@@ -159,6 +161,7 @@ export default async function ClassLogDetailPage({
             {isEditing ? "Edit Class Log" : "Class Log Details"}
           </h1>
           <p className="mt-1 text-sm text-sand-500">
+            {row.classGroupName && <>{row.classGroupName} · </>}
             {row.classDate} at {row.orphanageName || row.orphanageId}
           </p>
         </div>
@@ -250,6 +253,14 @@ export default async function ClassLogDetailPage({
                     </span>
                   )}
                 </div>
+              </div>
+
+              {/* Class name */}
+              <div>
+                <p className="text-xs font-medium text-sand-400">Class</p>
+                <p className="text-sm text-sand-900 mt-0.5">
+                  {row.classGroupName || "—"}
+                </p>
               </div>
 
               {/* Duration */}
