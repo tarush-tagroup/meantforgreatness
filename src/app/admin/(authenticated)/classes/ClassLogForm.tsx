@@ -41,6 +41,7 @@ interface ClassLogFormProps {
   orphanages: { id: string; name: string }[];
   teachers: { id: string; name: string | null; email: string }[];
   currentUserId: string;
+  userRole?: "admin" | "teacher_manager";
   classGroups?: { id: string; name: string; orphanageId: string }[];
   allKids?: {
     id: string;
@@ -85,6 +86,7 @@ export default function ClassLogForm({
   orphanages,
   teachers,
   currentUserId,
+  userRole,
   classGroups = [],
   allKids = [],
   aiMetadata,
@@ -633,6 +635,9 @@ export default function ClassLogForm({
           >
             <option value={1.0}>1 hour</option>
             <option value={1.5}>1.5 hours</option>
+            {userRole === "admin" && (
+              <option value={2.0}>2 hours</option>
+            )}
           </select>
         </div>
 

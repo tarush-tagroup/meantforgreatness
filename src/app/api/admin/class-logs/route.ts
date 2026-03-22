@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
+import { hasPermission } from "@/lib/permissions";
 import { db } from "@/db";
 import {
   classLogs,
@@ -162,6 +163,15 @@ async function postHandler(req: NextRequest) {
     return NextResponse.json(
       { error: parsed.error.issues?.[0]?.message || "Invalid input" },
       { status: 400 }
+    );
+  }
+
+  // Only admins can set duration to 2 hours
+  const isAdmin = user!.roles.includes("admin");
+  if (parsed.data.classDuration > 1.5 && !isAdmin) {
+    return NextResponse.json(
+      { error: "Only admins can set class duration longer than 1.5 hours" },
+      { status: 403 }
     );
   }
 
