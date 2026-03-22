@@ -193,6 +193,7 @@ export default async function ClassLogDetailPage({
             orphanages={orphanageOptions}
             teachers={teacherOptions}
             currentUserId={user.id}
+            userRole={user.roles.includes("admin") ? "admin" : "teacher_manager"}
             classGroups={classGroupOptions}
             allKids={kidsList}
             aiMetadata={aiMetadata}

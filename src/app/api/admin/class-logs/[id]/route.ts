@@ -150,6 +150,15 @@ export async function PUT(
     );
   }
 
+  // Only admins can set duration to 2 hours
+  const isAdmin = user!.roles.includes("admin");
+  if (parsed.data.classDuration !== undefined && parsed.data.classDuration > 1.5 && !isAdmin) {
+    return NextResponse.json(
+      { error: "Only admins can set class duration longer than 1.5 hours" },
+      { status: 403 }
+    );
+  }
+
   // If orphanageId is being changed, verify it exists
   if (parsed.data.orphanageId && parsed.data.orphanageId !== existing.orphanageId) {
     const [orphanage] = await db
