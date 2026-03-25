@@ -320,7 +320,15 @@ async function postHandler(req: NextRequest) {
       }
     })
     .catch((err) => {
-      logger.error("admin:class-logs", "Background AI analysis failed", { classLogId: created.id, error: err instanceof Error ? err.message : String(err) });
+      logger.error("admin:class-logs", "Background AI analysis failed", {
+        classLogId: created.id,
+        orphanageName: orphanage.name,
+        photoCount: photoUrls.length,
+        photoUrls,
+        errorName: err instanceof Error ? err.name : "Unknown",
+        errorMessage: err instanceof Error ? err.message : String(err),
+        errorStack: err instanceof Error ? err.stack : undefined,
+      });
     });
 
   return NextResponse.json({ classLog: created }, { status: 201 });

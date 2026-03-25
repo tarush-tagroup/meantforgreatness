@@ -286,7 +286,15 @@ export async function PUT(
         }
       })
       .catch((err) => {
-        logger.error("admin:class-logs", "Background AI re-analysis failed", { classLogId: id, error: err instanceof Error ? err.message : String(err) });
+        logger.error("admin:class-logs", "Background AI re-analysis failed", {
+          classLogId: id,
+          orphanageName,
+          photoCount: photoUrls.length,
+          photoUrls,
+          errorName: err instanceof Error ? err.name : "Unknown",
+          errorMessage: err instanceof Error ? err.message : String(err),
+          errorStack: err instanceof Error ? err.stack : undefined,
+        });
       });
   }
 
