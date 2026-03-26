@@ -190,6 +190,14 @@ export async function PUT(
     updateData.studentCount = parsed.data.studentCount;
   }
 
+  // Detect if any analysis-relevant fields changed (orphanage, date, time, studentCount)
+  const fieldsChanged =
+    (parsed.data.orphanageId !== undefined && parsed.data.orphanageId !== existing.orphanageId) ||
+    (parsed.data.classDate !== undefined && parsed.data.classDate !== existing.classDate) ||
+    (parsed.data.classTime !== undefined && parsed.data.classTime !== existing.classTime) ||
+    (parsed.data.studentCount !== undefined && parsed.data.studentCount !== existing.studentCount) ||
+    (parsed.data.attendance && parsed.data.attendance.length !== existing.studentCount);
+
   // Replace photos if provided — but only re-analyze if photo URLs actually changed
   let photosChanged = false;
   if (parsed.data.photos) {
@@ -209,14 +217,6 @@ export async function PUT(
     if (urlsChanged) {
       photosChanged = true;
       updateData.photoUrl = parsed.data.photos[0]?.url || null; // keep legacy field
-      // Clear AI metadata — will be re-generated
-      updateData.aiKidsCount = null;
-      updateData.aiLocation = null;
-      updateData.aiPhotoTimestamp = null;
-      updateData.aiOrphanageMatch = null;
-      updateData.aiConfidenceNotes = null;
-      updateData.aiPrimaryPhotoUrl = null;
-      updateData.aiAnalyzedAt = null;
     }
 
     // Always update photos (captions/order may have changed)
@@ -255,39 +255,68 @@ export async function PUT(
     await db.update(classLogs).set(updateData).where(eq(classLogs.id, id));
   }
 
-  // Re-run AI analysis if photos were changed (non-blocking)
-  if (photosChanged && parsed.data.photos && parsed.data.photos.length > 0) {
-    // Get orphanage name for analysis
-    const effectiveOrphanageId = parsed.data.orphanageId || existing.orphanageId;
-    const [orphanageRow] = await db
-      .select({ name: orphanages.name })
-      .from(orphanages)
-      .where(eq(orphanages.id, effectiveOrphanageId))
-      .limit(1);
+  // Re-run AI analysis if photos changed OR if analysis-relevant fields changed
+  const shouldReanalyze = photosChanged || fieldsChanged;
+  if (shouldReanalyze) {
+    // Get current photo URLs — from the update payload or from DB
+    let photoUrls: string[];
+    if (parsed.data.photos && parsed.data.photos.length > 0) {
+      photoUrls = parsed.data.photos.map((p) => p.url);
+    } else {
+      const currentPhotos = await db
+        .select({ url: classLogPhotos.url })
+        .from(classLogPhotos)
+        .where(eq(classLogPhotos.classLogId, id))
+        .orderBy(asc(classLogPhotos.sortOrder));
+      photoUrls = currentPhotos.map((p) => p.url);
+    }
 
-    const orphanageName = orphanageRow?.name || effectiveOrphanageId;
-    const photoUrls = parsed.data.photos.map((p) => p.url);
+    if (photoUrls.length > 0) {
+      // Clear AI metadata — will be re-generated
+      await db
+        .update(classLogs)
+        .set({
+          aiKidsCount: null,
+          aiLocation: null,
+          aiPhotoTimestamp: null,
+          aiOrphanageMatch: null,
+          aiConfidenceNotes: null,
+          aiPrimaryPhotoUrl: null,
+          aiAnalyzedAt: null,
+        })
+        .where(eq(classLogs.id, id));
 
-    analyzeClassLogPhotos(photoUrls, orphanageName, id)
-      .then(async (analysis) => {
-        if (analysis) {
-          await db
-            .update(classLogs)
-            .set({
-              aiKidsCount: analysis.kidsCount,
-              aiLocation: analysis.location,
-              aiPhotoTimestamp: analysis.photoTimestamp,
-              aiOrphanageMatch: analysis.orphanageMatch,
-              aiConfidenceNotes: analysis.confidenceNotes,
-              aiPrimaryPhotoUrl: analysis.primaryPhotoUrl,
-              aiAnalyzedAt: new Date(),
-            })
-            .where(eq(classLogs.id, id));
-        }
-      })
-      .catch((err) => {
-        logger.error("admin:class-logs", "Background AI re-analysis failed", { classLogId: id, error: err instanceof Error ? err.message : String(err) });
-      });
+      // Get orphanage name for analysis
+      const effectiveOrphanageId = parsed.data.orphanageId || existing.orphanageId;
+      const [orphanageRow] = await db
+        .select({ name: orphanages.name })
+        .from(orphanages)
+        .where(eq(orphanages.id, effectiveOrphanageId))
+        .limit(1);
+
+      const orphanageName = orphanageRow?.name || effectiveOrphanageId;
+
+      analyzeClassLogPhotos(photoUrls, orphanageName, id)
+        .then(async (analysis) => {
+          if (analysis) {
+            await db
+              .update(classLogs)
+              .set({
+                aiKidsCount: analysis.kidsCount,
+                aiLocation: analysis.location,
+                aiPhotoTimestamp: analysis.photoTimestamp,
+                aiOrphanageMatch: analysis.orphanageMatch,
+                aiConfidenceNotes: analysis.confidenceNotes,
+                aiPrimaryPhotoUrl: analysis.primaryPhotoUrl,
+                aiAnalyzedAt: new Date(),
+              })
+              .where(eq(classLogs.id, id));
+          }
+        })
+        .catch((err) => {
+          logger.error("admin:class-logs", "Background AI re-analysis failed", { classLogId: id, error: err instanceof Error ? err.message : String(err) });
+        });
+    }
   }
 
   return NextResponse.json({ success: true });
