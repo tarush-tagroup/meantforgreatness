@@ -123,15 +123,17 @@ export default function InvoiceEditor({
         if (!merged) return null;
 
         const totalHours = editingLineHours[key] ?? merged.totalHours;
+        const classCount = merged.classCount;
 
         if (merged.isNew) {
           return {
             orphanageId: merged.orphanageId,
             orphanageName: merged.orphanageName,
+            classCount,
             totalHours,
           };
         }
-        return { id: merged.id, totalHours };
+        return { id: merged.id, classCount, totalHours };
       })
       .filter(Boolean);
 
@@ -146,14 +148,15 @@ export default function InvoiceEditor({
       });
 
       if (!res.ok) {
-        alert("Failed to save changes");
+        const data = await res.json().catch(() => null);
+        alert(data?.error || "Failed to save changes");
         return;
       }
 
       setEditingLineHours({});
       await refreshData();
     } catch {
-      alert("Failed to save changes");
+      alert("Failed to save changes — check your connection and try again");
     } finally {
       setSaving(false);
     }
