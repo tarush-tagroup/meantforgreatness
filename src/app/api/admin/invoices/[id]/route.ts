@@ -91,7 +91,7 @@ const patchSchema = z.object({
         id: z.string().uuid().optional(),
         orphanageId: z.string().optional(),
         orphanageName: z.string().optional(),
-        classCount: z.number().int().min(0),
+        classCount: z.number().int().min(0).optional(),
         totalHours: z.number().min(0),
       })
     )
