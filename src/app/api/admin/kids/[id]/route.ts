@@ -110,6 +110,8 @@ export async function PUT(
     }
   }
 
+  const effectiveStatus = data.status ?? existing.status;
+
   await db
     .update(kids)
     .set({
@@ -121,8 +123,8 @@ export async function PUT(
       favoriteWord: data.favoriteWord ?? null,
       imageUrl: data.imageUrl ?? existing.imageUrl,
       orphanageId: data.orphanageId,
-      classGroupId: data.classGroupId ?? null,
-      status: data.status ?? existing.status,
+      classGroupId: effectiveStatus === "inactive" ? null : (data.classGroupId ?? null),
+      status: effectiveStatus,
       dateRegistered: data.dateRegistered !== undefined ? data.dateRegistered : existing.dateRegistered,
       updatedAt: new Date(),
     })
