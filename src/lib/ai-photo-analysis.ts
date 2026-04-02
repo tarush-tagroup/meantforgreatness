@@ -361,7 +361,7 @@ export async function analyzeClassLogPhotos(
   // Record aggregated usage (fire-and-forget)
   if (totalInputTokens > 0 || totalOutputTokens > 0) {
     const totalCostCents = calculateCostCents({ inputTokens: totalInputTokens, outputTokens: totalOutputTokens });
-    db.insert(anthropicUsage)
+    void db.insert(anthropicUsage)
       .values({
         useCase: "photo_analysis",
         model: "claude-sonnet-4-20250514",
@@ -371,6 +371,7 @@ export async function analyzeClassLogPhotos(
         classLogId: classLogId || null,
         metadata: { photoCount: photoUrls.length, successCount: successfulResults.length },
       })
+      .then(() => {})
       .catch((err) => {
         console.error("[ai-photo-analysis] Failed to record usage:", err);
       });
