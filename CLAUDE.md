@@ -30,24 +30,36 @@ The centralized logs capture: Stripe checkout/webhooks, contact form/email (Rese
 - **Permissions:** Role-based (admin, teacher_manager, donor_manager) at `src/lib/permissions.ts`
 - **Monitor:** GitHub Actions runs every 6h, checks Vercel + centralized logs, auto-fixes with Claude
 
+## Stack
+- **Framework**: Next.js App Router + TypeScript
+- **Database**: Neon Postgres (serverless)
+- **ORM**: Drizzle ORM
+- **Auth**: NextAuth v5 with Google OAuth (NOT Clerk)
+- **Payments**: Stripe
+- **Email**: Resend
+- **Analytics**: PostHog
+- **Testing**: Vitest
+- **Styling**: Tailwind CSS
+- **Logging**: Centralized to Vercel Blob via `src/lib/logger.ts`
+
 ## Authentication & Agent Access
 
-- **Human users:** NextAuth v5 with Google OAuth (NOT Clerk), JWT sessions
-- **Cron jobs:** `Authorization: Bearer {CRON_SECRET}` validated with `timingSafeEqual`
-- **Admin API routes:** Accept `Authorization: Bearer {LOG_API_SECRET}` for the GitHub Actions monitor, or fall back to NextAuth session via `withAuth()`
+### Human users
+NextAuth v5 with Google OAuth, JWT sessions. Role-based access: admin, teacher_manager, donor_manager.
 
-## Stack
+### AI agents / cron jobs
+Dual auth pattern — cron routes accept `Authorization: Bearer {CRON_SECRET}` (Vercel sends automatically). Admin API routes accept `Authorization: Bearer {LOG_API_SECRET}` (used by GitHub Actions monitor).
 
-- Next.js App Router + TypeScript
-- Neon Postgres
-- Drizzle ORM
-- NextAuth v5 with Google OAuth (NOT Clerk)
-- Stripe
-- Resend
-- PostHog
-- Vitest
-- Tailwind CSS
-- Centralized logging to Vercel Blob via `src/lib/logger.ts`
+```
+Vercel cron → /api/cron/*:     Authorization: Bearer {CRON_SECRET}
+GitHub Actions → /api/admin/*:  Authorization: Bearer {LOG_API_SECRET}
+Dashboard → /api/admin/*:       NextAuth session (withAuth())
+```
+
+### Security notes
+- ✅ Cron token comparison uses `timingSafeEqual` (secure)
+- **TODO: Add audit logging to cron and admin API endpoints** (follow teio's `auditedAdminAuth()` pattern — structured JSON logger to stdout)
+- **TODO: Write unit tests for cron auth and LOG_API_SECRET auth** (valid token, invalid token, missing token)
 
 ## Deployment — CRITICAL
 
@@ -86,6 +98,20 @@ Critical env vars (all in Vercel):
   - **sand** (neutral): `#F5F5F0` at 50 (cool gray bg), `#A8A598` at 400, range 50–900 — text, borders, backgrounds
 - **Logo**: SVG at `public/logo.svg` (dark green text) and `public/logo-white.svg` (cream text for dark backgrounds)
 - **Layout**: Public pages use `(public)` route group with Header + Footer; admin pages at `/admin` have their own `AdminShell` layout (no site Header/Footer)
+
+## gstack
+
+For all web browsing, use the `/browse` skill from gstack. Never use `mcp__Claude_in_Chrome__*` tools directly.
+
+Available gstack skills:
+- `/plan-ceo-review` — CEO-level plan review
+- `/plan-eng-review` — Engineering plan review
+- `/review` — Code review
+- `/ship` — Ship changes
+- `/browse` — Web browsing (use this instead of Claude in Chrome MCP tools)
+- `/retro` — Retrospective
+
+If gstack skills aren't working, rebuild by running: `cd .claude/skills/gstack && ./setup`
 
 ## Lessons Learned
 
