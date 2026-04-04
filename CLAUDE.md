@@ -30,6 +30,25 @@ The centralized logs capture: Stripe checkout/webhooks, contact form/email (Rese
 - **Permissions:** Role-based (admin, teacher_manager, donor_manager) at `src/lib/permissions.ts`
 - **Monitor:** GitHub Actions runs every 6h, checks Vercel + centralized logs, auto-fixes with Claude
 
+## Authentication & Agent Access
+
+- **Human users:** NextAuth v5 with Google OAuth (NOT Clerk), JWT sessions
+- **Cron jobs:** `Authorization: Bearer {CRON_SECRET}` validated with `timingSafeEqual`
+- **Admin API routes:** Accept `Authorization: Bearer {LOG_API_SECRET}` for the GitHub Actions monitor, or fall back to NextAuth session via `withAuth()`
+
+## Stack
+
+- Next.js App Router + TypeScript
+- Neon Postgres
+- Drizzle ORM
+- NextAuth v5 with Google OAuth (NOT Clerk)
+- Stripe
+- Resend
+- PostHog
+- Vitest
+- Tailwind CSS
+- Centralized logging to Vercel Blob via `src/lib/logger.ts`
+
 ## Deployment — CRITICAL
 
 **NEVER deploy directly with `npx vercel --prod`.** The only way to deploy is:
